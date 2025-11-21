@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, ViewStyle } from 'react-native';
 import Dice from './Dice';
 
@@ -6,16 +6,12 @@ type ScoreDieProps = {
   points: number; // 0–5
   style?: ViewStyle;
   size?: number;
+  animationKey?: number;
 };
 
 /**
- * Clamp points to face value: points + 1
- * 5 points → 6 pips
- * 4 points → 5 pips
- * 3 points → 4 pips
- * 2 points → 3 pips
- * 1 point → 2 pips
- * 0 points → 1 pip
+ * Visualize score loss as the die counting up.
+ * 5 points → face 1, 0 points → face 6.
  */
 const MAX_POINTS = 5;
 
@@ -27,12 +23,23 @@ const clampFace = (points: number): number => {
   return rawFace;
 };
 
-export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style, size = 30 }) => {
+export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style, size = 30, animationKey }) => {
   const targetFace = useMemo(() => clampFace(points), [points]);
 
   const [face, setFace] = useState<number>(() => targetFace);
 
   const rotation = useRef(new Animated.Value(0)).current;
+  const entryTranslateY = useRef(new Animated.Value(0)).current;
+
+  const runEntryAnimation = useCallback(() => {
+    entryTranslateY.setValue(-80);
+    Animated.spring(entryTranslateY, {
+      toValue: 0,
+      friction: 6,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+  }, [entryTranslateY]);
 
   useEffect(() => {
     if (targetFace === face) return;
@@ -64,6 +71,12 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style, size = 30 }) 
     outputRange: ['0deg', '90deg'],
   });
 
+  useEffect(() => {
+    if (typeof animationKey === 'number') {
+      runEntryAnimation();
+    }
+  }, [animationKey, runEntryAnimation]);
+
   return (
     <Animated.View
       style={[
@@ -72,7 +85,7 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style, size = 30 }) 
           width: size,
           height: size,
           borderRadius: size * 0.2,
-          transform: [{ rotateY }],
+          transform: [{ translateY: entryTranslateY }, { rotateY }],
         },
         style,
       ]}

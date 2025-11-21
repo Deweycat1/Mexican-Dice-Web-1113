@@ -116,6 +116,7 @@ export default function Game() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [cpuDiceRevealed, setCpuDiceRevealed] = useState(false);
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
+  const [scoreDiceAnimKey, setScoreDiceAnimKey] = useState(0);
 
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
@@ -662,7 +663,12 @@ export default function Game() {
                       ],
                     }}
                   >
-                    <ScoreDie points={playerScore} style={styles.scoreDie} size={38} />
+                    <ScoreDie
+                      points={playerScore}
+                      style={styles.scoreDie}
+                      size={38}
+                      animationKey={scoreDiceAnimKey}
+                    />
                   </Animated.View>
                 </View>
 
@@ -688,7 +694,12 @@ export default function Game() {
                       ],
                     }}
                   >
-                    <ScoreDie points={cpuScore} style={styles.scoreDie} size={38} />
+                    <ScoreDie
+                      points={cpuScore}
+                      style={styles.scoreDie}
+                      size={38}
+                      animationKey={scoreDiceAnimKey}
+                    />
                   </Animated.View>
                 </View>
               </View>
@@ -799,6 +810,7 @@ export default function Game() {
                   onPress={() => {
                     newGame();
                     setHasRolledThisGame(false);
+                    setScoreDiceAnimKey((k) => k + 1);
                     // Show new opening taunt in dialog banner
                     const openingLine = pickRandomRivalLine();
                     setTimeout(() => showDialog('rival', openingLine), 300);
