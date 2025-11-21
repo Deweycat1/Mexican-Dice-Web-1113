@@ -39,6 +39,8 @@ export const getRandomPun = (): string => {
   return selectedPun;
 };
 
+const AUTO_HIDE_DELAY_MS = 750; // Just under a second including exit animation
+
 export default function StreakEndPopup({ visible, onHide, pun }: Props) {
   const [animating, setAnimating] = useState(false);
   const [currentPun, setCurrentPun] = useState('');
@@ -47,32 +49,12 @@ export default function StreakEndPopup({ visible, onHide, pun }: Props) {
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const tiltAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const startedRef = useRef(false);
-  // Debugging: track lifecycle to help diagnose visibility problems
-  // Remove or lower verbosity after debugging
-  useEffect(() => {
-    // Log minimal lifecycle info to console (dev only)
-    try {
-      // eslint-disable-next-line no-console
-      console.debug('[StreakEndPopup] render', { visible, pun, animating, currentPun });
-    } catch {}
-  }, [visible, pun, animating, currentPun]);
 
   useEffect(() => {
     if (!visible) {
-      // Reset guard so next show can run the animation again
-      startedRef.current = false;
-      try { console.debug('[StreakEndPopup] effect - visible=false, reset startedRef'); } catch {}
+      setAnimating(false);
       return;
     }
-
-    // Prevent starting the animation more than once while visible
-    try { console.debug('[StreakEndPopup] effect start', { started: startedRef.current, visible, pun }); } catch {}
-    if (startedRef.current) {
-      try { console.debug('[StreakEndPopup] effect aborted - already started'); } catch {}
-      return;
-    }
-    startedRef.current = true;
 
     setAnimating(true);
     // If a pun is provided by the parent (selected at loss time), use it.
@@ -123,7 +105,7 @@ export default function StreakEndPopup({ visible, onHide, pun }: Props) {
     );
     pulseLoop.start();
 
-    // Auto-hide after 1.0 seconds (shortened by another 0.5s)
+    // Auto-hide quickly so it flashes for < 1 second total
     const timer = setTimeout(() => {
       pulseLoop.stop();
       Animated.parallel([
@@ -141,7 +123,7 @@ export default function StreakEndPopup({ visible, onHide, pun }: Props) {
         setAnimating(false);
         onHide();
       });
-    }, 1000);
+    }, AUTO_HIDE_DELAY_MS);
 
     return () => {
       clearTimeout(timer);

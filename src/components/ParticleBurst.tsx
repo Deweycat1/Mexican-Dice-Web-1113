@@ -5,8 +5,6 @@ import { Particle } from './Particle';
 type Props = {
   visible: boolean;
   onComplete?: () => void;
-  particleCount?: number;
-  emojis?: string[];
   distance?: number;
   duration?: number;
   particleSize?: number;
@@ -14,20 +12,43 @@ type Props = {
   centerY?: DimensionValue;
 };
 
-type ParticleData = {
-  emoji: string;
-  angle: number;
-  distance: number;
-};
-
-const DEFAULT_EMOJIS = ['🎲', '🔥', '🌶️', '💥', '✨'];
+const STREAK_FLASH_EMOJIS = [
+  '🔥',
+  '⚡',
+  '💥',
+  '🚀',
+  '🎲',
+  '🌶️',
+  '💀',
+  '🎉',
+  '🍀',
+  '🎰',
+  '😈',
+  '🪅',
+  '💸',
+  '🤯',
+  '🧨',
+  '🪙',
+  '🍄',
+] as const;
 const DICE_SIZE = 100; // Match dice component default size
+const SHUFFLE_INTERVAL_MS = 200;
+const SLOT_COUNT = 2;
+type StreakEmoji = typeof STREAK_FLASH_EMOJIS[number];
+type EmojiPair = readonly [StreakEmoji, StreakEmoji];
+
+const pickRandomEmojiPair = (): EmojiPair => {
+  const firstIndex = Math.floor(Math.random() * STREAK_FLASH_EMOJIS.length);
+  let secondIndex = Math.floor(Math.random() * STREAK_FLASH_EMOJIS.length);
+  while (secondIndex === firstIndex && STREAK_FLASH_EMOJIS.length > 1) {
+    secondIndex = Math.floor(Math.random() * STREAK_FLASH_EMOJIS.length);
+  }
+  return [STREAK_FLASH_EMOJIS[firstIndex], STREAK_FLASH_EMOJIS[secondIndex]];
+};
 
 export default function ParticleBurst({
   visible,
   onComplete,
-  particleCount = 5,
-  emojis = DEFAULT_EMOJIS,
   distance = 25,
   duration = 300,
   particleSize = DICE_SIZE,
@@ -35,20 +56,54 @@ export default function ParticleBurst({
   centerY = '50%',
 }: Props) {
   const [animating, setAnimating] = React.useState(false);
+  const [emojiPair, setEmojiPair] = React.useState<EmojiPair>(() => pickRandomEmojiPair());
+  const shuffleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const particles = useMemo<ParticleData[]>(() => {
-    return Array.from({ length: particleCount }).map((_, index) => {
-      const angle = (Math.PI * 2 * index) / particleCount + Math.random() * 0.3;
-      return {
-        emoji: emojis[index % emojis.length],
-        angle,
-        distance: distance + Math.random() * 10,
-      };
-    });
-  }, [particleCount, emojis, distance]);
+  const slots = useMemo(
+    () =>
+      Array.from({ length: SLOT_COUNT }).map((_, index) => ({
+        offsetX: index === 0 ? -distance : distance,
+        offsetY: 0,
+      })),
+    [distance]
+  );
 
-  const animValues = useRef(particles.map(() => new Animated.Value(0))).current;
-  const opacityValues = useRef(particles.map(() => new Animated.Value(1))).current;
+  const animValuesRef = useRef(slots.map(() => new Animated.Value(0)));
+  const opacityValuesRef = useRef(slots.map(() => new Animated.Value(1)));
+
+  useEffect(() => {
+    if (animValuesRef.current.length !== slots.length) {
+      animValuesRef.current = slots.map(() => new Animated.Value(0));
+    }
+    if (opacityValuesRef.current.length !== slots.length) {
+      opacityValuesRef.current = slots.map(() => new Animated.Value(1));
+    }
+  }, [slots]);
+
+  const animValues = animValuesRef.current;
+  const opacityValues = opacityValuesRef.current;
+
+  useEffect(() => {
+    if (!visible) {
+      if (shuffleIntervalRef.current) {
+        clearInterval(shuffleIntervalRef.current);
+        shuffleIntervalRef.current = null;
+      }
+      return;
+    }
+
+    setEmojiPair(pickRandomEmojiPair());
+    shuffleIntervalRef.current = setInterval(() => {
+      setEmojiPair(pickRandomEmojiPair());
+    }, SHUFFLE_INTERVAL_MS);
+
+    return () => {
+      if (shuffleIntervalRef.current) {
+        clearInterval(shuffleIntervalRef.current);
+        shuffleIntervalRef.current = null;
+      }
+    };
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) {
@@ -89,20 +144,20 @@ export default function ParticleBurst({
 
   return (
     <View style={[styles.container, { top: centerY, left: centerX }]} pointerEvents="none">
-      {particles.map((particle, index) => {
+      {slots.map((slot, index) => {
         const translateX = animValues[index].interpolate({
           inputRange: [0, 1],
-          outputRange: [0, Math.cos(particle.angle) * particle.distance],
+          outputRange: [slot.offsetX, slot.offsetX],
         });
         const translateY = animValues[index].interpolate({
           inputRange: [0, 1],
-          outputRange: [0, Math.sin(particle.angle) * particle.distance],
+          outputRange: [slot.offsetY, slot.offsetY],
         });
 
         return (
           <Particle
             key={index}
-            emoji={particle.emoji}
+            emoji={emojiPair[index] ?? emojiPair[emojiPair.length - 1]}
             size={particleSize}
             animatedStyle={[
               styles.particle,
