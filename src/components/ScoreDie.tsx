@@ -17,11 +17,14 @@ type ScoreDieProps = {
  * 1 point → 2 pips
  * 0 points → 1 pip
  */
+const MAX_POINTS = 5;
+
 const clampFace = (points: number): number => {
-  const face = points + 1;
-  if (face < 1) return 1;
-  if (face > 6) return 6;
-  return face;
+  const inverted = MAX_POINTS - points;
+  const rawFace = inverted + 1;
+  if (rawFace < 1) return 1;
+  if (rawFace > 6) return 6;
+  return rawFace;
 };
 
 export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style, size = 30 }) => {
