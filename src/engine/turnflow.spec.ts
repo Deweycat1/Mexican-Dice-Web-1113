@@ -1,5 +1,6 @@
 import { isLegalRaise } from '../engine/mexican';
 import { useGameStore } from '../state/useGameStore';
+import { MEXICAN_ICON } from '../lib/constants';
 
 const resetToNewGame = () => {
   useGameStore.getState().newGame();
@@ -55,7 +56,7 @@ describe('turn flow and scoring', () => {
       lastAction: 'reverseVsMexican',
       lastPlayerRoll: 31,
       lastCpuRoll: 21,
-      message: 'You claim 31 (Reverse) against Mexican 🌮.',
+      message: `You claim 31 (Reverse) against Mexican ${MEXICAN_ICON}.`,
     }));
 
     useGameStore.getState().callBluff();
@@ -76,7 +77,7 @@ describe('turn flow and scoring', () => {
       lastAction: 'reverseVsMexican',
       lastPlayerRoll: 52,
       lastCpuRoll: 21,
-      message: 'You claim 31 (Reverse) against Mexican 🌮.',
+      message: `You claim 31 (Reverse) against Mexican ${MEXICAN_ICON}.`,
     }));
 
     useGameStore.getState().callBluff();
@@ -96,7 +97,7 @@ describe('turn flow and scoring', () => {
       lastClaim: 21,
       lastAction: 'normal',
       lastCpuRoll: 21,
-      message: 'The Rival claims 21 (Mexican 🌮). You must roll a real 21, 31, or 41 or bluff 21/31 — otherwise call bluff.',
+      message: `The Rival claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31 — otherwise call bluff.`,
     }));
 
     useGameStore.getState().playerClaim(65);

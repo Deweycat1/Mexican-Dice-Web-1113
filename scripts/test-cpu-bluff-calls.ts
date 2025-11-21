@@ -6,6 +6,7 @@
  */
 
 import { useGameStore } from '../src/state/useGameStore';
+import { MEXICAN_ICON } from '../src/lib/constants';
 
 // Mock fetch for API calls
 global.fetch = jest.fn(() =>
@@ -207,7 +208,7 @@ const runBluffCallTest = async () => {
     console.log(`Average Call Rate: ${avgCallRate.toFixed(2)}%\n`);
   };
 
-  printCategory('MEXICAN', '🌮', mexican);
+  printCategory('MEXICAN', MEXICAN_ICON, mexican);
   printCategory('REVERSE', '🔄', reverse);
   printCategory('SOCIAL', '🎉', social);
   printCategory('DOUBLES', '🎲', doubles);

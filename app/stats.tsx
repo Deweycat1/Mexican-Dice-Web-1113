@@ -384,7 +384,7 @@ export default function StatsScreen() {
                 <Text style={styles.cardTitle}>🎭 Honesty Rating</Text>
                 <Text style={styles.bigNumber}>{formatPercentage(randomStats.honestyRating)}</Text>
                 <Text style={styles.tendencyDescription}>
-                  How often you tell the truth instead of bluffing
+                  How often users tell the truth instead of bluffing
                 </Text>
               </View>
 
@@ -392,7 +392,7 @@ export default function StatsScreen() {
                 <Text style={styles.cardTitle}>🎲 Most Common Roll</Text>
                 <Text style={styles.bigNumber}>{formatRoll(randomStats.mostCommonRoll)}</Text>
                 <Text style={styles.tendencyDescription}>
-                  Your most frequently rolled combo
+                  Users' most frequently rolled combo
                 </Text>
               </View>
 
@@ -400,7 +400,7 @@ export default function StatsScreen() {
                 <Text style={styles.cardTitle}>❄️ Coldest Roll</Text>
                 <Text style={styles.bigNumber}>{formatRoll(randomStats.coldestRoll)}</Text>
                 <Text style={styles.tendencyDescription}>
-                  The roll that almost never shows up for you
+                  The roll that almost never shows up for users
                 </Text>
               </View>
 
@@ -408,7 +408,7 @@ export default function StatsScreen() {
                 <Text style={styles.cardTitle}>⏱️ Average Turn Length</Text>
                 <Text style={styles.bigNumber}>{formatTurnLength(randomStats.averageTurnLengthMs)}</Text>
                 <Text style={styles.tendencyDescription}>
-                  How long you typically take to make a move
+                  How long users typically take to make a move
                 </Text>
               </View>
 
@@ -416,7 +416,7 @@ export default function StatsScreen() {
                 <Text style={styles.cardTitle}>🃏 Low-Roll Lie Rate</Text>
                 <Text style={styles.bigNumber}>{formatPercentage(randomStats.lowRollLieRate)}</Text>
                 <Text style={styles.tendencyDescription}>
-                  How often you bluff when you roll below a 61
+                  How often users bluff when they roll below a 61
                 </Text>
               </View>
             </>

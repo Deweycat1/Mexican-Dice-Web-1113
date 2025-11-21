@@ -4,6 +4,7 @@
  */
 
 import LearningAIOpponent from './LearningAIOpponent';
+import { MEXICAN_ICON } from '../lib/constants';
 
 describe('CPU Bluff-Calling Analysis', () => {
   it('should analyze bluff-calling rates for all roll types', () => {
@@ -90,7 +91,7 @@ describe('CPU Bluff-Calling Analysis', () => {
       console.log(`  Average: ${avg.toFixed(2)}%`);
     };
 
-    printCategory('🌮 MEXICAN', mexican);
+    printCategory(`${MEXICAN_ICON} MEXICAN`, mexican);
     printCategory('🔄 REVERSE', reverse);
     printCategory('🎉 SOCIAL', social);
     printCategory('🎲 DOUBLES', doubles);
@@ -119,4 +120,3 @@ describe('CPU Bluff-Calling Analysis', () => {
     expect(totalTrials).toBe(rollTypes.length * trialsPerRoll);
   });
 });
-

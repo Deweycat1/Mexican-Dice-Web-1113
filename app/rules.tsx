@@ -30,7 +30,7 @@ export default function RulesScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mexican Dice — Rules</Text>
+      <Text style={styles.title}>Mexican Dice ... Rules</Text>
 
       <View style={styles.musicSection}>
         <Text style={styles.statusLabel}>
@@ -89,9 +89,9 @@ export default function RulesScreen() {
           General Gameplay
         </Text>
         <Text style={styles.body}>
-          Roll two dice and read them higher-first (3 and 5 → 53). Doubles beat mixed rolls, and Special Rolls beat everything.
-          After you roll, claim a number to the next player — truth or bluff. You may claim any roll that matches
-          or beats the last claim, or a Special Roll (21 or 31 - you cannot lie about a 41).
+          Roll two dice and read them higher-first (3 and 5 → 53). Doubles beat mixed rolls, and Special Rolls beat
+          everything. After you roll, claim a number to the next player ... truth or bluff. You may claim any roll that
+          matches or beats the last claim, or a Special Roll (21 or 31 ... you cannot lie about a 41).
         </Text>
 
         <Text style={[styles.body, { fontWeight: '700', fontSize: 17, marginTop: 10 }]}>
@@ -99,9 +99,10 @@ export default function RulesScreen() {
         </Text>
 
         <Text style={styles.body}>
-          <Image source={require('../assets/images/mexican-dice-logo.png')} style={{ width: 18, height: 18, marginBottom: -2 }} /> 21 &ldquo;Mexican&rdquo;: Claiming a Mexican makes the round worth 2 points. The next player must either accept
-          the challenge and roll for a real 21, or Call Bluff. Whoever is wrong — caller or claimer — loses 2 points.
-          Reverses do not reduce the penalty.
+          <Image source={require('../assets/images/mexican-dice-logo.png')} style={{ width: 18, height: 18, marginBottom: -2 }} /> 21
+          &ldquo;Mexican&rdquo;: Claiming a Mexican makes the round worth 2 points. The next player must either accept the challenge
+          and roll for a real 21, or Call Bluff. Whoever is wrong ... caller or claimer ... loses 2 points. Reverse does not reduce
+          the penalty.
         </Text>
 
         <Text style={styles.body}>
@@ -110,7 +111,7 @@ export default function RulesScreen() {
         </Text>
 
         <Text style={styles.body}>
-          🍺 41 “Social”: Must be shown, never bluffed. When rolled, the round resets — all claims clear, no points
+          🍺 41 “Social”: Must be shown, never bluffed. When rolled, the round resets ... all claims clear, no points
           are lost, and the dice pass to the next player.
         </Text>
 
@@ -118,8 +119,34 @@ export default function RulesScreen() {
           Bluffs
         </Text>
         <Text style={styles.body}>
-          If a bluff is suspected, the player can Call Bluff rather than accepting the roll. In normal rounds, if the claim was truthful, the caller loses 1 point;
-          if it was a bluff, the liar loses 1 point. In Mexican <Image source={require('../assets/images/mexican-dice-logo.png')} style={{ width: 18, height: 18, marginBottom: -2 }} /> rounds, the loser always loses 2 points. Everyone starts with 5 points; hit 0 and you&apos;re out.
+          If a bluff is suspected, the player may Call Bluff instead of accepting the claim.
+        </Text>
+        <Text style={styles.body}>
+          • In normal rounds:{'\n'}
+          {'  '}• Claim true → caller loses 1 point{'\n'}
+          {'  '}• Claim false → bluffer loses 1 point
+        </Text>
+        <Text style={styles.body}>
+          • In Mexican <Image source={require('../assets/images/mexican-dice-logo.png')} style={{ width: 18, height: 18, marginBottom: -2 }} /> rounds:{'\n'}
+          {'  '}• The loser always loses 2 points
+        </Text>
+
+        <Text style={[styles.body, { fontWeight: '700', fontSize: 17, marginTop: 10 }]}>
+          Scoring &amp; Scorekeeper Dice
+        </Text>
+        <Text style={styles.body}>
+          Everyone starts with 5 points. When you lose points, your scorekeeper die counts up instead of down:
+        </Text>
+        <Text style={styles.body}>
+          • At full health (5 points), your die shows 1{'\n'}
+          • As you lose points, the die climbs toward 6{'\n'}
+          • When your die hits 6, you’ve reached 0 points ... and you’re out
+        </Text>
+        <Text style={styles.body}>
+          This makes it easy to see danger at a glance:{'\n'}
+          • Low die = safe{'\n'}
+          • High die = close to elimination{'\n'}
+          • Face 6 = game over
         </Text>
 
         </View>
