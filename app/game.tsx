@@ -1077,7 +1077,7 @@ const styles = StyleSheet.create({
   },
   gotEmBannerContainer: {
     position: 'absolute',
-    top: 360,
+    top: 320,
     left: 0,
     right: 0,
     alignItems: 'center',
