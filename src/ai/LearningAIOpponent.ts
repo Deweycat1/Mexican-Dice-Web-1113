@@ -1,4 +1,12 @@
-import { ClaimCategory, DicePair, normalizeRoll, rankValue } from '../engine/mexican';
+import {
+  ClaimCategory,
+  DicePair,
+  isDouble,
+  isLegalRaise,
+  isReverseOf,
+  normalizeRoll,
+  rankValue,
+} from '../engine/mexican';
 
 type Vector = number[];
 type Matrix = number[][];
@@ -266,8 +274,26 @@ export class LearningAIDiceOpponent {
   ): { type: 'call_bluff' } | { type: 'raise'; claim: number } {
     this.assertRulesReady();
 
+    const truthClaim = this.canonicalClaimFromRoll(myRoll);
+    const noPreviousClaim = currentClaim == null;
+    const truthLegal = noPreviousClaim ? true : isLegalRaise(currentClaim, truthClaim);
+    const truthReverses = !noPreviousClaim && isReverseOf(currentClaim, truthClaim);
+    const forcesTruth =
+      truthClaim === 21 ||
+      (!noPreviousClaim && truthClaim === 31);
+    const truthBeats =
+      noPreviousClaim ||
+      this.compareClaimsFn!(truthClaim, currentClaim!) > 0 ||
+      truthReverses;
+    const truthIsOpeningDouble = noPreviousClaim && isDouble(truthClaim);
+
+    if (truthLegal && (forcesTruth || truthBeats || truthIsOpeningDouble)) {
+      this.lastContext = null;
+      return { type: 'raise', claim: truthClaim };
+    }
+
     if (currentClaim == null) {
-      let opening = this.canonicalClaimFromRoll(myRoll);
+      let opening = truthClaim;
       // More aggressive opening: always jump if weak, frequently jump even if not
       if (this.isWeakTruth(opening)) {
         opening = this.pressureJumpAbove(normalizeRoll(4, 3));

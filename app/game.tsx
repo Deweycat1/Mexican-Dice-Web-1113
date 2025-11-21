@@ -121,6 +121,7 @@ export default function Game() {
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
   const [shouldRevealCpuDice, setShouldRevealCpuDice] = useState(false);
   const [rivalBluffBannerVisible, setRivalBluffBannerVisible] = useState(false);
+  const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | null>(null);
   const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
 
@@ -418,7 +419,8 @@ export default function Game() {
     }
   }, [gameOver, showEndBanner]);
 
-  const triggerRivalBluffBanner = useCallback(() => {
+  const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp') => {
+    setRivalBluffBannerType(type);
     setRivalBluffBannerVisible(true);
     rivalBluffBannerOpacity.stopAnimation();
     rivalBluffBannerScale.stopAnimation?.();
@@ -454,6 +456,7 @@ export default function Game() {
     ]).start(() => {
       setRivalBluffBannerVisible(false);
       rivalBluffBannerScale.setValue(1);
+      setRivalBluffBannerType(null);
     });
   }, [rivalBluffBannerOpacity, rivalBluffBannerScale]);
 
@@ -498,18 +501,14 @@ export default function Game() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (rivalToldTruth === true || rivalToldTruth === null) {
-      console.log("BLUFF: Rival was telling the truth – triggering reveal animation");
-      setShouldRevealCpuDice(true);
-      setPendingCpuBluffResolution(true);
-      setCpuDiceRevealed(true);
-    } else {
-      console.log("BLUFF: Rival was bluffing – flashing GOT EM banner");
-      setShouldRevealCpuDice(false);
-      setPendingCpuBluffResolution(false);
-      setCpuDiceRevealed(false);
-      triggerRivalBluffBanner();
-      callBluff();
+    console.log('BLUFF: Revealing Rival dice regardless of truth state');
+    setShouldRevealCpuDice(true);
+    setPendingCpuBluffResolution(true);
+    setCpuDiceRevealed(true);
+    if (rivalToldTruth === false) {
+      triggerRivalBluffBanner('got-em');
+    } else if (rivalToldTruth === true) {
+      triggerRivalBluffBanner('womp-womp');
     }
   }
 
@@ -601,7 +600,7 @@ export default function Game() {
         )}
 
         <SafeAreaView style={styles.safe}>
-          {rivalBluffBannerVisible && (
+          {rivalBluffBannerVisible && rivalBluffBannerType && (
             <Animated.View
               pointerEvents="none"
               style={[
@@ -612,8 +611,17 @@ export default function Game() {
                 },
               ]}
             >
-              <View style={styles.gotEmBanner}>
-                <Text style={styles.gotEmBannerText}>GOT 'EM!!!!</Text>
+              <View
+                style={[
+                  styles.bluffBanner,
+                  rivalBluffBannerType === 'got-em'
+                    ? styles.bluffBannerSuccess
+                    : styles.bluffBannerFail,
+                ]}
+              >
+                <Text style={styles.gotEmBannerText}>
+                  {rivalBluffBannerType === 'got-em' ? "GOT 'EM!!!!" : 'WOMP WOMP'}
+                </Text>
               </View>
             </Animated.View>
           )}
@@ -1075,18 +1083,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 25,
   },
-  gotEmBanner: {
-    backgroundColor: '#E63946',
+  bluffBanner: {
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 6,
+  },
+  bluffBannerSuccess: {
+    backgroundColor: '#16A34A',
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  bluffBannerFail: {
+    backgroundColor: '#E63946',
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   gotEmBannerText: {
     color: '#FFFFFF',
