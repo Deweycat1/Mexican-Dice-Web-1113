@@ -32,7 +32,6 @@ const STREAK_FLASH_EMOJIS = [
   '🍄',
 ] as const;
 const DICE_SIZE = 100; // Match dice component default size
-const SHUFFLE_INTERVAL_MS = 200;
 const SLOT_COUNT = 2;
 type StreakEmoji = typeof STREAK_FLASH_EMOJIS[number];
 type EmojiPair = readonly [StreakEmoji, StreakEmoji];
@@ -57,7 +56,6 @@ export default function ParticleBurst({
 }: Props) {
   const [animating, setAnimating] = React.useState(false);
   const [emojiPair, setEmojiPair] = React.useState<EmojiPair>(() => pickRandomEmojiPair());
-  const shuffleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const slots = useMemo(
     () =>
@@ -84,25 +82,9 @@ export default function ParticleBurst({
   const opacityValues = opacityValuesRef.current;
 
   useEffect(() => {
-    if (!visible) {
-      if (shuffleIntervalRef.current) {
-        clearInterval(shuffleIntervalRef.current);
-        shuffleIntervalRef.current = null;
-      }
-      return;
-    }
-
-    setEmojiPair(pickRandomEmojiPair());
-    shuffleIntervalRef.current = setInterval(() => {
+    if (visible) {
       setEmojiPair(pickRandomEmojiPair());
-    }, SHUFFLE_INTERVAL_MS);
-
-    return () => {
-      if (shuffleIntervalRef.current) {
-        clearInterval(shuffleIntervalRef.current);
-        shuffleIntervalRef.current = null;
-      }
-    };
+    }
   }, [visible]);
 
   useEffect(() => {
