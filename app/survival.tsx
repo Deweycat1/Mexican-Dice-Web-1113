@@ -1,0 +1,1442 @@
+import * as Haptics from 'expo-haptics';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    Animated,
+    Dimensions,
+    Image,
+    Modal,
+    Pressable,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
+
+import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
+import BluffModal from '../src/components/BluffModal';
+import Dice from '../src/components/Dice';
+import FeltBackground from '../src/components/FeltBackground';
+import FireworksOverlay from '../src/components/FireworksOverlay';
+import ParticleBurst from '../src/components/ParticleBurst';
+import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
+import StreakEndPopup, { getRandomPun } from '../src/components/StreakEndPopup';
+import StyledButton from '../src/components/StyledButton';
+import { isAlwaysClaimable, meetsOrBeats, resolveBluff, splitClaim } from '../src/engine/mexican';
+import { buildClaimOptions } from '../src/lib/claimOptions';
+import { useGameStore } from '../src/state/useGameStore';
+
+function formatClaim(value: number | null | undefined): string {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  if (value === 21) return '21 (Mexican)';
+  if (value === 31) return '31 (Reverse)';
+  if (value === 41) return '41 (Social)';
+  const hi = Math.floor(value / 10);
+  const lo = value % 10;
+  return `${hi}${lo}`;
+}
+function formatRoll(value: number | null | undefined): string {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  const [hi, lo] = splitClaim(value);
+  return `${hi}${lo}`;
+}
+function facesFromRoll(value: number | null | undefined): readonly [number | null, number | null] {
+  if (typeof value !== 'number' || Number.isNaN(value)) return [null, null] as const;
+  const [hi, lo] = splitClaim(value);
+  return [hi, lo] as const;
+}
+
+export default function Survival() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  console.log('SURVIVAL: screen rendering');
+  // Calculate particle burst center position (50% - 50px)
+  const screenWidth = Dimensions.get('window').width;
+  const particleBurstCenterX = (screenWidth / 2) - 50;
+  
+  const [claimPickerOpen, setClaimPickerOpen] = useState(false);
+  const [rollingAnim, setRollingAnim] = useState(false);
+  const [showFireworks, setShowFireworks] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [cpuDiceRevealed, setCpuDiceRevealed] = useState(false);
+  const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
+  const [shouldRevealCpuDice, setShouldRevealCpuDice] = useState(false);
+  const [rivalBluffBannerVisible, setRivalBluffBannerVisible] = useState(false);
+  const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
+  const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
+
+  // Milestone tracking state
+  const [hasShown5, setHasShown5] = useState(false);
+  const [hasShown10, setHasShown10] = useState(false);
+  const [hasShown15, setHasShown15] = useState(false);
+  const [hasShown20, setHasShown20] = useState(false);
+  const [hasShown25, setHasShown25] = useState(false);
+  const [hasShown30, setHasShown30] = useState(false);
+  const [hasShown35, setHasShown35] = useState(false);
+  const [hasShown40, setHasShown40] = useState(false);
+  const [hasShownNewLeader, setHasShownNewLeader] = useState(false);
+
+  // Celebration overlay state
+  const [celebrationVisible, setCelebrationVisible] = useState(false);
+  const [celebrationTitle, setCelebrationTitle] = useState('');
+  const [celebrationMode, setCelebrationMode] = useState<'5' | '10' | '15' | '20' | '25' | '30' | '35' | '40' | 'newLeader'>('5');
+
+  // Streak end popup state
+  const [streakEndPopupVisible, setStreakEndPopupVisible] = useState(false);
+  // Selected loss message for the current run (stable per-loss)
+  const [lossPun, setLossPun] = useState<string | null>(null);
+
+  // Particle burst state
+  const [showParticleBurst, setShowParticleBurst] = useState(false);
+
+  // Animation refs for micro animations
+  const streakScaleAnim = useRef(new Animated.Value(1)).current;
+  const diceJiggleAnim = useRef(new Animated.Value(0)).current;
+  const screenShakeAnim = useRef(new Animated.Value(0)).current;
+  const screenTiltAnim = useRef(new Animated.Value(0)).current;
+  const dimAnim = useRef(new Animated.Value(0)).current;
+  const edgeFlashAnim = useRef(new Animated.Value(0)).current;
+  
+  // New milestone animation refs
+  const goldPulseAnim = useRef(new Animated.Value(0)).current;
+  const fieryFlashAnim = useRef(new Animated.Value(0)).current;
+  const alarmFlashAnim = useRef(new Animated.Value(0)).current;
+  const electricJoltAnim = useRef(new Animated.Value(0)).current;
+  const electricJoltOpacityAnim = useRef(new Animated.Value(0)).current;
+  const vortexPulseAnim = useRef(new Animated.Value(0)).current;
+
+  const {
+    // survival controls
+    lastClaim,
+    lastAction,
+    baselineClaim,
+    turn,
+    lastPlayerRoll,
+    lastCpuRoll,
+    isRolling,
+    isBusy,
+    turnLock,
+    playerRoll,
+    playerClaim,
+    callBluff,
+    buildBanner,
+    message,
+    survivalClaims,
+    gameOver,
+    mustBluff,
+    mexicanFlashNonce,
+    // survival controls
+    startSurvival,
+    restartSurvival,
+    stopSurvival,
+    currentStreak,
+    bestStreak,
+    globalBest,
+    isSurvivalOver,
+  } = useGameStore();
+
+  // pulsing animation for the caption/title to add adrenaline
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // helpers
+  const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+  const hexToRgb = (hex: string) => {
+    const h = hex.replace('#', '');
+    const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
+  };
+  const rgbToHex = (r: number, g: number, b: number) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+
+  // compute dynamic parameters from streak
+  const normalized = clamp(currentStreak / 20, 0, 1); // 0..1 over first 20 streaks
+  const amplitude = 1 + clamp(0.06 + currentStreak * 0.008, 0.06, 0.20); // scale
+  const periodMs = Math.round(clamp(840 - currentStreak * 18, 480, 840)); // faster with streak
+
+  // color shift: from green (#E6FFE6) to red (#FF6B6B) based on normalized streak
+  const startCol = hexToRgb('#E6FFE6');
+  const endCol = hexToRgb('#FF6B6B');
+  const interp = (i: number) => Math.round(lerp(startCol[i], endCol[i], normalized));
+  const dynamicScoreColor = rgbToHex(interp(0), interp(1), interp(2));
+
+  // ensure we can restart animation & haptics when streak changes
+  const animLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const hapticTimerRef = useRef<number | null>(null);
+
+  // subtle flash on streak increment
+  const streakFlashAnim = useRef(new Animated.Value(1)).current;
+  const prevStreakRef = useRef(currentStreak);
+
+  useEffect(() => {
+    // if streak increased, trigger a subtle brightening flash
+    if (currentStreak > prevStreakRef.current) {
+      streakFlashAnim.setValue(0.5);
+      Animated.timing(streakFlashAnim, {
+        toValue: 1.0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+    prevStreakRef.current = currentStreak;
+  }, [currentStreak, streakFlashAnim]);
+
+  useEffect(() => {
+    // clear previous animation
+    if (animLoopRef.current) {
+      try { (animLoopRef.current as any).stop(); } catch {}
+      animLoopRef.current = null;
+    }
+
+    const half = Math.round(periodMs / 2);
+    const seq = Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: amplitude, duration: half, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1.0, duration: half, useNativeDriver: true }),
+    ]);
+    const loop = Animated.loop(seq);
+    animLoopRef.current = loop;
+    loop.start();
+
+    return () => {
+      if (animLoopRef.current) {
+        try { (animLoopRef.current as any).stop(); } catch {}
+        animLoopRef.current = null;
+      }
+    };
+  }, [pulseAnim, amplitude, periodMs]);
+
+  // haptics scaling and pattern
+  useEffect(() => {
+    // clear existing timer
+    if (hapticTimerRef.current) {
+      clearInterval(hapticTimerRef.current);
+      hapticTimerRef.current = null;
+    }
+
+    const intervalMs = periodMs;
+
+    const fireHaptic = () => {
+      if (isSurvivalOver) return;
+      try {
+        if (currentStreak >= 20) {
+          // strong double pulse
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 100);
+        } else if (currentStreak >= 15) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+        } else if (currentStreak >= 5) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+        } else {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        }
+      } catch {}
+    };
+
+    // start interval
+    const id = setInterval(fireHaptic, intervalMs);
+    hapticTimerRef.current = id as unknown as number;
+
+    // fire immediately once to match visual feel
+    fireHaptic();
+
+    return () => {
+      if (hapticTimerRef.current) {
+        clearInterval(hapticTimerRef.current);
+        hapticTimerRef.current = null;
+      }
+    };
+  }, [periodMs, currentStreak, isSurvivalOver]);
+
+  // Reset milestone flags when streak resets or survival restarts
+  const prevStreakForReset = useRef(currentStreak);
+  useEffect(() => {
+    // Detect streak end (went from positive to 0)
+    if (prevStreakForReset.current > 0 && currentStreak === 0) {
+      // Choose ONE loss phrase now and show the popup. Keep phrase stable until next run.
+      setLossPun(getRandomPun());
+      setStreakEndPopupVisible(true);
+    }
+    
+    if (currentStreak === 0) {
+      setHasShown5(false);
+      setHasShown10(false);
+      setHasShown15(false);
+      setHasShown20(false);
+      setHasShown25(false);
+      setHasShown30(false);
+      setHasShown35(false);
+      setHasShown40(false);
+      setHasShownNewLeader(false);
+    }
+    
+    prevStreakForReset.current = currentStreak;
+  }, [currentStreak]);
+
+  // Micro +1 streak animation (fires on every streak increment)
+  const prevStreakForMicroAnim = useRef(currentStreak);
+  useEffect(() => {
+    if (currentStreak > prevStreakForMicroAnim.current && currentStreak > 0) {
+      // Trigger micro animations
+      
+      // 1. Streak label pop + glow (550-650ms total)
+      streakScaleAnim.setValue(1);
+      Animated.sequence([
+        Animated.timing(streakScaleAnim, {
+          toValue: 1.2,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(streakScaleAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // 2. Particle burst (750-850ms)
+      setShowParticleBurst(true);
+      setTimeout(() => setShowParticleBurst(false), 800);
+
+      // 3. Dice micro-jiggle (450-500ms)
+      diceJiggleAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(diceJiggleAnim, {
+          toValue: -5,
+          duration: 225,
+          useNativeDriver: true,
+        }),
+        Animated.timing(diceJiggleAnim, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+    prevStreakForMicroAnim.current = currentStreak;
+  }, [currentStreak, streakScaleAnim, diceJiggleAnim]);
+
+  // 5-streak milestone
+  useEffect(() => {
+    if (currentStreak === 5 && !hasShown5) {
+      setHasShown5(true);
+      
+      // Screen shake
+      screenShakeAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(screenShakeAnim, { toValue: 5, duration: 50, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: -5, duration: 50, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: 3, duration: 50, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('🔥 5 in a row?! Okay RELAX.');
+      setCelebrationMode('5');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, hasShown5, screenShakeAnim]);
+
+  // 10-streak milestone
+  useEffect(() => {
+    if (currentStreak === 10 && !hasShown10) {
+      setHasShown10(true);
+      
+      // Screen shake
+      screenShakeAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(screenShakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: 5, duration: 60, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]).start();
+
+      // Edge flash (red)
+      edgeFlashAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(edgeFlashAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
+        Animated.timing(edgeFlashAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('💥 TEN IN A ROW!! DON\'T CHOKE!!!!');
+      setCelebrationMode('10');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, hasShown10, screenShakeAnim, edgeFlashAnim]);
+
+  // 15-streak milestone
+  useEffect(() => {
+    if (currentStreak === 15 && !hasShown15) {
+      setHasShown15(true);
+      
+      // Screen tilt
+      screenTiltAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(screenTiltAnim, { toValue: -0.03, duration: 150, useNativeDriver: true }),
+        Animated.timing(screenTiltAnim, { toValue: 0.03, duration: 150, useNativeDriver: true }),
+        Animated.spring(screenTiltAnim, { toValue: 0, friction: 8, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('👑 FIFTEEN. STREAK. YOU MENACE.');
+      setCelebrationMode('15');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, hasShown15, screenTiltAnim]);
+
+  // 20-streak milestone (Gold pulse aura)
+  useEffect(() => {
+    if (currentStreak === 20 && !hasShown20) {
+      setHasShown20(true);
+      
+      // Gold pulse aura
+      goldPulseAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(goldPulseAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(goldPulseAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+      ]).start();
+
+      // Heavy dice wiggle
+      diceJiggleAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(diceJiggleAnim, { toValue: -8, duration: 80, useNativeDriver: true }),
+        Animated.timing(diceJiggleAnim, { toValue: 8, duration: 80, useNativeDriver: true }),
+        Animated.timing(diceJiggleAnim, { toValue: 0, duration: 100, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('⭐ TWENTY?! You\'re entering myth territory.');
+      setCelebrationMode('20');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, hasShown20, goldPulseAnim, diceJiggleAnim]);
+
+  // 25-streak milestone (Fiery edge flash)
+  useEffect(() => {
+    if (currentStreak === 25 && !hasShown25) {
+      setHasShown25(true);
+      
+      // Fiery edge flash (orange/red)
+      fieryFlashAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(fieryFlashAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.timing(fieryFlashAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+
+      // Heavy dice bounce
+      diceJiggleAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(diceJiggleAnim, { toValue: -10, duration: 100, useNativeDriver: true }),
+        Animated.timing(diceJiggleAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('🔥 TWENTY-FIVE! This is statistically irresponsible.');
+      setCelebrationMode('25');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, hasShown25, fieryFlashAnim, diceJiggleAnim]);
+
+  // 30-streak milestone (Alarm flash + siren pulse)
+  useEffect(() => {
+    if (currentStreak === 30 && !hasShown30) {
+      setHasShown30(true);
+      
+      // Alarm-style red flash with siren pulse
+      alarmFlashAnim.setValue(0);
+      const sirenPulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(alarmFlashAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
+          Animated.timing(alarmFlashAnim, { toValue: 0, duration: 120, useNativeDriver: true }),
+        ])
+      );
+      sirenPulse.start();
+      setTimeout(() => sirenPulse.stop(), 800);
+
+      // Heavy screen shake
+      screenShakeAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(screenShakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: 5, duration: 60, useNativeDriver: true }),
+        Animated.timing(screenShakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('🚨 THIRTY. HOW ARE YOU STILL ALIVE?');
+      setCelebrationMode('30');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, hasShown30, alarmFlashAnim, screenShakeAnim]);
+
+  // 35-streak milestone (Electric jolt)
+  useEffect(() => {
+    if (currentStreak === 35 && !hasShown35) {
+      setHasShown35(true);
+      
+      // Electric jolt/jitter effect
+      electricJoltAnim.setValue(0);
+      electricJoltOpacityAnim.setValue(0);
+      
+      const jitterSequence = [];
+      for (let i = 0; i < 8; i += 1) {
+        jitterSequence.push(
+          Animated.timing(electricJoltAnim, {
+            toValue: (i % 2 === 0 ? 1 : -1) * (3 - i * 0.3),
+            duration: 40,
+            useNativeDriver: true,
+          })
+        );
+      }
+      jitterSequence.push(
+        Animated.timing(electricJoltAnim, { toValue: 0, duration: 40, useNativeDriver: true })
+      );
+      Animated.sequence(jitterSequence).start();
+      
+      // Opacity flash for cyan overlay
+      Animated.sequence([
+        Animated.timing(electricJoltOpacityAnim, { toValue: 0.25, duration: 80, useNativeDriver: true }),
+        Animated.timing(electricJoltOpacityAnim, { toValue: 0, duration: 320, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('⚡ THIRTY-FIVE! This run is illegal in several countries.');
+      setCelebrationMode('35');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, hasShown35, electricJoltAnim, electricJoltOpacityAnim]);
+
+  // 40-streak milestone (Dark vortex pulse + slow-mo)
+  useEffect(() => {
+    if (currentStreak === 40 && !hasShown40) {
+      setHasShown40(true);
+      
+      // Dark vortex pulse
+      vortexPulseAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(vortexPulseAnim, { toValue: 0.7, duration: 400, useNativeDriver: true }),
+        Animated.timing(vortexPulseAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+      ]).start();
+
+      // Slight slow-motion effect on dice (longer jiggle)
+      diceJiggleAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(diceJiggleAnim, { toValue: -12, duration: 200, useNativeDriver: true }),
+        Animated.timing(diceJiggleAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('🐉 FORTY. YOU HAVE AWAKENED SOMETHING ANCIENT.');
+      setCelebrationMode('40');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, hasShown40, vortexPulseAnim, diceJiggleAnim]);
+
+  // New Global Leader milestone
+  useEffect(() => {
+    if (currentStreak > globalBest && currentStreak > 0 && !hasShownNewLeader) {
+      setHasShownNewLeader(true);
+      
+      // Screen dim then pop
+      dimAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(dimAnim, { toValue: 0.5, duration: 200, useNativeDriver: true }),
+        Animated.timing(dimAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start();
+
+      // Show celebration overlay
+      setCelebrationTitle('🏆 NEW LEADER! YOU JUST BROKE THE SURVIVAL RECORD!');
+      setCelebrationMode('newLeader');
+      setCelebrationVisible(true);
+    }
+  }, [currentStreak, globalBest, hasShownNewLeader, dimAnim]);
+
+  const narration = (buildBanner?.() || message || '').trim();
+  const lastClaimValue = baselineClaim ?? lastClaim ?? null;
+
+  // Helper component to render claim with inline logo for Mexican
+  const renderClaim = (value: number | null | undefined) => {
+    const text = formatClaim(value);
+    if (value === 21) {
+      return (
+        <>
+          21 (Mexican <Image source={require('../assets/images/mexican-dice-logo.png')} style={{ width: 16, height: 16, marginBottom: -2 }} />)
+        </>
+      );
+    }
+    return text;
+  };
+
+  const claimText = useMemo(() => {
+    const rollPart = formatRoll(lastPlayerRoll);
+    return (
+      <>
+        Current claim: {renderClaim(lastClaimValue)} Your roll: {rollPart}
+      </>
+    );
+  }, [lastClaimValue, lastPlayerRoll]);
+
+  const [playerHi, playerLo] = facesFromRoll(lastPlayerRoll);
+  const [cpuHi, cpuLo] = facesFromRoll(lastCpuRoll);
+  const rolling = rollingAnim || isRolling;
+
+  const isGameOver = gameOver !== null;
+  const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock || isSurvivalOver;
+  const showCpuThinking = turn !== 'player' && !isGameOver;
+  const hasRolled = turn === 'player' && lastPlayerRoll !== null;
+  const rolledValue = hasRolled ? lastPlayerRoll : null;
+  const rolledCanClaim =
+    hasRolled &&
+    rolledValue !== null &&
+    (lastClaimValue == null || meetsOrBeats(rolledValue, lastClaimValue) || isAlwaysClaimable(rolledValue));
+
+  const isRivalClaimPhase = useMemo(() => {
+    if (isGameOver) return false;
+    if (turn !== 'player') return false;
+    if (lastClaim == null) return false;
+    return lastPlayerRoll == null;
+  }, [isGameOver, turn, lastClaim, lastPlayerRoll]);
+
+  const diceDisplayMode = useMemo(() => {
+    if (isRivalClaimPhase) {
+      return 'question';
+    }
+    if (turn === 'player') {
+      return lastPlayerRoll == null ? 'prompt' : 'values';
+    }
+    return 'values';
+  }, [isRivalClaimPhase, turn, lastPlayerRoll]);
+
+  const showCpuRevealDice =
+    !isGameOver &&
+    turn === 'player' &&
+    lastCpuRoll !== null &&
+    lastClaim !== null &&
+    lastPlayerRoll === null &&
+    shouldRevealCpuDice;
+
+  const claimOptions = useMemo(() => buildClaimOptions(lastClaim, lastPlayerRoll), [lastClaim, lastPlayerRoll]);
+
+  useEffect(() => setClaimPickerOpen(false), [turn]);
+
+  useEffect(() => {
+    if (turn === 'player') {
+      setCpuDiceRevealed(false);
+      setPendingCpuBluffResolution(false);
+      setShouldRevealCpuDice(false);
+    }
+  }, [turn, lastCpuRoll, lastClaim]);
+
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.15, duration: 100, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start();
+  }, [survivalClaims, fadeAnim]);
+
+  useEffect(() => {
+    if (!mexicanFlashNonce) return;
+    setShowFireworks(true);
+  }, [mexicanFlashNonce]);
+
+  const triggerRivalBluffBanner = useCallback(() => {
+    setRivalBluffBannerVisible(true);
+    rivalBluffBannerOpacity.stopAnimation();
+    rivalBluffBannerScale.stopAnimation?.();
+    rivalBluffBannerOpacity.setValue(0);
+    rivalBluffBannerScale.setValue(0.92);
+
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(rivalBluffBannerOpacity, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rivalBluffBannerScale, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.delay(450),
+      Animated.parallel([
+        Animated.timing(rivalBluffBannerOpacity, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rivalBluffBannerScale, {
+          toValue: 1.05,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      setRivalBluffBannerVisible(false);
+      rivalBluffBannerScale.setValue(1);
+    });
+  }, [rivalBluffBannerOpacity, rivalBluffBannerScale]);
+
+  function handleRollOrClaim() {
+    if (controlsDisabled) {
+      console.log('SURVIVAL: handleRollOrClaim blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
+      return;
+    }
+
+    if (hasRolled && !mustBluff && lastPlayerRoll != null) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      console.log('SURVIVAL: claiming current roll', { claim: lastPlayerRoll, lastClaimValue });
+      playerClaim(lastPlayerRoll);
+      return;
+    }
+
+    if (hasRolled && mustBluff) {
+      console.log('SURVIVAL: must bluff, cannot auto-claim', { lastClaimValue });
+      return;
+    }
+
+    console.log('SURVIVAL: rolling dice', { turn, lastClaimValue, hasRolled });
+    setRollingAnim(true);
+    Haptics.selectionAsync();
+    playerRoll();
+    setTimeout(() => setRollingAnim(false), 400);
+  }
+
+  function handleCallBluff() {
+    if (controlsDisabled) {
+      console.log('SURVIVAL: call bluff blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
+      return;
+    }
+    console.log("BLUFF: Player called Rival's bluff (Survival)", { lastClaim, lastCpuRoll, lastAction });
+
+    let rivalToldTruth: boolean | null = null;
+    if (lastClaim != null && lastCpuRoll != null) {
+      const { outcome } = resolveBluff(lastClaim, lastCpuRoll, lastAction === 'reverseVsMexican');
+      rivalToldTruth = outcome === -1;
+      console.log('BLUFF: showdown snapshot (Survival)', {
+        claim: lastClaim,
+        actual: lastCpuRoll,
+        prevWasReverseVsMexican: lastAction === 'reverseVsMexican',
+        rivalToldTruth,
+      });
+    } else {
+      console.log('BLUFF: missing data to precompute truth; using default reveal path (Survival)');
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (rivalToldTruth === true || rivalToldTruth === null) {
+      console.log("BLUFF: Rival was telling the truth – triggering reveal animation (Survival)");
+      setShouldRevealCpuDice(true);
+      setPendingCpuBluffResolution(true);
+      setCpuDiceRevealed(true);
+    } else {
+      console.log("BLUFF: Rival was bluffing – flashing GOT EM banner (Survival)");
+      setShouldRevealCpuDice(false);
+      setPendingCpuBluffResolution(false);
+      setCpuDiceRevealed(false);
+      triggerRivalBluffBanner();
+      callBluff();
+    }
+  }
+
+  function handleOpenBluff() {
+    if (controlsDisabled) return;
+    setClaimPickerOpen(true);
+  }
+
+  function handleSelectClaim(claim: number) {
+    if (controlsDisabled) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    playerClaim(claim);
+    setClaimPickerOpen(false);
+  }
+
+  const handleCpuRevealComplete = useCallback(() => {
+    if (pendingCpuBluffResolution) {
+      callBluff();
+      setPendingCpuBluffResolution(false);
+      setShouldRevealCpuDice(false);
+    }
+  }, [pendingCpuBluffResolution, callBluff]);
+
+  // Debug: lifecycle + initialization trace
+  const initialStateLoggedRef = useRef(false);
+  useEffect(() => {
+    console.log('SURVIVAL: screen mounted');
+    console.log('SURVIVAL: route params', params);
+    console.log('SURVIVAL: calling startSurvival()');
+    startSurvival();
+    setLossPun(null);
+    return () => {
+      console.log('SURVIVAL: screen unmounted -> stopSurvival()');
+      stopSurvival();
+    };
+  }, [startSurvival, stopSurvival]);
+
+  useEffect(() => {
+    if (initialStateLoggedRef.current) return;
+    console.log('SURVIVAL: initial store snapshot', {
+      turn,
+      gameOver,
+      isBusy,
+      turnLock,
+      isSurvivalOver,
+      lastClaim,
+      lastPlayerRoll,
+      lastCpuRoll,
+      currentStreak,
+      survivalClaimsCount: survivalClaims?.length ?? 0,
+    });
+    initialStateLoggedRef.current = true;
+  }, [
+    turn,
+    gameOver,
+    isBusy,
+    turnLock,
+    isSurvivalOver,
+    lastClaim,
+    lastPlayerRoll,
+    lastCpuRoll,
+    currentStreak,
+    survivalClaims,
+  ]);
+
+  return (
+    <View style={styles.root}>
+      <FeltBackground>
+        <SafeAreaView style={styles.safe}>
+          {rivalBluffBannerVisible && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.gotEmBannerContainer,
+                {
+                  opacity: rivalBluffBannerOpacity,
+                  transform: [{ scale: rivalBluffBannerScale }],
+                },
+              ]}
+            >
+              <View style={styles.gotEmBanner}>
+                <Text style={styles.gotEmBannerText}>GOT 'EM!!!!</Text>
+              </View>
+            </Animated.View>
+          )}
+          <View style={styles.content}>
+            {/* HEADER */}
+            <View style={styles.headerCard}>
+              <View style={styles.titleRow}>
+                <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Survival</Animated.Text>
+                <Image
+                  source={require('../assets/images/mexican-dice-logo.png')}
+                  style={styles.logoImage}
+                />
+                <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Mode</Animated.Text>
+              </View>
+              <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Streak: {currentStreak} | Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
+              <Text style={styles.subtle}>{claimText}</Text>
+              <Text style={styles.status} numberOfLines={2}>
+                {narration || 'Ready to roll.'}
+              </Text>
+              {showCpuThinking && (
+                <Text style={styles.subtleSmall}>The Rival thinking…</Text>
+              )}
+            </View>
+
+            {/* HISTORY BOX */}
+            <Pressable
+              onPress={() => setHistoryModalOpen(true)}
+              hitSlop={10}
+              style={({ pressed }) => [
+                styles.historyBox,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Animated.View style={{ opacity: fadeAnim }}>
+                {survivalClaims && survivalClaims.length > 0 ? (
+                  [...survivalClaims.slice(-2)].reverse().map((h, i) => (
+                    <Text key={i} style={styles.historyText} numberOfLines={1}>
+                      {h.type === 'event' ? h.text : (
+                        <>
+                          {h.who === 'player' ? 'You' : 'The Rival'} {h.claim === 41 ? 'rolled' : 'claimed'} {renderClaim(h.claim)}
+                        </>
+                      )}
+                    </Text>
+                  ))
+                ) : (
+                  <Text style={styles.historyText}>No recent events.</Text>
+                )}
+              </Animated.View>
+            </Pressable>
+
+            {/* DICE BLOCK */}
+            <Animated.View 
+              testID="dice-area" 
+              style={[
+                styles.diceArea,
+                {
+                  transform: [
+                    { translateY: diceJiggleAnim },
+                    { translateX: screenShakeAnim },
+                    { rotate: screenTiltAnim.interpolate({
+                      inputRange: [-1, 1],
+                      outputRange: ['-1rad', '1rad'],
+                    }) },
+                  ],
+                },
+              ]}
+            >
+              <View style={styles.diceRow}>
+                {showCpuThinking ? (
+                  <>
+                    <Dice
+                      value={turn === 'player' ? playerHi : cpuHi}
+                      rolling={rolling}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                    />
+                    <View style={{ width: 24 }} />
+                    <Dice
+                      value={turn === 'player' ? playerLo : cpuLo}
+                      rolling={rolling}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                    />
+                  </>
+                ) : showCpuRevealDice ? (
+                  <AnimatedDiceReveal
+                    hidden={!cpuDiceRevealed}
+                    diceValues={[cpuHi, cpuLo]}
+                    onRevealComplete={handleCpuRevealComplete}
+                  />
+                ) : (
+                  <>
+                    <Dice
+                      value={turn === 'player' ? playerHi : cpuHi}
+                      rolling={rolling}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                    />
+                    <View style={{ width: 24 }} />
+                    <Dice
+                      value={turn === 'player' ? playerLo : cpuLo}
+                      rolling={rolling}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                    />
+                  </>
+                )}
+              </View>
+            </Animated.View>
+
+            {/* ACTION BAR */}
+            <View style={styles.controls}>
+              <View style={styles.actionRow}>
+                <StyledButton
+                  label={hasRolled && !mustBluff ? 'Claim Roll' : 'Roll'}
+                  variant="success"
+                  onPress={handleRollOrClaim}
+                  style={styles.btn}
+                  disabled={controlsDisabled || (hasRolled && !rolledCanClaim)}
+                />
+                <StyledButton
+                  label="Call Bluff"
+                  variant="primary"
+                  onPress={handleCallBluff}
+                  style={styles.btn}
+                  disabled={controlsDisabled || hasRolled}
+                />
+              </View>
+
+              <View style={styles.bottomRow}>
+                <StyledButton
+                  label="Bluff Options"
+                  variant="outline"
+                  onPress={handleOpenBluff}
+                  style={styles.btnWide}
+                  disabled={controlsDisabled}
+                />
+              </View>
+
+              <View style={styles.bottomRow}>
+                <StyledButton
+                  label="New Game"
+                  variant="ghost"
+                  onPress={() => { setLossPun(null); restartSurvival(); }}
+                  style={[styles.btn, styles.newGameBtn]}
+                />
+                <StyledButton
+                  label="Menu"
+                  variant="ghost"
+                  onPress={() => router.push('/')}
+                  style={[styles.btn, styles.menuBtn]}
+                />
+                <StyledButton
+                  label="View Rules"
+                  variant="ghost"
+                  onPress={() => router.push('/rules')}
+                  style={[styles.btn, styles.newGameBtn]}
+                />
+              </View>
+            </View>
+
+            {/* FOOTER REMOVED: View Rules button omitted for Survival mode */}
+          </View>
+
+          <BluffModal
+            visible={claimPickerOpen}
+            options={claimOptions}
+            onCancel={() => setClaimPickerOpen(false)}
+            onSelect={handleSelectClaim}
+            canShowSocial={hasRolled && lastPlayerRoll === 41}
+            onShowSocial={() => handleSelectClaim(41)}
+          />
+
+          {/* EXPANDABLE HISTORY MODAL */}
+          <Modal
+            visible={historyModalOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setHistoryModalOpen(false)}
+          >
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => setHistoryModalOpen(false)}
+            />
+            <View style={styles.modalCenter}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Full History</Text>
+                  <Pressable
+                    onPress={() => setHistoryModalOpen(false)}
+                    style={({ pressed }) => [
+                      styles.closeButton,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.modalHistoryList}>
+                  {survivalClaims && survivalClaims.length > 0 ? (
+                    [...survivalClaims].reverse().map((h, i) => (
+                      <View key={i} style={styles.historyItem}>
+                        <Text style={styles.historyItemText}>
+                          {h.type === 'event' ? h.text : (
+                            <>
+                              {h.who === 'player' ? 'You' : 'The Rival'} {h.claim === 41 ? 'rolled' : 'claimed'} {renderClaim(h.claim)}
+                            </>
+                          )}
+                        </Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.noHistoryText}>No history yet.</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+        </SafeAreaView>
+      </FeltBackground>
+      <FireworksOverlay visible={showFireworks} onDone={() => setShowFireworks(false)} />
+      
+      {/* Celebration Overlay */}
+      <StreakCelebrationOverlay
+        visible={celebrationVisible}
+        title={celebrationTitle}
+        mode={celebrationMode}
+        onHide={() => setCelebrationVisible(false)}
+      />
+      
+      {/* Streak End Popup (Ominous) */}
+      <StreakEndPopup
+        visible={streakEndPopupVisible}
+        onHide={() => setStreakEndPopupVisible(false)}
+        pun={lossPun}
+      />
+      
+      {/* Particle Burst */}
+      <ParticleBurst
+        visible={showParticleBurst}
+        particleCount={5}
+        emojis={['🎲', '🔥', '🌶️', '💥', '✨']}
+        distance={25}
+        duration={800}
+        centerX={particleBurstCenterX}
+        centerY="42%"
+      />
+
+      {/* Screen effects overlays */}
+      {/* Dim overlay for new leader */}
+      <Animated.View
+        style={[
+          styles.screenOverlay,
+          { backgroundColor: 'black', opacity: dimAnim },
+        ]}
+        pointerEvents="none"
+      />
+      
+      {/* Red edge flash for 10-streak */}
+      <Animated.View
+        style={[
+          styles.screenOverlay,
+          { 
+            borderWidth: 8,
+            borderColor: '#FF0000',
+            opacity: edgeFlashAnim,
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      {/* Gold pulse aura for 20-streak */}
+      <Animated.View
+        style={[
+          styles.screenOverlay,
+          {
+            backgroundColor: '#FFD700',
+            opacity: goldPulseAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.3],
+            }),
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      {/* Fiery flash for 25-streak */}
+      <Animated.View
+        style={[
+          styles.screenOverlay,
+          {
+            borderWidth: 12,
+            borderColor: '#FF6600',
+            opacity: fieryFlashAnim,
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      {/* Alarm flash for 30-streak */}
+      <Animated.View
+        style={[
+          styles.screenOverlay,
+          {
+            backgroundColor: '#FF0000',
+            opacity: alarmFlashAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.4],
+            }),
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      {/* Electric jolt overlay for 35-streak */}
+      <Animated.View
+        style={[
+          styles.screenOverlay,
+          {
+            transform: [{ translateX: electricJoltAnim }],
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <Animated.View
+          style={[
+            styles.screenOverlay,
+            {
+              backgroundColor: '#00FFFF',
+              opacity: electricJoltOpacityAnim,
+            },
+          ]}
+        />
+      </Animated.View>
+
+      {/* Dark vortex pulse for 40-streak */}
+      <Animated.View
+        style={[
+          styles.screenOverlay,
+          {
+            backgroundColor: '#000000',
+            opacity: vortexPulseAnim,
+          },
+        ]}
+        pointerEvents="none"
+      />
+    </View>
+  );
+}
+
+const BAR_BG = '#115E38';
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#0B3A26' },
+  safe: { flex: 1 },
+  content: {
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingBottom: 20,
+  },
+  headerCard: {
+    backgroundColor: '#115E38',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 8,
+  },
+  title: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 28,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  logoImage: {
+    width: 32,
+    height: 32,
+    marginHorizontal: 8,
+  },
+  scoreLine: {
+    color: '#E6FFE6',
+    fontWeight: '600',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  subtle: {
+    color: '#E0B50C',
+    fontWeight: '800',
+    fontSize: 18,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  subtleSmall: {
+    color: '#C9F0D6',
+    opacity: 0.8,
+    textAlign: 'center',
+    fontSize: 13,
+  },
+  status: {
+    color: '#fff',
+    opacity: 0.95,
+    textAlign: 'center',
+  },
+  diceArea: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 260,
+    marginTop: -134,
+    marginBottom: 20,
+  },
+  diceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controls: {
+    backgroundColor: BAR_BG,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginTop: -150,
+    position: 'relative',
+    zIndex: 10,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 8,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 8,
+  },
+  btn: { flex: 1 },
+  newGameBtn: {
+    borderWidth: 2,
+    borderColor: '#e0b50c',
+  },
+  menuBtn: {
+    borderWidth: 2,
+    borderColor: '#063a25',
+  },
+  btnWide: { flex: 1 },
+  rollHelper: {
+    color: '#F8E9A1',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  historyBox: {
+    alignSelf: 'center',
+    width: '70%',
+    minHeight: 72,
+    backgroundColor: 'rgba(0,0,0,0.32)',
+    borderColor: '#000',
+    borderWidth: 2,
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 10,
+    justifyContent: 'center',
+    position: 'relative',
+    zIndex: 2,
+  },
+  historyText: {
+    color: '#E6FFE6',
+    textAlign: 'center',
+    fontSize: 13,
+    marginVertical: 2,
+  },
+  historyIcon: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  iconPlayer: {
+    color: '#FF6B6B',
+    fontWeight: '700',
+  },
+  iconCpu: {
+    color: '#6BFF89',
+    fontWeight: '700',
+  },
+  gotEmBannerContainer: {
+    position: 'absolute',
+    top: 360,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 25,
+  },
+  gotEmBanner: {
+    backgroundColor: '#E63946',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  gotEmBannerText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  modalCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1a4d2e',
+    borderRadius: 12,
+    padding: 20,
+    maxHeight: '70%',
+    width: '85%',
+    borderColor: '#e0b50c',
+    borderWidth: 2,
+    zIndex: 1001,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 18,
+  },
+  modalBody: {
+    marginBottom: 8,
+  },
+  modalMessage: {
+    color: '#E6FFE6',
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    color: '#E6FFE6',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  modalHistoryList: {
+    maxHeight: 400,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 8,
+    paddingHorizontal: 8,
+  },
+  historyItemIcon: {
+    fontSize: 16,
+    marginRight: 12,
+    marginTop: 2,
+    fontWeight: '700',
+  },
+  historyItemText: {
+    color: '#E6FFE6',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
+  noHistoryText: {
+    color: '#C9F0D6',
+    textAlign: 'center',
+    fontSize: 14,
+    marginVertical: 20,
+  },
+  screenOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
+  },
+});

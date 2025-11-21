@@ -1,0 +1,976 @@
+
+> mexican-dice@1.0.0 test
+> jest src/ai/cpu-bluff-analysis.spec.ts
+
+  console.log
+    
+    ╔══════════════════════════════════════════════════════════════════╗
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:72:13)
+
+  console.log
+    ║  CPU BLUFF CALLING ANALYSIS (100 games: 25 trials × 4 scenarios)║
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:73:13)
+
+  console.log
+    ╚══════════════════════════════════════════════════════════════════╝
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:74:13)
+
+  console.log
+    
+    ━━━ Weak Roll (32) ━━━
+
+      at src/ai/cpu-bluff-analysis.spec.ts:77:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Player Claim            │ Calls │ Raises │ Call Rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:78:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    ────────────────────────┼───────┼────────┼──────────
+
+      at src/ai/cpu-bluff-analysis.spec.ts:79:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Mexican (21)            │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Social Reverse (41)     │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-5 (65)                │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-4 (64)                │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-3 (63)                │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-2 (62)                │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Reverse Mexican (31)    │   17 │     8 │     68%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 6s (66)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 5s (55)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 4s (44)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 3s (33)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 2s (22)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 1s (11)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-1 (61)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-4 (54)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-3 (53)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-2 (52)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-1 (51)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-3 (43)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-2 (42)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    3-2 (32)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    
+      Category Averages:
+
+      at src/ai/cpu-bluff-analysis.spec.ts:109:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Mexican:         100% call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:110:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Reverses (31/41): 84% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:111:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Doubles:         0% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:112:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Normal Pairs:    33% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:113:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    
+    ━━━ Medium Roll (54) ━━━
+
+      at src/ai/cpu-bluff-analysis.spec.ts:77:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Player Claim            │ Calls │ Raises │ Call Rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:78:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    ────────────────────────┼───────┼────────┼──────────
+
+      at src/ai/cpu-bluff-analysis.spec.ts:79:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Mexican (21)            │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-5 (65)                │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-4 (64)                │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-3 (63)                │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-2 (62)                │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Reverse Mexican (31)    │   21 │     4 │     84%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Social Reverse (41)     │   11 │    14 │     44%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 6s (66)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 5s (55)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 4s (44)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 3s (33)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 2s (22)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 1s (11)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-1 (61)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-4 (54)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-3 (53)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-2 (52)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-1 (51)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-3 (43)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-2 (42)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    3-2 (32)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    
+      Category Averages:
+
+      at src/ai/cpu-bluff-analysis.spec.ts:109:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Mexican:         100% call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:110:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Reverses (31/41): 64% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:111:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Doubles:         0% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:112:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Normal Pairs:    33% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:113:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    
+    ━━━ Strong Roll (66) ━━━
+
+      at src/ai/cpu-bluff-analysis.spec.ts:77:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Player Claim            │ Calls │ Raises │ Call Rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:78:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    ────────────────────────┼───────┼────────┼──────────
+
+      at src/ai/cpu-bluff-analysis.spec.ts:79:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Mexican (21)            │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Reverse Mexican (31)    │   21 │     4 │     84%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-4 (64)                │   18 │     7 │     72%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-5 (65)                │   17 │     8 │     68%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-2 (62)                │   17 │     8 │     68%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Social Reverse (41)     │   16 │     9 │     64%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-3 (63)                │   16 │     9 │     64%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 6s (66)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 5s (55)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 4s (44)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 3s (33)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 2s (22)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 1s (11)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-1 (61)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-4 (54)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-3 (53)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-2 (52)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-1 (51)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-3 (43)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-2 (42)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    3-2 (32)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    
+      Category Averages:
+
+      at src/ai/cpu-bluff-analysis.spec.ts:109:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Mexican:         100% call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:110:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Reverses (31/41): 74% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:111:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Doubles:         0% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:112:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Normal Pairs:    23% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:113:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    
+    ━━━ Mexican Roll (21) ━━━
+
+      at src/ai/cpu-bluff-analysis.spec.ts:77:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Player Claim            │ Calls │ Raises │ Call Rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:78:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    ────────────────────────┼───────┼────────┼──────────
+
+      at src/ai/cpu-bluff-analysis.spec.ts:79:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Mexican (21)            │   25 │     0 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Social Reverse (41)     │   21 │     4 │     84%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-3 (63)                │   20 │     5 │     80%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-5 (65)                │   19 │     6 │     76%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-2 (62)                │   18 │     7 │     72%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Reverse Mexican (31)    │   16 │     9 │     64%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-4 (64)                │   16 │     9 │     64%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 6s (66)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 5s (55)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 4s (44)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 3s (33)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 2s (22)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 1s (11)          │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-1 (61)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-4 (54)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-3 (53)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-2 (52)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-1 (51)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-3 (43)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-2 (42)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    3-2 (32)                │    0 │    25 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:89:19
+          at Array.forEach (<anonymous>)
+          at Array.forEach (<anonymous>)
+
+  console.log
+    
+      Category Averages:
+
+      at src/ai/cpu-bluff-analysis.spec.ts:109:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Mexican:         100% call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:110:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Reverses (31/41): 74% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:111:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Doubles:         0% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:112:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+        Normal Pairs:    24% avg call rate
+
+      at src/ai/cpu-bluff-analysis.spec.ts:113:15
+          at Array.forEach (<anonymous>)
+
+  console.log
+    
+    
+    ┌──────────────────────────────────────────────────────────────┐
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:117:13)
+
+  console.log
+    │ OVERALL SUMMARY (All Scenarios Combined)                    │
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:118:13)
+
+  console.log
+    └──────────────────────────────────────────────────────────────┘
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:119:13)
+
+  console.log
+    
+    Player Claim            │ Total Calls │ Call Rate
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:136:13)
+
+  console.log
+    ────────────────────────┼─────────────┼──────────
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:137:13)
+
+  console.log
+    Mexican (21)            │        100 │    100%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-5 (65)                │         86 │     86%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-3 (63)                │         86 │     86%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-2 (62)                │         85 │     85%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-4 (64)                │         84 │     84%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Reverse Mexican (31)    │         75 │     75%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Social Reverse (41)     │         73 │     73%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 6s (66)          │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 5s (55)          │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 4s (44)          │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 3s (33)          │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 2s (22)          │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    Double 1s (11)          │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    6-1 (61)                │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-4 (54)                │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-3 (53)                │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-2 (52)                │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    5-1 (51)                │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-3 (43)                │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    4-2 (42)                │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+    3-2 (32)                │          0 │      0%
+
+      at src/ai/cpu-bluff-analysis.spec.ts:145:17
+          at Array.forEach (<anonymous>)
+
+  console.log
+
+
+      at Object.<anonymous> (src/ai/cpu-bluff-analysis.spec.ts:148:13)
+
+PASS src/ai/cpu-bluff-analysis.spec.ts
+  CPU Bluff Calling Analysis
+    ✓ CPU bluff-calling rates across multiple scenarios (100 games worth) (392 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        3.694 s, estimated 5 s
+Ran all test suites matching src/ai/cpu-bluff-analysis.spec.ts.

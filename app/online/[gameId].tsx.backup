@@ -1,0 +1,1063 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+
+import BluffModal from '../../src/components/BluffModal';
+import Dice from '../../src/components/Dice';
+import FeltBackground from '../../src/components/FeltBackground';
+import OnlineGameOverModal from '../../src/components/OnlineGameOverModal';
+import ScoreDie from '../../src/components/ScoreDie';
+import StyledButton from '../../src/components/StyledButton';
+
+import { applyClaim, CoreGameState } from '../../src/engine/coreGame';
+import { OnlineGame } from '../../src/engine/onlineActions';
+import { rollDice } from '../../src/engine/rng';
+import { buildClaimOptions, splitClaim } from '../../src/lib/claimOptions';
+import {
+  checkRateLimit,
+  clearHiddenRolls,
+  getMyCurrentRoll,
+  resolveBluffSecure,
+  saveHiddenRoll,
+} from '../../src/lib/hiddenRolls';
+import { supabase } from '../../src/lib/supabase';
+
+// ---------- helpers ----------
+function formatClaim(value: number | null | undefined): string {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  if (value === 21) return '21 (Mexican)';
+  if (value === 31) return '31 (Reverse)';
+  if (value === 41) return '41 (Social)';
+  const hi = Math.floor(value / 10);
+  const lo = value % 10;
+  return `${hi}${lo}`;
+}
+
+function formatRoll(value: number | null | undefined): string {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  const [hi, lo] = splitClaim(value);
+  return `${hi}${lo}`;
+}
+
+function facesFromRoll(value: number | null | undefined): readonly [number | null, number | null] {
+  if (typeof value !== 'number' || Number.isNaN(value)) return [null, null] as const;
+  const [hi, lo] = splitClaim(value);
+  return [hi, lo] as const;
+}
+
+export default function OnlineMatchScreen() {
+  const router = useRouter();
+  const { gameId, matchId } = useLocalSearchParams<{
+    gameId?: string | string[];
+    matchId?: string | string[];
+  }>();
+
+  // normalize id across possible params + array shapes
+  const rawId = (gameId ?? matchId) as string | string[] | undefined;
+  const normalizedId = Array.isArray(rawId) ? rawId[0] : rawId;
+
+  // DEBUG: Log route params
+  console.log('DEBUG: Route params', { gameId, matchId, rawId, normalizedId });
+
+  // ----- STATE -----
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [game, setGame] = useState<OnlineGame | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [myRoll, setMyRoll] = useState<number | null>(null);
+  const [isRolling, setIsRolling] = useState(false);
+  const [claimPickerOpen, setClaimPickerOpen] = useState(false);
+  const [gameOverModalVisible, setGameOverModalVisible] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+
+  // ----- HISTORY (derived) -----
+  const wovenHistory = useMemo(() => {
+    const anyGame = game as any;
+    if (!anyGame || !anyGame.history) return [];
+    return anyGame.history as any[];
+  }, [game]);
+
+  // Animated fade for history box - MUST BE BEFORE EARLY RETURNS
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // run a quick fade-out/in when history changes
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.15, duration: 100, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start();
+  }, [wovenHistory, fadeAnim]);
+
+  // Derive info for hooks (must be before early returns)
+  const anyGame = game as any;
+  const isPlayer1 = myUserId === game?.player1_id;
+  const myScore = game ? (isPlayer1 ? game.player1_score : game.player2_score) : 0;
+  const friendName = game
+    ? isPlayer1
+      ? anyGame.player2_username || 'Friend'
+      : anyGame.player1_username
+    : 'Friend';
+  const friendScore = game ? (isPlayer1 ? game.player2_score : game.player1_score) : 0;
+
+  const isMyTurn =
+    !!myUserId &&
+    !!game &&
+    ((isPlayer1 && game.current_player === 'player1') ||
+      (!isPlayer1 && game.current_player === 'player2'));
+
+  const claimOptions = useMemo(
+    () => buildClaimOptions(anyGame?.current_claim, myRoll),
+    [anyGame?.current_claim, myRoll]
+  );
+
+  const [dieHi, dieLo] = facesFromRoll(myRoll);
+
+  const diceDisplayMode = useMemo(() => {
+    if (!isMyTurn) return 'values';
+    return myRoll === null ? 'prompt' : 'values';
+  }, [isMyTurn, myRoll]);
+
+  // Helper component to render claim with inline logo for Mexican
+  const renderClaim = (value: number | null | undefined) => {
+    const text = formatClaim(value);
+    if (value === 21) {
+      return (
+        <>
+          21 (Mexican <Image source={require('../../assets/images/mexican-dice-logo.png')} style={{ width: 16, height: 16, marginBottom: -2 }} />)
+        </>
+      );
+    }
+    return text;
+  };
+
+  const claimText = useMemo(() => {
+    const rollPart = formatRoll(myRoll);
+    return (
+      <>
+        Current claim: {renderClaim(anyGame?.current_claim)} {'\n'}
+        Your roll: {rollPart}
+      </>
+    );
+  }, [anyGame?.current_claim, myRoll]);
+
+  const hasRolled = isMyTurn && myRoll !== null;
+  const controlsDisabled = anyGame?.status !== 'active' || !isMyTurn || isRolling;
+
+  const statusLine = (() => {
+    if (!game) return 'Ready';
+    if (anyGame.status === 'waiting') {
+      const myJoined = isPlayer1 ? anyGame.player1_joined : anyGame.player2_joined;
+      const friendJoined = isPlayer1 ? anyGame.player2_joined : anyGame.player1_joined;
+      if (!myJoined && !friendJoined) return 'Waiting for both players...';
+      if (myJoined && !friendJoined) return 'Waiting for your friend to join...';
+      if (!myJoined && friendJoined) return 'Waiting for you to join...';
+      return 'Both players joined. Starting game...';
+    }
+    if (anyGame.status === 'active') {
+      return isMyTurn ? 'Your turn' : `${friendName}'s turn`;
+    }
+    if (anyGame.status === 'finished') {
+      if (anyGame.winner) {
+        const winnerName =
+          anyGame.winner === 'player1' ? anyGame.player1_username : anyGame.player2_username;
+        return winnerName ? `${winnerName} wins the match` : 'Match finished';
+      }
+      return 'Match finished';
+    }
+    return 'Ready';
+  })();
+
+  const renderHistoryLine = (item: any) => {
+    if (!item) return '—';
+    if (typeof item === 'string') return item;
+    if (item.type === 'event' && item.text) return item.text;
+    if (item.claim) {
+      const who = item.who === 'player1'
+        ? (isPlayer1 ? 'You' : friendName)
+        : (isPlayer1 ? friendName : 'You');
+      return `${who} claimed ${formatClaim(item.claim)}`;
+    }
+    return JSON.stringify(item);
+  };
+
+  // handle missing id
+  useEffect(() => {
+    if (!normalizedId) {
+      console.warn('DEBUG: No normalized ID, setting error');
+      setError('No match id provided');
+      setLoading(false);
+    }
+  }, [normalizedId]);
+
+  // ----- LOAD USER -----
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const userId = data?.user?.id ?? null;
+      console.log('DEBUG: Loaded user', { userId });
+      setMyUserId(userId);
+    })();
+  }, []);
+
+  // ----- LOAD GAME + REALTIME SUB -----
+  useEffect(() => {
+    if (!normalizedId) {
+      console.warn('DEBUG: LOAD GAME effect skipped - no normalizedId');
+      return;
+    }
+
+    console.log('DEBUG: LOAD GAME effect starting for', normalizedId);
+    let channel: any = null;
+    setLoading(true);
+    setError(null);
+
+    (async () => {
+      try {
+        console.log('DEBUG: Fetching game from Supabase...', normalizedId);
+        const { data, error: gameErr } = await supabase
+          .from('games')
+          .select('*')
+          .eq('id', normalizedId)
+          .single();
+
+        console.log('DEBUG: Supabase response', { data, gameErr });
+
+        if (gameErr || !data) {
+          console.warn('DEBUG: Game not found or error', gameErr);
+          setError('Match not found');
+          setLoading(false);
+          return;
+        }
+
+        console.log('DEBUG: Game loaded successfully', data);
+        setGame(data as OnlineGame);
+        setLoading(false);
+
+        channel = supabase
+          .channel(`game-${normalizedId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'games',
+              filter: `id=eq.${normalizedId}`,
+            },
+            (payload) => {
+              if (payload.new) {
+                setGame(payload.new as OnlineGame);
+              }
+            }
+          )
+          .subscribe();
+      } catch (err) {
+        console.error('Failed to load game:', err);
+        setError('Failed to connect to match');
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [normalizedId]);
+
+  // ----- MARK PLAYER JOINED -----
+  useEffect(() => {
+    if (!game || !myUserId) return;
+
+    const isP1 = myUserId === game.player1_id;
+    const field = isP1 ? 'player1_joined' : 'player2_joined';
+    const alreadyJoined = isP1 ? (game as any).player1_joined : (game as any).player2_joined;
+
+    if (alreadyJoined) return;
+
+    (async () => {
+      const { error: updateError } = await supabase
+        .from('games')
+        .update({ [field]: true })
+        .eq('id', game.id);
+
+      if (updateError) {
+        console.error('Error marking player as joined:', updateError);
+      }
+    })();
+  }, [game?.id, (game as any)?.player1_joined, (game as any)?.player2_joined, myUserId]);
+
+  // ----- ACTIVATE GAME WHEN BOTH JOINED -----
+  useEffect(() => {
+    if (!game) return;
+
+    const ag = game as any;
+    if (
+      ag.status === 'waiting' &&
+      ag.player1_joined === true &&
+      ag.player2_joined === true
+    ) {
+      (async () => {
+        const { error: updateError } = await supabase
+          .from('games')
+          .update({ status: 'active' })
+          .eq('id', game.id);
+
+        if (updateError) {
+          console.error('Error activating game:', updateError);
+        }
+      })();
+    }
+  }, [game?.id, (game as any)?.status, (game as any)?.player1_joined, (game as any)?.player2_joined]);
+
+  // ----- GAME OVER MODAL -----
+  useEffect(() => {
+    if ((game as any)?.status === 'finished' && (game as any)?.winner) {
+      setGameOverModalVisible(true);
+    }
+  }, [(game as any)?.status, (game as any)?.winner]);
+
+  // ----- SYNC myRoll WITH HIDDEN ROLL WHEN IT'S MY TURN -----
+  useEffect(() => {
+    if (!game || !myUserId) return;
+
+    const isP1 = myUserId === game.player1_id;
+    const isMyTurnNow =
+      (isP1 && game.current_player === 'player1') ||
+      (!isP1 && game.current_player === 'player2');
+
+    if (!isMyTurnNow) return;
+
+    (async () => {
+      const currentRoll = await getMyCurrentRoll(game.id);
+      setMyRoll(currentRoll);
+    })();
+  }, [game, myUserId]);
+
+  // ----- MAPPERS FOR CORE ENGINE -----
+  const mapGameToCoreState = (g: OnlineGame): CoreGameState => ({
+    player1Score: g.player1_score,
+    player2Score: g.player2_score,
+    currentPlayer: g.current_player,
+    currentRoll: (g as any).current_roll,
+    currentClaim: (g as any).current_claim,
+    baselineClaim: (g as any).baseline_claim,
+    lastAction: (g as any).last_action || 'normal',
+    status: (g as any).status === 'finished' ? 'finished' : 'active',
+    winner: (g as any).winner,
+  });
+
+  const mapCoreStateToGameUpdate = (core: CoreGameState) => ({
+    player1_score: core.player1Score,
+    player2_score: core.player2Score,
+    current_player: core.currentPlayer,
+    current_roll: core.currentRoll,
+    current_claim: core.currentClaim,
+    baseline_claim: core.baselineClaim,
+    last_action: core.lastAction,
+    status: core.status,
+    winner: core.winner,
+    last_action_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  // ----- HANDLERS -----
+
+  const handleRoll = async () => {
+    if (!game || !myUserId || isRolling) return;
+    if (myRoll !== null) return;
+
+    const isP1 = myUserId === game.player1_id;
+    const myTurn =
+      (isP1 && game.current_player === 'player1') ||
+      (!isP1 && game.current_player === 'player2');
+    if (!myTurn) return;
+
+    try {
+      const allowed = await checkRateLimit(game.id, 500);
+      if (!allowed) return;
+
+      setIsRolling(true);
+
+      const { normalized } = rollDice();
+      await saveHiddenRoll(game.id, normalized);
+      setMyRoll(normalized);
+
+      await supabase
+        .from('games')
+        .update({
+          last_action_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', game.id);
+    } catch (err) {
+      console.error('Unexpected error during roll:', err);
+      setMyRoll(null);
+      Alert.alert('Error', 'An error occurred while rolling');
+    } finally {
+      setIsRolling(false);
+    }
+  };
+
+  const handleClaim = async (claimValue: number) => {
+    if (!game || !myUserId) return;
+    if (myRoll === null) return;
+
+    const isP1 = myUserId === game.player1_id;
+    const myTurn =
+      (isP1 && game.current_player === 'player1') ||
+      (!isP1 && game.current_player === 'player2');
+    if (!myTurn) return;
+
+    try {
+      const canProceed = await checkRateLimit(game.id, 500);
+      if (!canProceed) return;
+
+      const coreState = mapGameToCoreState(game);
+      const claimResult = applyClaim(coreState, claimValue, myRoll);
+
+      if (!claimResult.success) {
+        Alert.alert('Invalid claim', claimResult.error || 'Invalid claim');
+        return;
+      }
+
+      const updates = mapCoreStateToGameUpdate(claimResult.newState!);
+      const { error: updateError } = await supabase
+        .from('games')
+        .update(updates)
+        .eq('id', game.id);
+
+      if (updateError) {
+        console.error('Error updating claim:', updateError);
+        Alert.alert('Error', 'Failed to update game');
+        return;
+      }
+
+      await clearHiddenRolls(game.id);
+      setMyRoll(null);
+      setClaimPickerOpen(false);
+    } catch (err) {
+      console.error('Unexpected error during claim:', err);
+      Alert.alert('Error', 'An unexpected error occurred');
+    }
+  };
+
+  const handleCallBluff = async () => {
+    if (!game || !(game as any).current_claim || !myUserId) return;
+
+    const isP1 = myUserId === game.player1_id;
+    const myTurn =
+      (isP1 && game.current_player === 'player1') ||
+      (!isP1 && game.current_player === 'player2');
+    if (!myTurn) return;
+
+    try {
+      const canProceed = await checkRateLimit(game.id, 500);
+      if (!canProceed) return;
+
+      const claimNumber = parseInt(String((game as any).current_claim), 10);
+      const bluffResult = await resolveBluffSecure(game.id, claimNumber);
+
+      setMyRoll(null);
+      await clearHiddenRolls(game.id);
+
+      if ((bluffResult as any).error) {
+        Alert.alert('Bluff Error', `Bluff resolution error: ${(bluffResult as any).error}`);
+        return;
+      }
+
+      let message = '';
+
+      if (bluffResult.winner) {
+        const winnerName =
+          bluffResult.winner === 'player1'
+            ? (game as any).player1_username
+            : (game as any).player2_username;
+
+        message = winnerName ? `${winnerName} wins the game!` : 'Game finished!';
+      } else {
+        if (typeof bluffResult.outcome !== 'undefined') {
+          message += bluffResult.outcome > 0 ? 'Bluff caught! ' : 'Truth told! ';
+        }
+        if (typeof bluffResult.penalty !== 'undefined') {
+          message += `Penalty: ${bluffResult.penalty} point${
+            Math.abs(bluffResult.penalty) === 1 ? '' : 's'
+          }.`;
+        }
+      }
+
+      if (!message) message = 'Bluff resolved.';
+      Alert.alert('Bluff Result', message);
+    } catch (err) {
+      console.error('Unexpected error during bluff call:', err);
+      Alert.alert('Error', 'An unexpected error occurred while resolving the bluff.');
+    }
+  };
+
+  const handleLeaveMatch = async () => {
+    if (!game || !myUserId) return;
+
+    try {
+      const isP1 = myUserId === game.player1_id;
+      const winner = isP1 ? 'player2' : 'player1';
+
+      const { error: updateError } = await supabase
+        .from('games')
+        .update({
+          status: 'finished',
+          winner,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', game.id);
+
+      if (updateError) {
+        console.error('Error leaving match:', updateError);
+        Alert.alert('Error', 'Failed to leave match');
+        return;
+      }
+
+      router.replace('/');
+    } catch (err) {
+      console.error('Unexpected error leaving match:', err);
+      Alert.alert('Error', 'An error occurred while leaving the match');
+    }
+  };
+
+  // ----- EARLY RETURNS -----
+  if (loading) {
+    console.warn('DEBUG: early return - loading=true');
+    return (
+      <FeltBackground>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E0B50C" />
+          <Text style={styles.loadingText}>Connecting to your match...</Text>
+        </View>
+      </FeltBackground>
+    );
+  }
+
+  if (error) {
+    console.warn('DEBUG: early return - error=', error);
+    return (
+      <FeltBackground>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.hintText}>Please go back and try again.</Text>
+          <StyledButton
+            label="Back to Menu"
+            variant="primary"
+            onPress={() => router.replace('/')}
+            style={{ marginTop: 20, minWidth: 200 }}
+          />
+        </View>
+      </FeltBackground>
+    );
+  }
+
+  if (!game) {
+    console.warn('DEBUG: early return - !game with loading=', loading);
+    return (
+      <FeltBackground>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Match not found</Text>
+          <StyledButton
+            label="Back to Menu"
+            variant="primary"
+            onPress={() => router.replace('/')}
+            style={{ marginTop: 20, minWidth: 200 }}
+          />
+        </View>
+      </FeltBackground>
+    );
+  }
+
+  console.log('DEBUG: Rendering main UI', { game: !!game, myUserId, status: anyGame?.status });
+  console.log('DEBUG: Layout updated, rendering main UI');
+
+  // TEST RETURN - verify component renders
+  console.log("DEBUG: TEST RETURN – should show big RED screen");
+  return (
+    <View style={{ flex: 1, backgroundColor: 'red', alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold' }}>ONLINE MATCH TEST</Text>
+      <Text style={{ color: 'white', fontSize: 16, marginTop: 10 }}>Game ID: {normalizedId?.slice(0, 8)}</Text>
+      <Text style={{ color: 'white', fontSize: 16 }}>Status: {anyGame?.status}</Text>
+      <Text style={{ color: 'white', fontSize: 16 }}>User ID: {myUserId ? 'YES' : 'NO'}</Text>
+    </View>
+  );
+}
+
+const BAR_BG = '#115E38';
+    <View style={styles.root}>
+      <FeltBackground>
+        <SafeAreaView style={styles.safe}>
+          <View style={styles.content}>
+            {/* HEADER */}
+            <View style={styles.headerCard}>
+              {/* Top row: Player avatar, title, Friend avatar */}
+              <View style={styles.headerRow}>
+                {/* Player Column */}
+                <View style={styles.playerColumn}>
+                  <View style={styles.avatarCircle}>
+                    <Image
+                      source={require('../../assets/images/User.png')}
+                      style={styles.userAvatarImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <Text style={styles.playerScoreLabel}>
+                    You: {myScore}
+                  </Text>
+                  <ScoreDie points={myScore} style={styles.scoreDie} />
+                </View>
+
+                {/* Title Column - Now shows current claim */}
+                <View style={styles.titleColumn}>
+                  <Text style={styles.subtle}>{claimText}</Text>
+                </View>
+
+                {/* Friend Column */}
+                <View style={styles.playerColumn}>
+                  <View style={styles.avatarCircle}>
+                    <Image
+                      source={require('../../assets/images/Rival.png')}
+                      style={styles.rivalAvatarImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                  <Text style={styles.playerScoreLabel}>
+                    {friendName}: {friendScore}
+                  </Text>
+                  <ScoreDie points={friendScore} style={styles.scoreDie} />
+                </View>
+              </View>
+
+              {/* Status text below */}
+              <Text style={styles.status} numberOfLines={2}>
+                {statusLine}
+              </Text>
+              <Text style={styles.subtleSmall}>
+                {isMyTurn
+                  ? 'Roll, then claim or bluff wisely.'
+                  : 'Waiting on your friend...'}
+              </Text>
+            </View>
+
+            {/* HISTORY BOX - shows last two claims/events */}
+            <Pressable
+              onPress={() => setHistoryModalOpen(true)}
+              hitSlop={10}
+              style={({ pressed }) => [
+                styles.historyBox,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <Animated.View style={{ opacity: fadeAnim }}>
+                {wovenHistory.length ? (
+                  wovenHistory
+                    .slice(-2)
+                    .reverse()
+                    .map((item, idx) => (
+                      <Text key={idx} style={styles.historyText} numberOfLines={1}>
+                        {renderHistoryLine(item)}
+                      </Text>
+                    ))
+                ) : (
+                  <Text style={styles.historyText}>No recent events.</Text>
+                )}
+              </Animated.View>
+            </Pressable>
+
+            {/* DICE BLOCK */}
+            <View style={styles.diceArea}>
+              <View style={styles.diceRow}>
+                <Dice
+                  value={dieHi}
+                  rolling={isRolling}
+                  displayMode={diceDisplayMode}
+                  overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                />
+                <View style={{ width: 24 }} />
+                <Dice
+                  value={dieLo}
+                  rolling={isRolling}
+                  displayMode={diceDisplayMode}
+                  overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                />
+              </View>
+            </View>
+
+            {/* ACTION BAR */}
+            <View style={styles.controls}>
+              <View style={styles.actionRow}>
+                <StyledButton
+                  label={hasRolled ? 'Claim Roll' : 'Roll'}
+                  variant="success"
+                  onPress={() => {
+                    if (hasRolled && myRoll !== null) handleClaim(myRoll);
+                    else handleRoll();
+                  }}
+                  style={styles.btn}
+                  disabled={controlsDisabled}
+                />
+                <StyledButton
+                  label="Call Bluff"
+                  variant="primary"
+                  onPress={handleCallBluff}
+                  style={styles.btn}
+                  disabled={controlsDisabled || hasRolled || !anyGame.current_claim}
+                />
+              </View>
+
+              <View style={styles.bottomRow}>
+                <StyledButton
+                  label="Bluff Options"
+                  variant="outline"
+                  onPress={() => setClaimPickerOpen(true)}
+                  style={styles.btnWide}
+                  disabled={controlsDisabled || !hasRolled}
+                />
+              </View>
+
+              <View style={styles.bottomRow}>
+                <StyledButton
+                  label="Leave Match"
+                  variant="ghost"
+                  onPress={handleLeaveMatch}
+                  style={[styles.btn, styles.ghostBtn]}
+                />
+                <StyledButton
+                  label="Menu"
+                  variant="ghost"
+                  onPress={() => router.replace('/')}
+                  style={[styles.btn, styles.ghostBtn]}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* CLAIM PICKER */}
+          <BluffModal
+            visible={claimPickerOpen}
+            options={claimOptions}
+            onCancel={() => setClaimPickerOpen(false)}
+            onSelect={handleClaim}
+          />
+
+          {/* EXPANDABLE HISTORY MODAL */}
+          <Modal
+            visible={historyModalOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setHistoryModalOpen(false)}
+          >
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => setHistoryModalOpen(false)}
+            />
+            <View style={styles.modalCenter}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Full History</Text>
+                  <Pressable
+                    onPress={() => setHistoryModalOpen(false)}
+                    style={({ pressed }) => [
+                      styles.closeButton,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </Pressable>
+                </View>
+                <View style={styles.modalHistoryList}>
+                  {wovenHistory.length ? (
+                    [...wovenHistory].reverse().map((item, idx) => (
+                      <View key={idx} style={styles.historyItem}>
+                        <Text style={styles.historyItemText}>{renderHistoryLine(item)}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={styles.noHistoryText}>No history yet.</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          <OnlineGameOverModal
+            visible={gameOverModalVisible}
+            didIWin={(game as any).winner === (isPlayer1 ? 'player1' : 'player2')}
+            myScore={myScore}
+            opponentScore={friendScore}
+            opponentName={friendName || 'Friend'}
+            onClose={() => setGameOverModalVisible(false)}
+          />
+        </SafeAreaView>
+      </FeltBackground>
+
+      {/* DEBUG PANEL - positioned outside SafeAreaView to not interfere */}
+      <View style={styles.debugPanel} pointerEvents="none">
+        <Text style={styles.debugText}>🐛 DEBUG</Text>
+        <Text style={styles.debugText}>ID: {normalizedId?.slice(0, 8) || 'NONE'}</Text>
+        <Text style={styles.debugText}>game: {game ? 'YES' : 'NO'}</Text>
+        <Text style={styles.debugText}>status: {anyGame?.status || '—'}</Text>
+        <Text style={styles.debugText}>user: {myUserId ? 'YES' : 'NO'}</Text>
+      </View>
+    </View>
+  );
+}
+
+const BAR_BG = '#115E38';
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#0B3A26' },
+  safe: { flex: 1 },
+  content: {
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingBottom: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#0B3A26',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 16,
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  hintText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+  },
+  headerCard: {
+    position: 'relative',
+    backgroundColor: '#115E38',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 8,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  playerColumn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 70,
+  },
+  avatarCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#E0B50C',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  userAvatarImage: {
+    width: 62,
+    height: 62,
+  },
+  rivalAvatarImage: {
+    width: 56,
+    height: 56,
+  },
+  playerScoreLabel: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 18,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  scoreDie: {
+    marginTop: 6,
+  },
+  titleColumn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    marginTop: 75,
+  },
+  subtle: {
+    color: '#E0B50C',
+    fontWeight: '800',
+    fontSize: 18,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  subtleSmall: {
+    color: '#C9F0D6',
+    opacity: 0.8,
+    textAlign: 'center',
+    fontSize: 13,
+  },
+  status: {
+    color: '#fff',
+    opacity: 0.95,
+    textAlign: 'center',
+  },
+  historyBox: {
+    alignSelf: 'center',
+    width: '70%',
+    minHeight: 72,
+    backgroundColor: 'rgba(0,0,0,0.32)',
+    borderColor: '#000',
+    borderWidth: 2,
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 10,
+    justifyContent: 'center',
+    position: 'relative',
+    zIndex: 2,
+  },
+  historyText: {
+    color: '#E6FFE6',
+    textAlign: 'center',
+    fontSize: 13,
+    marginVertical: 2,
+  },
+  diceArea: {
+    flexGrow: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 260,
+    marginTop: -134,
+    marginBottom: 0,
+  },
+  diceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controls: {
+    backgroundColor: BAR_BG,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginTop: -150,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 8,
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 8,
+  },
+  btn: { flex: 1 },
+  btnWide: { flex: 1 },
+  ghostBtn: { borderWidth: 2, borderColor: '#e0b50c' },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  modalCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1a4d2e',
+    borderRadius: 12,
+    padding: 20,
+    maxHeight: '70%',
+    width: '85%',
+    borderColor: '#e0b50c',
+    borderWidth: 2,
+    zIndex: 1001,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 18,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    color: '#E6FFE6',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  modalHistoryList: {
+    maxHeight: 400,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 8,
+    paddingHorizontal: 8,
+  },
+  historyItemText: {
+    color: '#E6FFE6',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
+  noHistoryText: {
+    color: '#C9F0D6',
+    textAlign: 'center',
+    fontSize: 14,
+    marginVertical: 20,
+  },
+  // DEBUG STYLES
+  debugPanel: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E0B50C',
+    zIndex: 9999,
+  },
+  debugText: {
+    color: '#E0B50C',
+    fontSize: 9,
+    fontFamily: 'monospace',
+    marginVertical: 0.5,
+  },
+});
