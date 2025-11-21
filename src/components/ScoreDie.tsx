@@ -5,6 +5,7 @@ import Dice from './Dice';
 type ScoreDieProps = {
   points: number; // 0–5
   style?: ViewStyle;
+  size?: number;
 };
 
 /**
@@ -23,7 +24,7 @@ const clampFace = (points: number): number => {
   return face;
 };
 
-export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style }) => {
+export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style, size = 30 }) => {
   const targetFace = useMemo(() => clampFace(points), [points]);
 
   const [face, setFace] = useState<number>(() => targetFace);
@@ -64,24 +65,24 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style }) => {
     <Animated.View
       style={[
         styles.wrapper,
-        style,
         {
+          width: size,
+          height: size,
+          borderRadius: size * 0.2,
           transform: [{ rotateY }],
         },
+        style,
       ]}
     >
-      <Dice value={face} size={30} rolling={false} displayMode="values" />
+      <Dice value={face} size={size} rolling={false} displayMode="values" />
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   wrapper: {
-    width: 30,
-    height: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
     overflow: 'hidden',
   },
 });

@@ -662,11 +662,8 @@ export default function Game() {
                       ],
                     }}
                   >
-                    <Text style={styles.playerScoreLabel}>
-                      You: {playerScore}
-                    </Text>
+                    <ScoreDie points={playerScore} style={styles.scoreDie} size={38} />
                   </Animated.View>
-                  <ScoreDie points={playerScore} style={styles.scoreDie} />
                 </View>
 
                 {/* Title Column - Now shows current claim */}
@@ -691,11 +688,8 @@ export default function Game() {
                       ],
                     }}
                   >
-                    <Text style={styles.playerScoreLabel}>
-                      Rival: {cpuScore}
-                    </Text>
+                    <ScoreDie points={cpuScore} style={styles.scoreDie} size={38} />
                   </Animated.View>
-                  <ScoreDie points={cpuScore} style={styles.scoreDie} />
                 </View>
               </View>
 
@@ -1077,7 +1071,7 @@ const styles = StyleSheet.create({
   },
   gotEmBannerContainer: {
     position: 'absolute',
-    top: 320,
+    top: 270,
     left: 0,
     right: 0,
     alignItems: 'center',
