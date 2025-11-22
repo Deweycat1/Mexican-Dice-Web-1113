@@ -184,13 +184,8 @@ export const useGameStore = create<Store>((set, get) => {
 
   const recordSurvivalRun = async (streak: number) => {
     try {
-      await fetch('/api/survival-average', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ streak }),
-      });
       try {
-        // Also notify server of this device's survival run so we can track per-device bests
+        // Notify server of this device's survival run so we can track per-device bests
         // Use deviceId stored locally (getOrCreateDeviceId)
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { getOrCreateDeviceId } = require('../utils/deviceId');
