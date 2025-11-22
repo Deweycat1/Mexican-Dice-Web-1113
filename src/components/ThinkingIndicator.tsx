@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Image } from 'react-native';
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -65,16 +65,15 @@ export default function ThinkingIndicator({
           },
         ]}
       >
-        <Text
-          style={[
-            styles.brainEmoji,
-            {
-              fontSize: size * 0.6,
-            },
-          ]}
-        >
-          🧠
-        </Text>
+        <Image
+          source={require('../../assets/images/Rival.png')}
+          style={{
+            // Increase size by 25% (0.6 * 1.25 = 0.75)
+            width: size * 0.75,
+            height: size * 0.75,
+            resizeMode: 'contain',
+          }}
+        />
       </View>
     );
   }
