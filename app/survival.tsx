@@ -62,8 +62,14 @@ export default function Survival() {
   const [cpuDiceRevealed, setCpuDiceRevealed] = useState(false);
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
   const [shouldRevealCpuDice, setShouldRevealCpuDice] = useState(false);
+  const [isRevealAnimating, setIsRevealAnimating] = useState(false);
+  const socialRevealNonceRef = useRef(0);
+  const socialBannerNonceRef = useRef(0);
+  const [showSocialReveal, setShowSocialReveal] = useState(false);
+  const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
+  const [socialRevealHidden, setSocialRevealHidden] = useState(true);
   const [rivalBluffBannerVisible, setRivalBluffBannerVisible] = useState(false);
-  const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | null>(null);
+  const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | 'social' | null>(null);
   const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
 
@@ -127,6 +133,9 @@ export default function Survival() {
     gameOver,
     mustBluff,
     mexicanFlashNonce,
+    cpuSocialDice,
+    cpuSocialRevealNonce,
+    socialBannerNonce,
     // survival controls
     startSurvival,
     restartSurvival,
@@ -616,6 +625,18 @@ export default function Survival() {
     lastPlayerRoll === null &&
     shouldRevealCpuDice;
 
+  const currentBluffBannerStyle = useMemo(() => {
+    if (rivalBluffBannerType === 'social') return styles.bluffBannerSocial;
+    if (rivalBluffBannerType === 'got-em') return styles.bluffBannerSuccess;
+    return styles.bluffBannerFail;
+  }, [rivalBluffBannerType]);
+
+  const currentBluffBannerText = useMemo(() => {
+    if (rivalBluffBannerType === 'social') return '🍻 SOCIAL!!! 🍻';
+    if (rivalBluffBannerType === 'got-em') return "GOT 'EM!!!!";
+    return 'WOMP WOMP';
+  }, [rivalBluffBannerType]);
+
   const claimOptions = useMemo(() => buildClaimOptions(lastClaim, lastPlayerRoll), [lastClaim, lastPlayerRoll]);
 
   useEffect(() => setClaimPickerOpen(false), [turn]);
@@ -641,7 +662,7 @@ export default function Survival() {
     setShowFireworks(true);
   }, [mexicanFlashNonce]);
 
-  const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp') => {
+  const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp' | 'social') => {
     setRivalBluffBannerType(type);
     setRivalBluffBannerVisible(true);
     rivalBluffBannerOpacity.stopAnimation();
@@ -682,8 +703,15 @@ export default function Survival() {
     });
   }, [rivalBluffBannerOpacity, rivalBluffBannerScale]);
 
+  useEffect(() => {
+    if (socialBannerNonce > socialBannerNonceRef.current) {
+      triggerRivalBluffBanner('social');
+    }
+    socialBannerNonceRef.current = socialBannerNonce;
+  }, [socialBannerNonce, triggerRivalBluffBanner]);
+
   function handleRollOrClaim() {
-    if (controlsDisabled) {
+    if (controlsDisabled || isRevealAnimating) {
       console.log('SURVIVAL: handleRollOrClaim blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
       return;
     }
@@ -730,6 +758,7 @@ export default function Survival() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     console.log('BLUFF: Revealing Rival dice regardless of truth state (Survival)');
+    setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
     setPendingCpuBluffResolution(true);
     setCpuDiceRevealed(true);
@@ -753,12 +782,30 @@ export default function Survival() {
   }
 
   const handleCpuRevealComplete = useCallback(() => {
+    setIsRevealAnimating(false);
     if (pendingCpuBluffResolution) {
       callBluff();
       setPendingCpuBluffResolution(false);
       setShouldRevealCpuDice(false);
     }
   }, [pendingCpuBluffResolution, callBluff]);
+
+  const handleSocialRevealComplete = useCallback(() => {
+    setShowSocialReveal(false);
+    setSocialRevealHidden(true);
+    setIsRevealAnimating(false);
+  }, []);
+
+  useEffect(() => {
+    if (cpuSocialDice && cpuSocialRevealNonce > socialRevealNonceRef.current) {
+      socialRevealNonceRef.current = cpuSocialRevealNonce;
+      setSocialDiceValues(cpuSocialDice);
+      setShowSocialReveal(true);
+      setSocialRevealHidden(true);
+      setIsRevealAnimating(true);
+      requestAnimationFrame(() => setSocialRevealHidden(false));
+    }
+  }, [cpuSocialDice, cpuSocialRevealNonce]);
 
   // Debug: lifecycle + initialization trace
   const initialStateLoggedRef = useRef(false);
@@ -820,13 +867,11 @@ export default function Survival() {
               <View
                 style={[
                   styles.bluffBanner,
-                  rivalBluffBannerType === 'got-em'
-                    ? styles.bluffBannerSuccess
-                    : styles.bluffBannerFail,
+                  currentBluffBannerStyle,
                 ]}
               >
                 <Text style={styles.gotEmBannerText}>
-                  {rivalBluffBannerType === 'got-em' ? "GOT 'EM!!!!" : 'WOMP WOMP'}
+                  {currentBluffBannerText}
                 </Text>
               </View>
             </Animated.View>
@@ -896,9 +941,9 @@ export default function Survival() {
               ]}
             >
               <View style={styles.diceRow}>
-                {showCpuThinking ? (
-                  <>
-                    <Dice
+            {showCpuThinking ? (
+              <>
+                <Dice
                       value={turn === 'player' ? playerHi : cpuHi}
                       rolling={rolling}
                       displayMode={diceDisplayMode}
@@ -912,12 +957,18 @@ export default function Survival() {
                       overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
                     />
                   </>
-                ) : showCpuRevealDice ? (
-                  <AnimatedDiceReveal
-                    hidden={!cpuDiceRevealed}
-                    diceValues={[cpuHi, cpuLo]}
-                    onRevealComplete={handleCpuRevealComplete}
-                  />
+            ) : showSocialReveal ? (
+              <AnimatedDiceReveal
+                hidden={socialRevealHidden}
+                diceValues={socialDiceValues}
+                onRevealComplete={handleSocialRevealComplete}
+              />
+            ) : showCpuRevealDice ? (
+              <AnimatedDiceReveal
+                hidden={!cpuDiceRevealed}
+                diceValues={[cpuHi, cpuLo]}
+                onRevealComplete={handleCpuRevealComplete}
+              />
                 ) : (
                   <>
                     <Dice
@@ -946,7 +997,7 @@ export default function Survival() {
                   variant="success"
                   onPress={handleRollOrClaim}
                   style={styles.btn}
-                  disabled={controlsDisabled || (hasRolled && !rolledCanClaim)}
+                  disabled={controlsDisabled || isRevealAnimating || (hasRolled && !rolledCanClaim)}
                 />
                 <StyledButton
                   label="Call Bluff"
@@ -963,7 +1014,7 @@ export default function Survival() {
                   variant="outline"
                   onPress={handleOpenBluff}
                   style={styles.btnWide}
-                  disabled={controlsDisabled}
+                  disabled={controlsDisabled || isRevealAnimating}
                 />
               </View>
 
@@ -1346,6 +1397,10 @@ const styles = StyleSheet.create({
   bluffBannerFail: {
     backgroundColor: '#E63946',
     borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  bluffBannerSocial: {
+    backgroundColor: '#C0C0C0',
+    borderColor: 'rgba(255, 255, 255, 0.65)',
   },
   gotEmBannerText: {
     color: '#FFFFFF',

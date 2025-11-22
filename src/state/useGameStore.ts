@@ -68,6 +68,9 @@ export type Store = {
   mustBluff: boolean;
   message: string;
   mexicanFlashNonce: number;
+  cpuSocialDice: DicePair | null;
+  cpuSocialRevealNonce: number;
+  socialBannerNonce: number;
   
   // Turn timing tracking
   playerTurnStartTime: number | null;
@@ -459,6 +462,7 @@ export const useGameStore = create<Store>((set, get) => {
       lastCpuRoll: null,
       mustBluff: false,
       isRolling: false,
+      cpuSocialDice: null,
     });
   };
 
@@ -482,6 +486,9 @@ export const useGameStore = create<Store>((set, get) => {
       isBusy: false,
       gameOver: null,
       mexicanFlashNonce: 0,
+      cpuSocialDice: null,
+      cpuSocialRevealNonce: 0,
+      socialBannerNonce: 0,
       playerTurnStartTime: null,
       turn: 'player',
     });
@@ -507,6 +514,9 @@ export const useGameStore = create<Store>((set, get) => {
       isBusy: false,
       gameOver: null,
       mexicanFlashNonce: 0,
+      cpuSocialDice: null,
+      cpuSocialRevealNonce: 0,
+      socialBannerNonce: 0,
       playerTurnStartTime: null,
       turn: 'player',
     });
@@ -670,13 +680,20 @@ export const useGameStore = create<Store>((set, get) => {
         pushClaim('cpu', 41, 41);
         // Record claim statistics (async, non-blocking)
         void recordClaimStat(41);
-        
+
         pendingCpuRaise = null;
+        const socialDice: DicePair = [
+          Math.max(dicePair[0], dicePair[1]),
+          Math.min(dicePair[0], dicePair[1]),
+        ];
         resetRound();
-        set({
+        set((prevState) => ({
+          cpuSocialDice: socialDice,
+          cpuSocialRevealNonce: prevState.cpuSocialRevealNonce + 1,
+          socialBannerNonce: prevState.socialBannerNonce + 1,
           turn: 'player',
           message: 'The Rival shows Social (41). Round resets.',
-        });
+        }));
         return;
       }
 
@@ -817,6 +834,9 @@ export const useGameStore = create<Store>((set, get) => {
     mustBluff: false,
     message: `Welcome to Mexican ${MEXICAN_ICON} Dice!`,
     mexicanFlashNonce: 0,
+    cpuSocialDice: null,
+    cpuSocialRevealNonce: 0,
+    socialBannerNonce: 0,
     
     // Turn timing tracking
     playerTurnStartTime: null,
@@ -860,6 +880,9 @@ export const useGameStore = create<Store>((set, get) => {
         isBusy: false,
         gameOver: null,
         mexicanFlashNonce: 0,
+        cpuSocialDice: null,
+        cpuSocialRevealNonce: 0,
+        socialBannerNonce: 0,
       });
     },
 
@@ -987,10 +1010,11 @@ export const useGameStore = create<Store>((set, get) => {
         pushClaim('player', 41, state.lastPlayerRoll);
 
         resetRound();
-        set({
+        set((prevState) => ({
           turn: 'cpu',
           message: 'Social (41) shown — round resets.',
-        });
+          socialBannerNonce: prevState.socialBannerNonce + 1,
+        }));
         set({ isBusy: false });
         endTurnLock();
         cpuTurn();

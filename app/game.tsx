@@ -117,14 +117,20 @@ export default function Game() {
   const [cpuDiceRevealed, setCpuDiceRevealed] = useState(false);
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
   const [scoreDiceAnimKey, setScoreDiceAnimKey] = useState(0);
+  const socialRevealNonceRef = useRef(0);
+  const socialBannerNonceRef = useRef(0);
+  const [showSocialReveal, setShowSocialReveal] = useState(false);
+  const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
+  const [socialRevealHidden, setSocialRevealHidden] = useState(true);
 
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
   const [shouldRevealCpuDice, setShouldRevealCpuDice] = useState(false);
   const [rivalBluffBannerVisible, setRivalBluffBannerVisible] = useState(false);
-  const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | null>(null);
+  const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | 'social' | null>(null);
   const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
+  const [isRevealAnimating, setIsRevealAnimating] = useState(false);
 
   // End-of-game banner state
   type EndBannerType = 'win' | 'lose' | null;
@@ -166,6 +172,9 @@ export default function Game() {
     gameOver,
     mustBluff,
     mexicanFlashNonce,
+    cpuSocialDice,
+    cpuSocialRevealNonce,
+    socialBannerNonce,
   } = useGameStore();
 
   const narration = (buildBanner?.() || message || '').trim();
@@ -231,6 +240,18 @@ export default function Game() {
     lastClaim !== null &&
     lastPlayerRoll === null &&
     shouldRevealCpuDice;
+
+  const currentBluffBannerStyle = useMemo(() => {
+    if (rivalBluffBannerType === 'social') return styles.bluffBannerSocial;
+    if (rivalBluffBannerType === 'got-em') return styles.bluffBannerSuccess;
+    return styles.bluffBannerFail;
+  }, [rivalBluffBannerType]);
+
+  const currentBluffBannerText = useMemo(() => {
+    if (rivalBluffBannerType === 'social') return '🍻 SOCIAL!!! 🍻';
+    if (rivalBluffBannerType === 'got-em') return "GOT 'EM!!!!";
+    return 'WOMP WOMP';
+  }, [rivalBluffBannerType]);
 
   const claimOptions = useMemo(() => buildClaimOptions(lastClaim, lastPlayerRoll), [lastClaim, lastPlayerRoll]);
 
@@ -420,7 +441,7 @@ export default function Game() {
     }
   }, [gameOver, showEndBanner]);
 
-  const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp') => {
+  const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp' | 'social') => {
     setRivalBluffBannerType(type);
     setRivalBluffBannerVisible(true);
     rivalBluffBannerOpacity.stopAnimation();
@@ -461,8 +482,15 @@ export default function Game() {
     });
   }, [rivalBluffBannerOpacity, rivalBluffBannerScale]);
 
+  useEffect(() => {
+    if (socialBannerNonce > socialBannerNonceRef.current) {
+      triggerRivalBluffBanner('social');
+    }
+    socialBannerNonceRef.current = socialBannerNonce;
+  }, [socialBannerNonce, triggerRivalBluffBanner]);
+
   function handleRollOrClaim() {
-    if (controlsDisabled) return;
+    if (controlsDisabled || isRevealAnimating) return;
 
     if (hasRolled && !mustBluff && lastPlayerRoll != null) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -503,6 +531,7 @@ export default function Game() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     console.log('BLUFF: Revealing Rival dice regardless of truth state');
+    setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
     setPendingCpuBluffResolution(true);
     setCpuDiceRevealed(true);
@@ -526,12 +555,30 @@ export default function Game() {
   }
 
   const handleCpuRevealComplete = useCallback(() => {
+    setIsRevealAnimating(false);
     if (pendingCpuBluffResolution) {
       callBluff();
       setPendingCpuBluffResolution(false);
       setShouldRevealCpuDice(false);
     }
   }, [pendingCpuBluffResolution, callBluff]);
+
+  const handleSocialRevealComplete = useCallback(() => {
+    setShowSocialReveal(false);
+    setSocialRevealHidden(true);
+    setIsRevealAnimating(false);
+  }, []);
+
+  useEffect(() => {
+    if (cpuSocialDice && cpuSocialRevealNonce > socialRevealNonceRef.current) {
+      socialRevealNonceRef.current = cpuSocialRevealNonce;
+      setSocialDiceValues(cpuSocialDice);
+      setShowSocialReveal(true);
+      setSocialRevealHidden(true);
+      setIsRevealAnimating(true);
+      requestAnimationFrame(() => setSocialRevealHidden(false));
+    }
+  }, [cpuSocialDice, cpuSocialRevealNonce]);
 
   // Animated interpolations for score loss animation
   const userScoreScale = userScoreAnim.interpolate({
@@ -615,13 +662,11 @@ export default function Game() {
               <View
                 style={[
                   styles.bluffBanner,
-                  rivalBluffBannerType === 'got-em'
-                    ? styles.bluffBannerSuccess
-                    : styles.bluffBannerFail,
+                  currentBluffBannerStyle,
                 ]}
               >
                 <Text style={styles.gotEmBannerText}>
-                  {rivalBluffBannerType === 'got-em' ? "GOT 'EM!!!!" : 'WOMP WOMP'}
+                  {currentBluffBannerText}
                 </Text>
               </View>
             </Animated.View>
@@ -748,6 +793,12 @@ export default function Game() {
                 <View style={{ width: 24 }} />
                 <ThinkingIndicator size={100} position="right" />
               </>
+            ) : showSocialReveal ? (
+              <AnimatedDiceReveal
+                hidden={socialRevealHidden}
+                diceValues={socialDiceValues}
+                onRevealComplete={handleSocialRevealComplete}
+              />
             ) : showCpuRevealDice ? (
               <AnimatedDiceReveal
                 hidden={!cpuDiceRevealed}
@@ -782,7 +833,9 @@ export default function Game() {
                   variant="success"
                   onPress={handleRollOrClaim}
                   style={styles.btn}
-                  disabled={controlsDisabled || (hasRolled && !rolledCanClaim)}
+                  disabled={
+                    controlsDisabled || isRevealAnimating || (hasRolled && !rolledCanClaim)
+                  }
                 />
                 <StyledButton
                   label="Call Bluff"
@@ -799,7 +852,7 @@ export default function Game() {
                   variant="outline"
                   onPress={handleOpenBluff}
                   style={styles.btnWide}
-                  disabled={controlsDisabled}
+                  disabled={controlsDisabled || isRevealAnimating}
                 />
               </View>
 
@@ -1107,6 +1160,10 @@ const styles = StyleSheet.create({
   bluffBannerFail: {
     backgroundColor: '#E63946',
     borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  bluffBannerSocial: {
+    backgroundColor: '#C0C0C0',
+    borderColor: 'rgba(255, 255, 255, 0.65)',
   },
   gotEmBannerText: {
     color: '#FFFFFF',
