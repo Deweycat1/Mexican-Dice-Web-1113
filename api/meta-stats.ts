@@ -27,28 +27,7 @@ type MetaStatsResponse = {
       index: number;
     };
   };
-  claimsRisk: {
-    safest: {
-      code: string;
-      wins: number;
-      losses: number;
-      winRate: number;
-    } | null;
-    mostDangerous: {
-      code: string;
-      wins: number;
-      losses: number;
-      winRate: number;
-    } | null;
-    all: {
-      [code: string]: {
-        wins: number;
-        losses: number;
-        winRate: number;
-        uses: number;
-      };
-    };
-  };
+  // claim risk analysis removed (deprecated)
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -73,34 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? (rivalAggressiveEvents / rivalTotalEvents) * 100 
         : 0;
 
-      // 3. Fetch claims risk stats
-      const claimsRiskAll: MetaStatsResponse['claimsRisk']['all'] = {};
-      let safestClaim: MetaStatsResponse['claimsRisk']['safest'] = null;
-      let mostDangerousClaim: MetaStatsResponse['claimsRisk']['mostDangerous'] = null;
-      let highestWinRate = -1;
-      let lowestWinRate = 2; // Start above 1
-
-      for (const code of ALL_ROLL_CODES) {
-        const wins = (await kv.get<number>(`stats:claims:${code}:wins`)) ?? 0;
-        const losses = (await kv.get<number>(`stats:claims:${code}:losses`)) ?? 0;
-        const uses = wins + losses;
-        const winRate = uses > 0 ? wins / uses : 0;
-
-        claimsRiskAll[code] = { wins, losses, winRate, uses };
-
-        // Only consider claims with sufficient sample size (>= 5 uses)
-        if (uses >= 5) {
-          if (winRate > highestWinRate) {
-            highestWinRate = winRate;
-            safestClaim = { code, wins, losses, winRate };
-          }
-          if (winRate < lowestWinRate) {
-            lowestWinRate = winRate;
-            mostDangerousClaim = { code, wins, losses, winRate };
-          }
-        }
-      }
-
+      // NOTE: Claim Risk Analysis has been deprecated and removed from server-side aggregation.
       const response: MetaStatsResponse = {
         honesty: {
           truthful: truthfulClaims,
@@ -119,11 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             index: rivalAggressionIndex,
           },
         },
-        claimsRisk: {
-          safest: safestClaim,
-          mostDangerous: mostDangerousClaim,
-          all: claimsRiskAll,
-        },
+        // claimsRisk removed
       };
 
       return res.status(200).json(response);

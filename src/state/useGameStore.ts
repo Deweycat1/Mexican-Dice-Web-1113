@@ -189,6 +189,21 @@ export const useGameStore = create<Store>((set, get) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ streak }),
       });
+      try {
+        // Also notify server of this device's survival run so we can track per-device bests
+        // Use deviceId stored locally (getOrCreateDeviceId)
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { getOrCreateDeviceId } = require('../utils/deviceId');
+        const deviceId = await getOrCreateDeviceId();
+        await fetch('/api/survival-run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId, streak }),
+        });
+      } catch (err) {
+        // Non-fatal: don't block gameplay if server per-device tracking fails
+        console.error('Failed to record per-device survival run:', err);
+      }
     } catch (error) {
       console.error('Failed to record survival run:', error);
     }

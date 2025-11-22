@@ -74,28 +74,7 @@ interface MetaStats {
       index: number;
     };
   };
-  claimsRisk: {
-    safest: {
-      code: string;
-      wins: number;
-      losses: number;
-      winRate: number;
-    } | null;
-    mostDangerous: {
-      code: string;
-      wins: number;
-      losses: number;
-      winRate: number;
-    } | null;
-    all: {
-      [code: string]: {
-        wins: number;
-        losses: number;
-        winRate: number;
-        uses: number;
-      };
-    };
-  };
+  // claim risk removed from server-side response
 }
 
 export default function SecretStatsScreen() {
@@ -105,6 +84,7 @@ export default function SecretStatsScreen() {
   
   // Win/Survival stats
   const [survivalBest, setSurvivalBest] = useState<SurvivalBestData | null>(null);
+  const [survivalOver10, setSurvivalOver10] = useState<{ totalSurvivalUsers: number; survivalOver10Users: number; survivalOver10Rate: number } | null>(null);
   const [quickPlayBest, setQuickPlayBest] = useState<QuickPlayBestData | null>(null);
   const [averageStreak, setAverageStreak] = useState<number | null>(null);
   const [playerWins, setPlayerWins] = useState<number>(0);
@@ -142,6 +122,7 @@ export default function SecretStatsScreen() {
           uniqueDevicesRes,
           behaviorRes,
           metaRes,
+          survivalOver10Res,
           cityStatsRes
         ] = await Promise.all([
           fetch(`${baseUrl}/api/survival-best`, {
@@ -169,6 +150,10 @@ export default function SecretStatsScreen() {
             headers: { 'Content-Type': 'application/json' },
           }),
           fetch(`${baseUrl}/api/meta-stats`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          }),
+          fetch(`${baseUrl}/api/survival-over10`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
           }),
@@ -224,6 +209,15 @@ export default function SecretStatsScreen() {
           }
         } catch {
           console.log('Meta stats not available yet');
+        }
+
+        try {
+          if (survivalOver10Res.ok) {
+            const over10Data = await survivalOver10Res.json();
+            setSurvivalOver10(over10Data);
+          }
+        } catch {
+          console.log('Survival over-10 stats not available yet');
         }
 
         // Set survival stats
@@ -594,37 +588,27 @@ export default function SecretStatsScreen() {
           </View>
         )}
 
-        {/* Safest & Most Dangerous Claims */}
-        {metaStats?.claimsRisk && (
+        {/* Claim Risk Analysis has been deprecated and removed from the backend. */}
+
+        {/* Survival: Percent of users scoring >10 */}
+        {survivalOver10 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>⚠️ Claim Risk Analysis</Text>
+            <Text style={styles.cardTitle}>🔥 Survival Mode</Text>
             <View style={styles.statsTable}>
-              {metaStats.claimsRisk.safest ? (
-                <View style={styles.statRow}>
-                  <Text style={styles.statLabel}>Safest Claim</Text>
-                  <Text style={styles.statCountLarge}>
-                    {getRollLabel(metaStats.claimsRisk.safest.code)} ({(metaStats.claimsRisk.safest.winRate * 100).toFixed(1)}% win rate)
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.statRow}>
-                  <Text style={styles.statLabel}>Safest Claim</Text>
-                  <Text style={styles.noDataText}>Not enough data (need 5+ uses)</Text>
-                </View>
-              )}
-              {metaStats.claimsRisk.mostDangerous ? (
-                <View style={styles.statRow}>
-                  <Text style={styles.statLabel}>Most Dangerous Claim</Text>
-                  <Text style={styles.statCountLarge}>
-                    {getRollLabel(metaStats.claimsRisk.mostDangerous.code)} ({(metaStats.claimsRisk.mostDangerous.winRate * 100).toFixed(1)}% win rate)
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.statRow}>
-                  <Text style={styles.statLabel}>Most Dangerous Claim</Text>
-                  <Text style={styles.noDataText}>Not enough data (need 5+ uses)</Text>
-                </View>
-              )}
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>% of users scoring &gt; 10</Text>
+                <Text style={styles.statCountLarge}>
+                  {`${(survivalOver10.survivalOver10Rate ?? 0).toFixed(1)}%`}
+                </Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Total Survival Players</Text>
+                <Text style={styles.statCountLarge}>{survivalOver10.totalSurvivalUsers ?? 0}</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Users &gt; 10</Text>
+                <Text style={styles.statCountLarge}>{survivalOver10.survivalOver10Users ?? 0}</Text>
+              </View>
             </View>
           </View>
         )}
