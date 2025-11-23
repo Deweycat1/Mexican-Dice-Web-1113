@@ -8,6 +8,7 @@ import {
   Image,
   Modal,
   Pressable,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -633,6 +634,18 @@ export default function OnlineGameV2Screen() {
 
   const handleQuitGame = useCallback(() => {
     console.log('[OnlineGameV2] Quit Game pressed');
+
+    // On web, Alert is effectively a no-op, so fall back to window.confirm
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      const confirmed = window.confirm('Are you sure you want to leave the game?');
+      if (confirmed) {
+        router.replace('/online');
+      }
+      return;
+    }
+
+    // Native iOS/Android: use Alert.alert as before
     Alert.alert(
       'Quit Game',
       'Are you sure you want to leave the game?',
@@ -845,13 +858,13 @@ export default function OnlineGameV2Screen() {
                   label="Quit Game"
                   variant="ghost"
                   onPress={handleQuitGame}
-                  style={styles.btn}
+                  style={[styles.btn, styles.menuBottomButton]}
                 />
                 <StyledButton
                   label="View Rules"
                   variant="ghost"
                   onPress={() => setRulesOpen(true)}
-                  style={styles.btn}
+                  style={[styles.btn, styles.menuBottomButton]}
                 />
               </View>
             </View>
@@ -1107,10 +1120,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    marginTop: 8,
+    marginTop: 4,
   },
   btnWide: {
     flex: 1,
+  },
+  menuBottomButton: {
+    borderWidth: 2,
+    borderColor: '#E0B50C', // same as claimText color
   },
   menuRow: {
     flexDirection: 'row',
