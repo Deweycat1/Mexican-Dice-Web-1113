@@ -3,7 +3,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -60,6 +62,8 @@ export type RoundState = {
   hostMustBluff: boolean;
   guestMustBluff: boolean;
   lastClaimRoll: number | null;
+  socialRevealDice: [number | null, number | null] | null;
+  socialRevealNonce: number;
 };
 
 type HistoryItem =
@@ -94,6 +98,8 @@ const defaultRoundState: RoundState = {
   hostMustBluff: false,
   guestMustBluff: false,
   lastClaimRoll: null,
+  socialRevealDice: null,
+  socialRevealNonce: 0,
 };
 
 const clampScore = (value: number) => Math.max(0, value);
@@ -121,7 +127,11 @@ export default function OnlineGameV2Screen() {
   const [rollingAnim, setRollingAnim] = useState(false);
   const [revealDiceValues, setRevealDiceValues] = useState<[number | null, number | null] | null>(null);
   const [isRevealingBluff, setIsRevealingBluff] = useState(false);
-  const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [showSocialReveal, setShowSocialReveal] = useState(false);
+  const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
+  const [socialRevealHidden, setSocialRevealHidden] = useState(true);
+  const [isRevealAnimating, setIsRevealAnimating] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -226,10 +236,33 @@ export default function OnlineGameV2Screen() {
           typeof (raw as RoundState).lastClaimRoll === 'number' || (raw as RoundState).lastClaimRoll === null
             ? (raw as RoundState).lastClaimRoll ?? null
             : null,
+        socialRevealNonce:
+          typeof (raw as RoundState).socialRevealNonce === 'number'
+            ? (raw as RoundState).socialRevealNonce
+            : 0,
+        socialRevealDice:
+          Array.isArray((raw as RoundState).socialRevealDice) &&
+          (raw as RoundState).socialRevealDice.length === 2
+            ? [
+                typeof (raw as RoundState).socialRevealDice?.[0] === 'number' || (raw as RoundState).socialRevealDice?.[0] === null
+                  ? (raw as RoundState).socialRevealDice?.[0] ?? null
+                  : null,
+                typeof (raw as RoundState).socialRevealDice?.[1] === 'number' || (raw as RoundState).socialRevealDice?.[1] === null
+                  ? (raw as RoundState).socialRevealDice?.[1] ?? null
+                  : null,
+              ]
+            : null,
       };
     }
     return defaultRoundState;
   }, [game?.round_state, game?.id]);
+  const socialRevealNonceRef = useRef(roundState.socialRevealNonce ?? 0);
+  useEffect(() => {
+    const nonce = roundState.socialRevealNonce ?? 0;
+    if (nonce < socialRevealNonceRef.current) {
+      socialRevealNonceRef.current = nonce;
+    }
+  }, [roundState.socialRevealNonce]);
 
   const lastClaim = useMemo(() => {
     if (game?.last_claim == null) return null;
@@ -273,11 +306,45 @@ export default function OnlineGameV2Screen() {
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
+  const startSocialReveal = useCallback((dice: [number | null, number | null]) => {
+    setSocialDiceValues(dice);
+    setShowSocialReveal(true);
+    setSocialRevealHidden(true);
+    setIsRevealAnimating(true);
+    requestAnimationFrame(() => setSocialRevealHidden(false));
+  }, []);
+  const handleSocialRevealComplete = useCallback(() => {
+    setShowSocialReveal(false);
+    setSocialRevealHidden(true);
+    setIsRevealAnimating(false);
+  }, []);
+  useEffect(() => {
+    const nonce = roundState.socialRevealNonce ?? 0;
+    if (!nonce || !roundState.socialRevealDice) return;
+    if (nonce > socialRevealNonceRef.current) {
+      socialRevealNonceRef.current = nonce;
+      startSocialReveal(roundState.socialRevealDice);
+    }
+  }, [roundState.socialRevealNonce, roundState.socialRevealDice, startSocialReveal]);
 
-  const visibleHistory = useMemo(() => {
-    const maxItems = historyExpanded ? 10 : 2;
-    return roundState.history.slice(-maxItems).reverse();
-  }, [roundState.history, historyExpanded]);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.15, duration: 100, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start();
+  }, [roundState.history, fadeAnim]);
+  const collapsedHistory = useMemo(() => [...roundState.history.slice(-2)].reverse(), [roundState.history]);
+  const modalHistory = useMemo(() => [...roundState.history.slice(-10)].reverse(), [roundState.history]);
+  const formatHistoryEntry = useCallback(
+    (entry: HistoryItem) => {
+      if (entry.type === 'event') return entry.text;
+      const whoLabel = entry.who === myRole ? 'You' : opponentName;
+      const verb = entry.claim === 41 ? 'rolled' : 'claimed';
+      return `${whoLabel} ${verb} ${formatClaim(entry.claim)}`;
+    },
+    [myRole, opponentName]
+  );
 
   const myTurnText = (() => {
     if (!game) return '';
@@ -312,7 +379,7 @@ export default function OnlineGameV2Screen() {
   );
 
   const handleRoll = useCallback(async () => {
-    if (!game || !myRole || !isMyTurn || game.status !== 'in_progress') return;
+    if (!game || !myRole || !isMyTurn || game.status !== 'in_progress' || isRevealAnimating) return;
     if ((myRole === 'host' && roundState.hostRoll !== null) || (myRole === 'guest' && roundState.guestRoll !== null)) {
       return;
     }
@@ -341,7 +408,7 @@ export default function OnlineGameV2Screen() {
     } finally {
       setTimeout(() => setRollingAnim(false), 400);
     }
-  }, [game, myRole, isMyTurn, roundState, claimToCheck, handleUpdate]);
+  }, [game, myRole, isMyTurn, isRevealAnimating, roundState, claimToCheck, handleUpdate]);
 
   const appendHistory = useCallback(
     (entry: HistoryItem): HistoryItem[] => {
@@ -353,7 +420,7 @@ export default function OnlineGameV2Screen() {
 
   const handleClaim = useCallback(
     async (claim: number) => {
-      if (!game || !myRole || !opponentRole || !isMyTurn) return;
+      if (!game || !myRole || !opponentRole || !isMyTurn || isRevealAnimating) return;
       const prev = lastClaim;
       if (prev === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
         Alert.alert('Invalid claim', 'After Mexican (21), only 21, 31, or 41 are legal.');
@@ -388,6 +455,8 @@ export default function OnlineGameV2Screen() {
 
       const myCurrentRoll =
         myRole === 'host' ? roundState.hostRoll : roundState.guestRoll;
+      const socialDice = claim === 41 && myCurrentRoll != null ? facesFromRoll(myCurrentRoll) : null;
+      const nextSocialNonce = claim === 41 ? (roundState.socialRevealNonce ?? 0) + 1 : roundState.socialRevealNonce;
 
       const nextRound: RoundState = {
         ...roundState,
@@ -396,6 +465,8 @@ export default function OnlineGameV2Screen() {
         lastClaimer: claim === 41 ? null : myRole,
         history: claim === 41 ? [...newHistory, { id: uuid(), type: 'event', text: `${myRole === 'host' ? hostName : guestName} showed Social (41).`, timestamp }] : newHistory,
         lastClaimRoll: claim === 41 ? null : myCurrentRoll,
+        socialRevealDice: claim === 41 ? socialDice : roundState.socialRevealDice,
+        socialRevealNonce: nextSocialNonce,
       };
 
       if (myRole === 'host') {
@@ -413,6 +484,10 @@ export default function OnlineGameV2Screen() {
         nextRound.guestMustBluff = false;
         nextRound.lastAction = 'normal';
         nextRound.lastClaimer = null;
+        if (socialDice) {
+          startSocialReveal(socialDice);
+          socialRevealNonceRef.current = nextSocialNonce;
+        }
       }
 
       const payload: Record<string, any> = {
@@ -430,7 +505,21 @@ export default function OnlineGameV2Screen() {
         Alert.alert('Claim failed', err.message ?? 'Could not save claim.');
       }
     },
-    [game, myRole, opponentRole, isMyTurn, lastClaim, roundState, myRoll, appendHistory, handleUpdate, hostName, guestName]
+    [
+      game,
+      myRole,
+      opponentRole,
+      isMyTurn,
+      isRevealAnimating,
+      lastClaim,
+      roundState,
+      myRoll,
+      appendHistory,
+      handleUpdate,
+      hostName,
+      guestName,
+      startSocialReveal,
+    ]
   );
 
   const handleShowSocial = useCallback(() => {
@@ -438,7 +527,7 @@ export default function OnlineGameV2Screen() {
   }, [handleClaim]);
 
   const handleCallBluff = useCallback(async () => {
-    if (!game || !myRole || !opponentRole || !isMyTurn || lastClaim == null) {
+    if (!game || !myRole || !opponentRole || !isMyTurn || lastClaim == null || isRevealAnimating) {
       return;
     }
     const defendingRole = roundState.lastClaimer;
@@ -482,6 +571,8 @@ export default function OnlineGameV2Screen() {
     const nextRound: RoundState = {
       ...defaultRoundState,
       history: nextHistory,
+      socialRevealNonce: roundState.socialRevealNonce ?? 0,
+      socialRevealDice: null,
     };
     const payload: Record<string, any> = {
       host_score: nextHostScore,
@@ -497,7 +588,7 @@ export default function OnlineGameV2Screen() {
     } catch (err: any) {
       Alert.alert('Bluff call failed', err.message ?? 'Could not resolve bluff.');
     }
-  }, [game, myRole, opponentRole, isMyTurn, lastClaim, roundState, appendHistory, handleUpdate, hostName, guestName]);
+  }, [game, myRole, opponentRole, isMyTurn, lastClaim, isRevealAnimating, roundState, appendHistory, handleUpdate, hostName, guestName]);
 
   if (loading) {
     return (
@@ -575,7 +666,6 @@ export default function OnlineGameV2Screen() {
                   </View>
                   <Text style={styles.playerLabel}>You</Text>
                   <ScoreDie points={myScore} style={styles.scoreDie} size={38} />
-                  <Text style={styles.scoreValue}>{myScore} pts</Text>
                 </View>
 
                 <View style={styles.titleColumn}>
@@ -591,7 +681,6 @@ export default function OnlineGameV2Screen() {
                   </View>
                   <Text style={styles.playerLabel}>{opponentName}</Text>
                   <ScoreDie points={opponentScore} style={styles.scoreDie} size={38} />
-                  <Text style={styles.scoreValue}>{opponentScore} pts</Text>
                 </View>
               </View>
 
@@ -613,26 +702,33 @@ export default function OnlineGameV2Screen() {
               </View>
             )}
 
-            <Pressable style={styles.historyBox} onPress={() => setHistoryExpanded((prev) => !prev)}>
-              <Text style={styles.historyHeading}>
-                Recent events {historyExpanded ? '(tap to collapse)' : '(tap to expand)'}
-              </Text>
-              {visibleHistory.length === 0 ? (
-                <Text style={styles.historyText}>No actions yet.</Text>
-              ) : (
-                visibleHistory.map((entry) => (
-                  <Text key={entry.id} style={styles.historyText} numberOfLines={1}>
-                    {entry.type === 'claim'
-                      ? `${entry.who === myRole ? 'You' : opponentName} claimed ${formatClaim(entry.claim)}`
-                      : entry.text}
-                  </Text>
-                ))
-              )}
+            <Pressable
+              onPress={() => setHistoryModalOpen(true)}
+              hitSlop={10}
+              style={({ pressed }) => [styles.historyBox, { opacity: pressed ? 0.7 : 1 }]}
+            >
+              <Animated.View style={{ opacity: fadeAnim }}>
+                {collapsedHistory.length > 0 ? (
+                  collapsedHistory.map((entry) => (
+                    <Text key={entry.id} style={styles.historyText} numberOfLines={1}>
+                      {formatHistoryEntry(entry)}
+                    </Text>
+                  ))
+                ) : (
+                  <Text style={styles.historyText}>No recent events.</Text>
+                )}
+              </Animated.View>
             </Pressable>
 
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
-                {isRevealingBluff && revealDiceValues ? (
+                {showSocialReveal ? (
+                  <AnimatedDiceReveal
+                    hidden={socialRevealHidden}
+                    diceValues={socialDiceValues}
+                    onRevealComplete={handleSocialRevealComplete}
+                  />
+                ) : isRevealingBluff && revealDiceValues ? (
                   <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={110} />
                 ) : isMyTurn ? (
                   <>
@@ -666,14 +762,14 @@ export default function OnlineGameV2Screen() {
                   label={canRoll ? 'Roll' : 'Claim'}
                   variant="success"
                   onPress={canRoll ? handleRoll : () => handleClaim(myRoll!)}
-                  disabled={canRoll ? !canRoll : !canClaim}
+                  disabled={isRevealAnimating || (canRoll ? !canRoll : !canClaim)}
                   style={styles.btn}
                 />
                 <StyledButton
                   label="Call Bluff"
                   variant="primary"
                   onPress={handleCallBluff}
-                  disabled={!canCallBluff || myRoll !== null}
+                  disabled={!canCallBluff || myRoll !== null || isRevealAnimating}
                   style={[styles.btn, styles.dangerButton]}
                 />
               </View>
@@ -682,7 +778,7 @@ export default function OnlineGameV2Screen() {
                   label="Bluff Options"
                   variant="outline"
                   onPress={() => setClaimPickerOpen(true)}
-                  disabled={!canClaim}
+                  disabled={!canClaim || isRevealAnimating}
                   style={styles.btnWide}
                 />
               </View>
@@ -727,6 +823,41 @@ export default function OnlineGameV2Screen() {
         canShowSocial={canShowSocial}
         onShowSocial={handleShowSocial}
       />
+
+      <Modal
+        visible={historyModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setHistoryModalOpen(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setHistoryModalOpen(false)} />
+        <View style={styles.modalCenter}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Full History</Text>
+              <Pressable
+                onPress={() => setHistoryModalOpen(false)}
+                style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </Pressable>
+            </View>
+            <View style={styles.modalHistoryList}>
+              {modalHistory.length > 0 ? (
+                <ScrollView>
+                  {modalHistory.map((entry) => (
+                    <View key={entry.id} style={styles.historyItem}>
+                      <Text style={styles.historyItemText}>{formatHistoryEntry(entry)}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              ) : (
+                <Text style={styles.noHistoryText}>No history yet.</Text>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -804,10 +935,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   claimText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#E0B50C',
+    fontSize: 18,
     fontWeight: '800',
     textAlign: 'center',
+    marginBottom: 6,
   },
   status: {
     marginTop: 12,
@@ -849,24 +981,25 @@ const styles = StyleSheet.create({
     borderColor: '#5E471F',
   },
   historyBox: {
-    marginTop: 8,
-    marginBottom: 18,
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  historyHeading: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
-    marginBottom: 6,
-    fontWeight: '600',
+    alignSelf: 'center',
+    width: '70%',
+    minHeight: 72,
+    backgroundColor: 'rgba(0,0,0,0.32)',
+    borderColor: '#000',
+    borderWidth: 2,
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 10,
+    justifyContent: 'center',
+    position: 'relative',
+    zIndex: 2,
   },
   historyText: {
-    color: '#fff',
-    fontSize: 14,
-    marginBottom: 4,
+    color: '#E6FFE6',
+    textAlign: 'center',
+    fontSize: 13,
+    marginVertical: 2,
   },
   diceArea: {
     marginBottom: 24,
@@ -920,5 +1053,67 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     textAlign: 'center',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  modalCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1a4d2e',
+    borderRadius: 12,
+    padding: 20,
+    maxHeight: '70%',
+    width: '85%',
+    borderColor: '#e0b50c',
+    borderWidth: 2,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 18,
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    color: '#E6FFE6',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  modalHistoryList: {
+    maxHeight: 400,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 8,
+    paddingHorizontal: 8,
+  },
+  historyItemText: {
+    color: '#E6FFE6',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
+  noHistoryText: {
+    color: '#C9F0D6',
+    textAlign: 'center',
+    fontSize: 14,
+    marginVertical: 20,
   },
 });
