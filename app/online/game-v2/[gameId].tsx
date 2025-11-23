@@ -18,6 +18,7 @@ import Dice from '../../../src/components/Dice';
 import FeltBackground from '../../../src/components/FeltBackground';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
+import ThinkingIndicator from '../../../src/components/ThinkingIndicator';
 import {
   claimMatchesRoll,
   isLegalRaise,
@@ -117,7 +118,7 @@ export default function OnlineGameV2Screen() {
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hostName, setHostName] = useState<string>('Host');
   const [guestName, setGuestName] = useState<string>('Guest');
-  const [isRolling, setIsRolling] = useState(false);
+  const [rollingAnim, setRollingAnim] = useState(false);
   const [revealDiceValues, setRevealDiceValues] = useState<[number | null, number | null] | null>(null);
   const [isRevealingBluff, setIsRevealingBluff] = useState(false);
   const [historyExpanded, setHistoryExpanded] = useState(false);
@@ -257,8 +258,21 @@ export default function OnlineGameV2Screen() {
     () => `Current claim: ${formatClaim(lastClaim)}     Your roll: ${formatRoll(myRoll)}`,
     [lastClaim, myRoll]
   );
-  const overlayTextHi = myRoll == null ? (isMyTurn ? 'Your' : '??') : undefined;
-  const overlayTextLo = myRoll == null ? (isMyTurn ? 'Roll' : '??') : undefined;
+  const isOpponentClaimPhase = useMemo(() => {
+    if (!game) return false;
+    if (!isMyTurn) return false;
+    if (lastClaim == null || myRoll != null) return false;
+    if (!roundState.lastClaimer) return false;
+    return roundState.lastClaimer !== myRole;
+  }, [game, isMyTurn, lastClaim, myRoll, roundState.lastClaimer, myRole]);
+  const diceDisplayMode = useMemo(() => {
+    if (isOpponentClaimPhase) return 'question';
+    if (isMyTurn) return myRoll == null ? 'prompt' : 'values';
+    return 'values';
+  }, [isOpponentClaimPhase, isMyTurn, myRoll]);
+  const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
+  const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
+  const rolling = rollingAnim;
 
   const visibleHistory = useMemo(() => {
     const maxItems = historyExpanded ? 10 : 2;
@@ -303,7 +317,7 @@ export default function OnlineGameV2Screen() {
       return;
     }
     setBanner(null);
-    setIsRolling(true);
+    setRollingAnim(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 900));
       const { values, normalized } = rollDice();
@@ -325,7 +339,7 @@ export default function OnlineGameV2Screen() {
     } catch (err: any) {
       Alert.alert('Roll failed', err.message ?? 'Could not save roll.');
     } finally {
-      setIsRolling(false);
+      setTimeout(() => setRollingAnim(false), 400);
     }
   }, [game, myRole, isMyTurn, roundState, claimToCheck, handleUpdate]);
 
@@ -620,21 +634,27 @@ export default function OnlineGameV2Screen() {
               <View style={styles.diceRow}>
                 {isRevealingBluff && revealDiceValues ? (
                   <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={110} />
-                ) : (
+                ) : isMyTurn ? (
                   <>
                     <Dice
                       value={dieHi}
-                      displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
+                      displayMode={diceDisplayMode}
                       overlayText={overlayTextHi}
-                      rolling={isRolling}
+                      rolling={rolling}
                     />
                     <View style={{ width: 24 }} />
                     <Dice
                       value={dieLo}
-                      displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
+                      displayMode={diceDisplayMode}
                       overlayText={overlayTextLo}
-                      rolling={isRolling}
+                      rolling={rolling}
                     />
+                  </>
+                ) : (
+                  <>
+                    <ThinkingIndicator size={110} position="left" />
+                    <View style={{ width: 24 }} />
+                    <ThinkingIndicator size={110} position="right" />
                   </>
                 )}
               </View>
