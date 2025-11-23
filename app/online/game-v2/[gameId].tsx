@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -234,6 +235,12 @@ export default function OnlineGameV2Screen() {
   const opponentScore = myRole === 'host' ? game?.guest_score ?? 0 : game?.host_score ?? 0;
   const claimToCheck = roundState.baselineClaim ?? lastClaim;
   const [dieHi, dieLo] = facesFromRoll(myRoll);
+  const claimSummary = useMemo(
+    () => `Current claim: ${formatClaim(lastClaim)}     Your roll: ${formatRoll(myRoll)}`,
+    [lastClaim, myRoll]
+  );
+  const overlayTextHi = myRoll == null ? (isMyTurn ? 'Your' : '??') : undefined;
+  const overlayTextLo = myRoll == null ? (isMyTurn ? 'Roll' : '??') : undefined;
 
   const history = roundState.history.slice(-3).reverse();
 
@@ -508,19 +515,37 @@ export default function OnlineGameV2Screen() {
             <View style={styles.headerCard}>
               <View style={styles.headerRow}>
                 <View style={styles.playerColumn}>
-                  <Text style={styles.playerLabel}>You ({myRole === 'host' ? hostName : guestName})</Text>
-                  <ScoreDie points={myScore} style={styles.scoreDie} size={42} />
+                  <View style={styles.avatarCircle}>
+                    <Image
+                      source={require('../../../assets/images/User.png')}
+                      style={styles.avatarImage}
+                    />
+                  </View>
+                  <Text style={styles.playerLabel}>You</Text>
+                  <ScoreDie points={myScore} style={styles.scoreDie} size={38} />
+                  <Text style={styles.scoreValue}>{myScore} pts</Text>
                 </View>
-                <View style={styles.statusBlock}>
-                  <Text style={styles.statusLabel}>{formatClaim(lastClaim)}</Text>
-                  <Text style={styles.statusSubtle}>Current claim</Text>
+
+                <View style={styles.titleColumn}>
+                  <Text style={styles.claimText}>{claimSummary}</Text>
                 </View>
+
                 <View style={styles.playerColumn}>
+                  <View style={styles.avatarCircle}>
+                    <Image
+                      source={require('../../../assets/images/Rival.png')}
+                      style={styles.avatarImage}
+                    />
+                  </View>
                   <Text style={styles.playerLabel}>{opponentName}</Text>
-                  <ScoreDie points={opponentScore} style={styles.scoreDie} size={42} />
+                  <ScoreDie points={opponentScore} style={styles.scoreDie} size={38} />
+                  <Text style={styles.scoreValue}>{opponentScore} pts</Text>
                 </View>
               </View>
-              <Text style={styles.message} numberOfLines={2}>{myTurnText}</Text>
+
+              <Text style={styles.status} numberOfLines={2}>
+                {myTurnText}
+              </Text>
             </View>
 
             {banner && (
@@ -536,23 +561,8 @@ export default function OnlineGameV2Screen() {
               </View>
             )}
 
-            <View style={styles.diceArea}>
-              <Dice
-                value={dieHi}
-                displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
-                overlayText={myRoll == null ? (isMyTurn ? 'Roll' : '??') : undefined}
-                rolling={false}
-              />
-              <View style={{ width: 24 }} />
-              <Dice
-                value={dieLo}
-                displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
-                overlayText={myRoll == null ? (isMyTurn ? 'Dice' : '??') : undefined}
-                rolling={false}
-              />
-            </View>
-
             <View style={styles.historyBox}>
+              <Text style={styles.historyHeading}>Recent events</Text>
               {history.length === 0 ? (
                 <Text style={styles.historyText}>No actions yet.</Text>
               ) : (
@@ -566,33 +576,57 @@ export default function OnlineGameV2Screen() {
               )}
             </View>
 
+            <View style={styles.diceArea}>
+              <View style={styles.diceRow}>
+                <Dice
+                  value={dieHi}
+                  displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
+                  overlayText={overlayTextHi}
+                  rolling={false}
+                />
+                <View style={{ width: 24 }} />
+                <Dice
+                  value={dieLo}
+                  displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
+                  overlayText={overlayTextLo}
+                  rolling={false}
+                />
+              </View>
+            </View>
+
             <View style={styles.controls}>
-              <StyledButton
-                label="Roll"
-                variant="success"
-                onPress={handleRoll}
-                disabled={!canRoll}
-                style={styles.controlButton}
-              />
-              <StyledButton
-                label="Claim / Bluff"
-                variant="primary"
-                onPress={() => setClaimPickerOpen(true)}
-                disabled={!canClaim}
-                style={styles.controlButton}
-              />
-              <StyledButton
-                label="Call Bluff"
-                variant="primary"
-                onPress={handleCallBluff}
-                disabled={!canCallBluff}
-                style={[styles.controlButton, styles.dangerButton]}
-              />
+              <View style={styles.actionRow}>
+                <StyledButton
+                  label="Roll"
+                  variant="success"
+                  onPress={handleRoll}
+                  disabled={!canRoll}
+                  style={styles.btn}
+                />
+                <StyledButton
+                  label="Call Bluff"
+                  variant="primary"
+                  onPress={handleCallBluff}
+                  disabled={!canCallBluff}
+                  style={[styles.btn, styles.dangerButton]}
+                />
+              </View>
+              <View style={styles.bottomRow}>
+                <StyledButton
+                  label="Bluff Options"
+                  variant="outline"
+                  onPress={() => setClaimPickerOpen(true)}
+                  disabled={!canClaim}
+                  style={styles.btnWide}
+                />
+              </View>
             </View>
 
             {game.status === 'finished' && (
               <View style={styles.finishedBox}>
-                <Text style={styles.finishedText}>Match over! {myScore === 0 ? 'You lost.' : opponentScore === 0 ? 'You won!' : ''}</Text>
+                <Text style={styles.finishedText}>
+                  Match over! {myScore === 0 ? 'You lost.' : opponentScore === 0 ? 'You won!' : ''}
+                </Text>
                 <StyledButton
                   label="Back to Lobby"
                   variant="outline"
@@ -626,9 +660,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
+    padding: 20,
     flexGrow: 1,
-    paddingBottom: 48,
+    paddingBottom: 60,
   },
   centered: {
     flex: 1,
@@ -654,12 +688,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerCard: {
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 22,
+    padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   headerRow: {
     flexDirection: 'row',
@@ -668,59 +702,52 @@ const styles = StyleSheet.create({
   },
   playerColumn: {
     alignItems: 'center',
+    width: 96,
+  },
+  avatarCircle: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  avatarImage: {
+    width: 58,
+    height: 58,
+    resizeMode: 'contain',
   },
   playerLabel: {
     color: '#fff',
     fontSize: 16,
-    marginBottom: 8,
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  statusBlock: {
+  titleColumn: {
+    flex: 1,
     alignItems: 'center',
+    paddingHorizontal: 12,
   },
-  statusLabel: {
-    color: '#E0B50C',
-    fontSize: 20,
+  claimText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '800',
+    textAlign: 'center',
   },
-  statusSubtle: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  message: {
+  status: {
     marginTop: 12,
     color: '#fff',
     fontSize: 16,
-  },
-  diceArea: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 16,
-  },
-  historyBox: {
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  historyText: {
-    color: '#fff',
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  controls: {
-    marginTop: 20,
-  },
-  controlButton: {
-    minHeight: 52,
-    marginBottom: 12,
-  },
-  dangerButton: {
-    backgroundColor: '#6C1115',
+    textAlign: 'center',
   },
   scoreDie: {
     marginTop: 8,
+  },
+  scoreValue: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    marginTop: 4,
   },
   banner: {
     borderRadius: 14,
@@ -728,6 +755,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 12,
     alignItems: 'center',
+    borderWidth: 1,
   },
   bannerText: {
     color: '#fff',
@@ -737,17 +765,64 @@ const styles = StyleSheet.create({
   bannerSuccess: {
     backgroundColor: '#0F5132',
     borderColor: '#0C4128',
-    borderWidth: 1,
   },
   bannerFail: {
     backgroundColor: '#661313',
     borderColor: '#520E0E',
-    borderWidth: 1,
   },
   bannerSocial: {
     backgroundColor: '#8C6B2F',
     borderColor: '#5E471F',
+  },
+  historyBox: {
+    marginTop: 8,
+    marginBottom: 18,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.25)',
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  historyHeading: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  historyText: {
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  diceArea: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  diceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controls: {
+    marginTop: 8,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  btn: {
+    flex: 1,
+    marginHorizontal: 6,
+  },
+  bottomRow: {
+    marginTop: 4,
+  },
+  btnWide: {
+    alignSelf: 'stretch',
+  },
+  dangerButton: {
+    backgroundColor: '#6C1115',
   },
   finishedBox: {
     marginTop: 24,

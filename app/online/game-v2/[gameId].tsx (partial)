@@ -1,0 +1,187 @@
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#0B3A26',
+  },
+  safe: {
+    flex: 1,
+  },
+  content: {
+    padding: 20,
+    flexGrow: 1,
+    paddingBottom: 60,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  errorText: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  breadcrumb: {
+    color: '#E0B50C',
+    fontWeight: '700',
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  headerCard: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 18,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  playerColumn: {
+    alignItems: 'center',
+    width: 96,
+  },
+  avatarCircle: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  avatarImage: {
+    width: 58,
+    height: 58,
+    resizeMode: 'contain',
+  },
+  playerLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  titleColumn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  claimText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  status: {
+    marginTop: 12,
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  scoreDie: {
+    marginTop: 8,
+  },
+  scoreValue: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  banner: {
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  bannerText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 18,
+  },
+  bannerSuccess: {
+    backgroundColor: '#0F5132',
+    borderColor: '#0C4128',
+  },
+  bannerFail: {
+    backgroundColor: '#661313',
+    borderColor: '#520E0E',
+  },
+  bannerSocial: {
+    backgroundColor: '#8C6B2F',
+    borderColor: '#5E471F',
+  },
+  historyBox: {
+    marginTop: 8,
+    marginBottom: 18,
+    padding: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  historyHeading: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  historyText: {
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  diceArea: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  diceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controls: {
+    marginTop: 8,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  btn: {
+    flex: 1,
+    marginHorizontal: 6,
+  },
+  bottomRow: {
+    marginTop: 4,
+  },
+  btnWide: {
+    alignSelf: 'stretch',
+  },
+  dangerButton: {
+    backgroundColor: '#6C1115',
+  },
+  finishedBox: {
+    marginTop: 24,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  finishedText: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+});

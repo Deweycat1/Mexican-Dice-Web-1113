@@ -253,7 +253,7 @@ export default function IncomingChallengesList({ myUserId, onJoinGame }: Incomin
         .eq('recipient_id', myUser.id);
 
       if (updateError) {
-        console.error('[Challenges] Challenge update error:', updateError, { challenge, newGame });
+        console.error('Challenge update failed:', updateError);
         alert('Could not update challenge.');
         return;
       }
