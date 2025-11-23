@@ -56,6 +56,7 @@ export type RoundState = {
   guestRoll: number | null;
   hostMustBluff: boolean;
   guestMustBluff: boolean;
+  lastClaimRoll: number | null;
 };
 
 type HistoryItem =
@@ -89,6 +90,7 @@ const defaultRoundState: RoundState = {
   guestRoll: null,
   hostMustBluff: false,
   guestMustBluff: false,
+  lastClaimRoll: null,
 };
 
 const clampScore = (value: number) => Math.max(0, value);
@@ -207,6 +209,10 @@ export default function OnlineGameV2Screen() {
         ...defaultRoundState,
         ...raw,
         history: Array.isArray(raw.history) ? raw.history : [],
+        lastClaimRoll:
+          typeof (raw as RoundState).lastClaimRoll === 'number' || (raw as RoundState).lastClaimRoll === null
+            ? (raw as RoundState).lastClaimRoll ?? null
+            : null,
       };
     }
     return defaultRoundState;
@@ -347,17 +353,23 @@ export default function OnlineGameV2Screen() {
         return;
       }
 
+      const myCurrentRoll =
+        myRole === 'host' ? roundState.hostRoll : roundState.guestRoll;
+
       const nextRound: RoundState = {
         ...roundState,
         baselineClaim: nextBaseline,
         lastAction: actionFlag,
         lastClaimer: claim === 41 ? null : myRole,
         history: claim === 41 ? [...newHistory, { id: uuid(), type: 'event', text: `${myRole === 'host' ? hostName : guestName} showed Social (41).`, timestamp }] : newHistory,
+        lastClaimRoll: claim === 41 ? null : myCurrentRoll,
       };
 
       if (myRole === 'host') {
+        nextRound.hostRoll = null;
         nextRound.hostMustBluff = false;
-      } else {
+      } else if (myRole === 'guest') {
+        nextRound.guestRoll = null;
         nextRound.guestMustBluff = false;
       }
 
@@ -401,7 +413,7 @@ export default function OnlineGameV2Screen() {
       Alert.alert('Nothing to challenge', 'Waiting for opponent claim.');
       return;
     }
-    const defenderRoll = defendingRole === 'host' ? roundState.hostRoll : roundState.guestRoll;
+    const defenderRoll = roundState.lastClaimRoll;
     if (defenderRoll == null) {
       Alert.alert('Missing roll', 'Opponent has no recorded roll to challenge.');
       return;
