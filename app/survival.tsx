@@ -8,6 +8,7 @@ import {
     Modal,
     Pressable,
     SafeAreaView,
+    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -46,6 +47,40 @@ function facesFromRoll(value: number | null | undefined): readonly [number | nul
   return [hi, lo] as const;
 }
 
+const RULES_TEXT = `General Gameplay
+
+Roll two dice and read them higher-first (3 and 5 → 53). Doubles beat mixed rolls, and Special Rolls beat everything. After you roll, claim a number to the next player ... truth or bluff. You may claim any roll that matches or beats the last claim, or a Special Roll (21 or 31 ... you cannot lie about a 41).
+
+Special Rolls
+
+🎲 21 “Mexican”: Claiming a Mexican makes the round worth 2 points. The next player must either accept the challenge and roll for a real 21, or Call Bluff. Whoever is wrong ... caller or claimer ... loses 2 points. Reverse does not reduce the penalty.
+
+🔄 31 “Reverse”: Sends the challenge back so the previous player must now match or beat the reflected roll. Reverse can always be claimed (truth or bluff). If a Mexican is reversed onto someone, the 2-point penalty still applies.
+
+🍺 41 “Social”: Must be shown, never bluffed. When rolled, the round resets ... all claims clear, no points are lost, and the dice pass to the next player.
+
+Bluffs
+
+If a bluff is suspected, the player may Call Bluff instead of accepting the claim.
+• In normal rounds:
+  • Claim true → caller loses 1 point
+  • Claim false → bluffer loses 1 point
+
+• In Mexican rounds:
+  • The loser always loses 2 points
+
+Scoring & Scorekeeper Dice
+
+Everyone starts with 5 points. When you lose points, your scorekeeper die counts up instead of down:
+• At full health (5 points), your die shows 1
+• As you lose points, the die climbs toward 6
+• When your die hits 6, you’ve reached 0 points ... and you’re out
+
+This makes it easy to see danger at a glance:
+• Low die = safe
+• High die = close to elimination
+• Face 6 = game over`;
+
 export default function Survival() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -72,6 +107,7 @@ export default function Survival() {
   const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | 'social' | null>(null);
   const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   // Milestone tracking state
   const [hasShown5, setHasShown5] = useState(false);
@@ -1034,7 +1070,7 @@ export default function Survival() {
                 <StyledButton
                   label="View Rules"
                   variant="ghost"
-                  onPress={() => router.push('/rules')}
+                  onPress={() => setRulesOpen(true)}
                   style={[styles.btn, styles.newGameBtn]}
                 />
               </View>
@@ -1094,6 +1130,28 @@ export default function Survival() {
                     <Text style={styles.noHistoryText}>No history yet.</Text>
                   )}
                 </View>
+              </View>
+            </View>
+          </Modal>
+
+          <Modal
+            visible={rulesOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setRulesOpen(false)}
+          >
+            <Pressable style={styles.rulesBackdrop} onPress={() => setRulesOpen(false)} />
+            <View style={styles.rulesCenter}>
+              <View style={styles.rulesContent}>
+                <View style={styles.rulesHeader}>
+                  <Text style={styles.rulesTitle}>Game Rules</Text>
+                  <Pressable onPress={() => setRulesOpen(false)} style={styles.rulesCloseButton}>
+                    <Text style={styles.rulesClose}>✕</Text>
+                  </Pressable>
+                </View>
+                <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.rulesText}>{RULES_TEXT}</Text>
+                </ScrollView>
               </View>
             </View>
           </Modal>
@@ -1499,6 +1557,55 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     marginVertical: 20,
+  },
+  rulesBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  rulesCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rulesContent: {
+    backgroundColor: '#1a4d2e',
+    borderRadius: 12,
+    padding: 20,
+    width: '85%',
+    maxHeight: '75%',
+    borderColor: '#e0b50c',
+    borderWidth: 2,
+  },
+  rulesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  rulesTitle: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 20,
+  },
+  rulesCloseButton: {
+    padding: 4,
+  },
+  rulesClose: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  rulesScroll: {
+    maxHeight: '100%',
+  },
+  rulesText: {
+    color: '#E6FFE6',
+    fontSize: 15,
+    lineHeight: 22,
   },
   screenOverlay: {
     position: 'absolute',
