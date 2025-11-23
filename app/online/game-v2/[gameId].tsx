@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -11,15 +12,12 @@ import {
   View,
 } from 'react-native';
 
+import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
 import BluffModal from '../../../src/components/BluffModal';
 import Dice from '../../../src/components/Dice';
-import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
 import FeltBackground from '../../../src/components/FeltBackground';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
-import { buildClaimOptions } from '../../../src/lib/claimOptions';
-import { getCurrentUser } from '../../../src/lib/auth';
-import { supabase } from '../../../src/lib/supabase';
 import {
   claimMatchesRoll,
   isLegalRaise,
@@ -28,9 +26,12 @@ import {
   splitClaim,
 } from '../../../src/engine/mexican';
 import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
+import { getCurrentUser } from '../../../src/lib/auth';
+import { buildClaimOptions } from '../../../src/lib/claimOptions';
+import { supabase } from '../../../src/lib/supabase';
 
 const formatClaim = (value: number | null | undefined) => {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
   if (value === 21) return '21 (Mexican)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
@@ -38,7 +39,7 @@ const formatClaim = (value: number | null | undefined) => {
   return `${hi}${lo}`;
 };
 const formatRoll = (value: number | null | undefined) => {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
   const [hi, lo] = splitClaim(value);
   return `${hi}${lo}`;
 };
@@ -119,6 +120,7 @@ export default function OnlineGameV2Screen() {
   const [isRolling, setIsRolling] = useState(false);
   const [revealDiceValues, setRevealDiceValues] = useState<[number | null, number | null] | null>(null);
   const [isRevealingBluff, setIsRevealingBluff] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -258,7 +260,10 @@ export default function OnlineGameV2Screen() {
   const overlayTextHi = myRoll == null ? (isMyTurn ? 'Your' : '??') : undefined;
   const overlayTextLo = myRoll == null ? (isMyTurn ? 'Roll' : '??') : undefined;
 
-  const history = roundState.history.slice(-3).reverse();
+  const visibleHistory = useMemo(() => {
+    const maxItems = historyExpanded ? 10 : 2;
+    return roundState.history.slice(-maxItems).reverse();
+  }, [roundState.history, historyExpanded]);
 
   const myTurnText = (() => {
     if (!game) return '';
@@ -448,7 +453,7 @@ export default function OnlineGameV2Screen() {
     }, 1800);
     const eventText = liar
       ? `${callerName} caught ${defenderName} bluffing!`
-      : `${callerName} was wrong — ${defenderName} told the truth.`;
+      : `${callerName} was wrong - ${defenderName} told the truth.`;
 
     const nextHistory = appendHistory({ id: uuid(), type: 'event', text: eventText, timestamp: new Date().toISOString() });
 
@@ -594,12 +599,14 @@ export default function OnlineGameV2Screen() {
               </View>
             )}
 
-            <View style={styles.historyBox}>
-              <Text style={styles.historyHeading}>Recent events</Text>
-              {history.length === 0 ? (
+            <Pressable style={styles.historyBox} onPress={() => setHistoryExpanded((prev) => !prev)}>
+              <Text style={styles.historyHeading}>
+                Recent events {historyExpanded ? '(tap to collapse)' : '(tap to expand)'}
+              </Text>
+              {visibleHistory.length === 0 ? (
                 <Text style={styles.historyText}>No actions yet.</Text>
               ) : (
-                history.map((entry) => (
+                visibleHistory.map((entry) => (
                   <Text key={entry.id} style={styles.historyText} numberOfLines={1}>
                     {entry.type === 'claim'
                       ? `${entry.who === myRole ? 'You' : opponentName} claimed ${formatClaim(entry.claim)}`
@@ -607,7 +614,7 @@ export default function OnlineGameV2Screen() {
                   </Text>
                 ))
               )}
-            </View>
+            </Pressable>
 
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
