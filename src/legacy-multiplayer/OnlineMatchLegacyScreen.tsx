@@ -13,24 +13,24 @@ import {
   View,
 } from 'react-native';
 
-import BluffModal from '../../src/components/BluffModal';
-import Dice from '../../src/components/Dice';
-import FeltBackground from '../../src/components/FeltBackground';
-import OnlineGameOverModal from '../../src/components/OnlineGameOverModal';
-import { ScoreDie } from '../../src/components/ScoreDie';
-import StyledButton from '../../src/components/StyledButton';
+import BluffModal from '@/src/components/BluffModal';
+import Dice from '@/src/components/Dice';
+import FeltBackground from '@/src/components/FeltBackground';
+import OnlineGameOverModal from '@/src/components/OnlineGameOverModal';
+import { ScoreDie } from '@/src/components/ScoreDie';
+import StyledButton from '@/src/components/StyledButton';
 
-import { applyClaim, CoreGameState } from '../../src/engine/coreGame';
-import { rollDice } from '../../src/engine/onlineRoll';
-import { buildClaimOptions } from '../../src/lib/claimOptions';
+import { applyClaim, CoreGameState } from '@/src/engine/coreGame';
+import { rollDice } from '@/src/engine/onlineRoll';
+import { buildClaimOptions } from '@/src/lib/claimOptions';
 import {
   checkRateLimit,
   clearHiddenRolls,
   getMyCurrentRoll,
   resolveBluffSecure,
   saveHiddenRoll,
-} from '../../src/lib/hiddenRolls';
-import { supabase } from '../../src/lib/supabase';
+} from '@/src/legacy-multiplayer/hiddenRolls';
+import { supabase } from '@/src/lib/supabase';
 
 // ---------- types ----------
 type OnlineGame = {

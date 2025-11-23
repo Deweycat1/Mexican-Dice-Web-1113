@@ -16,7 +16,7 @@
  * 4. After resolution → actual roll revealed in public.games.current_roll
  */
 
-import { supabase } from './supabase';
+import { supabase } from '../lib/supabase';
 
 /**
  * Type for hidden roll records

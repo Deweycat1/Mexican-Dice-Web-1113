@@ -92,7 +92,7 @@ export default function OnlineScreen() {
 							updated.game_id
 						);
 						setPendingChallengeId(null);
-						router.push(`/online/${updated.game_id}` as any);
+						router.push(`/online/game-v2/${updated.game_id}` as any);
 					}
 				}
 			)
@@ -132,7 +132,7 @@ export default function OnlineScreen() {
 					data.game_id
 				);
 				setPendingChallengeId(null);
-				router.push(`/online/${data.game_id}` as any);
+				router.push(`/online/game-v2/${data.game_id}` as any);
 			}
 		}, 2000);
 
@@ -302,7 +302,7 @@ export default function OnlineScreen() {
 			{!isLoading && myUserId && (
 				<IncomingChallengesList
 					myUserId={myUserId}
-					onJoinGame={(gameId) => router.push(`/online/${gameId}` as any)}
+					onJoinGame={(gameId) => router.push(`/online/game-v2/${gameId}` as any)}
 				/>
 			)}
 		</View>

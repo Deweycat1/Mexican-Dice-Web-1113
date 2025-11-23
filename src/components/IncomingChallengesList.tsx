@@ -216,23 +216,21 @@ export default function IncomingChallengesList({ myUserId, onJoinGame }: Incomin
       const recipientUsername = userProfile.username || '';
       console.log('[AcceptChallenge] Recipient username:', recipientUsername);
 
-      // 3. Create new game row in public.games
-      console.log('[AcceptChallenge] Creating game with:', {
-        player1_id: challenge.challenger_id,
-        player2_id: challenge.recipient_id,
-        player1_username: challenge.challenger_username,
-        player2_username: recipientUsername,
+      // 3. Create new game row in public.games_v2
+      console.log('[AcceptChallenge] Creating V2 game with:', {
+        host_id: challenge.challenger_id,
+        guest_id: challenge.recipient_id,
+        host_username: challenge.challenger_username,
+        guest_username: recipientUsername,
       });
 
       const { data: newGame, error: gameError } = await supabase
-        .from('games')
+        .from('games_v2')
         .insert({
-          player1_id: challenge.challenger_id,
-          player2_id: challenge.recipient_id,
-          player1_username: challenge.challenger_username,
-          player2_username: recipientUsername,
-          status: 'waiting',
-          current_player: 'player1'
+          host_id: challenge.challenger_id,
+          guest_id: challenge.recipient_id,
+          status: 'in_progress',
+          current_player_id: challenge.challenger_id,
         })
         .select('*')
         .single();
