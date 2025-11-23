@@ -13,6 +13,7 @@ import {
 
 import BluffModal from '../../../src/components/BluffModal';
 import Dice from '../../../src/components/Dice';
+import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
 import FeltBackground from '../../../src/components/FeltBackground';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
@@ -112,8 +113,12 @@ export default function OnlineGameV2Screen() {
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [banner, setBanner] = useState<{ type: 'got-em' | 'womp-womp' | 'social'; text: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hostName, setHostName] = useState<string>('Host');
   const [guestName, setGuestName] = useState<string>('Guest');
+  const [isRolling, setIsRolling] = useState(false);
+  const [revealDiceValues, setRevealDiceValues] = useState<[number | null, number | null] | null>(null);
+  const [isRevealingBluff, setIsRevealingBluff] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -201,6 +206,11 @@ export default function OnlineGameV2Screen() {
       if (bannerTimer.current) clearTimeout(bannerTimer.current);
     };
   }, [banner]);
+  useEffect(() => {
+    return () => {
+      if (revealTimer.current) clearTimeout(revealTimer.current);
+    };
+  }, []);
 
   const roundState: RoundState = useMemo(() => {
     const raw = game?.round_state;
@@ -288,16 +298,18 @@ export default function OnlineGameV2Screen() {
       return;
     }
     setBanner(null);
-    const { values, normalized } = rollDice();
-    const legalTruth = computeLegalTruth(claimToCheck ?? null, normalized);
-    const nextRound: RoundState = {
-      ...roundState,
-      hostRoll: myRole === 'host' ? normalized : roundState.hostRoll,
-      guestRoll: myRole === 'guest' ? normalized : roundState.guestRoll,
-      hostMustBluff: myRole === 'host' ? !legalTruth : roundState.hostMustBluff,
-      guestMustBluff: myRole === 'guest' ? !legalTruth : roundState.guestMustBluff,
-    };
+    setIsRolling(true);
     try {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      const { values, normalized } = rollDice();
+      const legalTruth = computeLegalTruth(claimToCheck ?? null, normalized);
+      const nextRound: RoundState = {
+        ...roundState,
+        hostRoll: myRole === 'host' ? normalized : roundState.hostRoll,
+        guestRoll: myRole === 'guest' ? normalized : roundState.guestRoll,
+        hostMustBluff: myRole === 'host' ? !legalTruth : roundState.hostMustBluff,
+        guestMustBluff: myRole === 'guest' ? !legalTruth : roundState.guestMustBluff,
+      };
       await handleUpdate(
         {
           last_roll_1: values[0],
@@ -307,6 +319,8 @@ export default function OnlineGameV2Screen() {
       );
     } catch (err: any) {
       Alert.alert('Roll failed', err.message ?? 'Could not save roll.');
+    } finally {
+      setIsRolling(false);
     }
   }, [game, myRole, isMyTurn, roundState, claimToCheck, handleUpdate]);
 
@@ -424,6 +438,14 @@ export default function OnlineGameV2Screen() {
     const loserRole = liar ? defendingRole : myRole;
     const callerName = myRole === 'host' ? hostName : guestName;
     const defenderName = defendingRole === 'host' ? hostName : guestName;
+    const [revealHi, revealLo] = splitClaim(defenderRoll);
+    setRevealDiceValues([revealHi, revealLo]);
+    setIsRevealingBluff(true);
+    if (revealTimer.current) clearTimeout(revealTimer.current);
+    revealTimer.current = setTimeout(() => {
+      setIsRevealingBluff(false);
+      setRevealDiceValues(null);
+    }, 1800);
     const eventText = liar
       ? `${callerName} caught ${defenderName} bluffing!`
       : `${callerName} was wrong — ${defenderName} told the truth.`;
@@ -589,19 +611,25 @@ export default function OnlineGameV2Screen() {
 
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
-                <Dice
-                  value={dieHi}
-                  displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
-                  overlayText={overlayTextHi}
-                  rolling={false}
-                />
-                <View style={{ width: 24 }} />
-                <Dice
-                  value={dieLo}
-                  displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
-                  overlayText={overlayTextLo}
-                  rolling={false}
-                />
+                {isRevealingBluff && revealDiceValues ? (
+                  <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={110} />
+                ) : (
+                  <>
+                    <Dice
+                      value={dieHi}
+                      displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
+                      overlayText={overlayTextHi}
+                      rolling={isRolling}
+                    />
+                    <View style={{ width: 24 }} />
+                    <Dice
+                      value={dieLo}
+                      displayMode={myRoll == null ? (isMyTurn ? 'prompt' : 'question') : 'values'}
+                      overlayText={overlayTextLo}
+                      rolling={isRolling}
+                    />
+                  </>
+                )}
               </View>
             </View>
 
