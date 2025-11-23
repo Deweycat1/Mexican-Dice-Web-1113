@@ -6,11 +6,8 @@ import {
   Alert,
   Animated,
   Image,
-<<<<<<< ours
   Modal,
   Pressable,
-=======
->>>>>>> theirs
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -164,16 +161,12 @@ export default function OnlineGameV2Screen() {
   const [rollingAnim, setRollingAnim] = useState(false);
   const [revealDiceValues, setRevealDiceValues] = useState<[number | null, number | null] | null>(null);
   const [isRevealingBluff, setIsRevealingBluff] = useState(false);
-<<<<<<< ours
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [showSocialReveal, setShowSocialReveal] = useState(false);
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
-  const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
-=======
->>>>>>> theirs
 
   useEffect(() => {
     (async () => {
@@ -369,7 +362,6 @@ export default function OnlineGameV2Screen() {
     }
   }, [roundState.socialRevealNonce, roundState.socialRevealDice, startSocialReveal]);
 
-<<<<<<< ours
   const fadeAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     Animated.sequence([
@@ -377,8 +369,14 @@ export default function OnlineGameV2Screen() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
     ]).start();
   }, [roundState.history, fadeAnim]);
-  const collapsedHistory = useMemo(() => [...roundState.history.slice(-2)].reverse(), [roundState.history]);
-  const modalHistory = useMemo(() => [...roundState.history.slice(-10)].reverse(), [roundState.history]);
+  const collapsedHistory = useMemo(
+    () => [...roundState.history.slice(-2)].reverse(),
+    [roundState.history]
+  );
+  const modalHistory = useMemo(
+    () => [...roundState.history.slice(-10)].reverse(),
+    [roundState.history]
+  );
   const formatHistoryEntry = useCallback(
     (entry: HistoryItem) => {
       if (entry.type === 'event') return entry.text;
@@ -388,9 +386,6 @@ export default function OnlineGameV2Screen() {
     },
     [myRole, opponentName]
   );
-=======
-  const history = roundState.history.slice(-3).reverse();
->>>>>>> theirs
 
   const myTurnText = (() => {
     if (!game) return '';
@@ -638,8 +633,20 @@ export default function OnlineGameV2Screen() {
 
   const handleQuitGame = useCallback(() => {
     console.log('[OnlineGameV2] Quit Game pressed');
-    setQuitConfirmOpen(true);
-  }, []);
+    Alert.alert(
+      'Quit Game',
+      'Are you sure you want to leave the game?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave Game',
+          style: 'destructive',
+          onPress: () => router.replace('/online'),
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [router]);
 
   if (loading) {
     return (
@@ -753,7 +760,6 @@ export default function OnlineGameV2Screen() {
               </View>
             )}
 
-<<<<<<< ours
             <Pressable
               onPress={() => setHistoryModalOpen(true)}
               hitSlop={10}
@@ -771,22 +777,6 @@ export default function OnlineGameV2Screen() {
                 )}
               </Animated.View>
             </Pressable>
-=======
-            <View style={styles.historyBox}>
-              <Text style={styles.historyHeading}>Recent events</Text>
-              {history.length === 0 ? (
-                <Text style={styles.historyText}>No actions yet.</Text>
-              ) : (
-                history.map((entry) => (
-                  <Text key={entry.id} style={styles.historyText} numberOfLines={1}>
-                    {entry.type === 'claim'
-                      ? `${entry.who === myRole ? 'You' : opponentName} claimed ${formatClaim(entry.claim)}`
-                      : entry.text}
-                  </Text>
-                ))
-              )}
-            </View>
->>>>>>> theirs
 
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
@@ -949,54 +939,6 @@ export default function OnlineGameV2Screen() {
         </View>
       </Modal>
 
-      <Modal
-        visible={quitConfirmOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setQuitConfirmOpen(false)}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setQuitConfirmOpen(false)}
-        />
-        <View style={styles.modalCenter}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Quit Game?</Text>
-              <Pressable
-                onPress={() => setQuitConfirmOpen(false)}
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>✕</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.modalBody}>
-              <Text style={styles.modalMessage}>
-                Are you sure you want to leave the game?
-              </Text>
-            </View>
-
-            <View style={styles.actionRow}>
-              <StyledButton
-                label="Cancel"
-                variant="outline"
-                onPress={() => setQuitConfirmOpen(false)}
-                style={styles.btn}
-              />
-              <StyledButton
-                label="Quit"
-                variant="primary"
-                onPress={() => {
-                  setQuitConfirmOpen(false);
-                  router.replace('/online');
-                }}
-                style={styles.btn}
-              />
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
