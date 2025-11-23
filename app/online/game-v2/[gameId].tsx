@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -419,8 +420,8 @@ export default function OnlineGameV2Screen() {
     }
     setBanner(null);
     setRollingAnim(true);
+    Haptics.selectionAsync().catch(() => {});
     try {
-      await new Promise((resolve) => setTimeout(resolve, 900));
       const { values, normalized } = rollDice();
       const legalTruth = computeLegalTruth(claimToCheck ?? null, normalized);
       const nextRound: RoundState = {
@@ -624,6 +625,23 @@ export default function OnlineGameV2Screen() {
     }
   }, [game, myRole, opponentRole, isMyTurn, lastClaim, isRevealAnimating, roundState, appendHistory, handleUpdate, hostName, guestName]);
 
+  const handleQuitGame = useCallback(() => {
+    console.log('[OnlineGameV2] Quit Game pressed');
+    Alert.alert(
+      'Quit Game',
+      'Are you sure you want to leave the game?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave Game',
+          style: 'destructive',
+          onPress: () => router.replace('/online'),
+        },
+      ],
+      { cancelable: true }
+    );
+  }, [router]);
+
   if (loading) {
     return (
       <View style={styles.root}>
@@ -770,14 +788,14 @@ export default function OnlineGameV2Screen() {
                       value={dieHi}
                       displayMode={diceDisplayMode}
                       overlayText={overlayTextHi}
-                      rolling={rolling}
+                      rolling={isMyTurn && rolling && myRoll == null}
                     />
                     <View style={{ width: 24 }} />
                     <Dice
                       value={dieLo}
                       displayMode={diceDisplayMode}
                       overlayText={overlayTextLo}
-                      rolling={rolling}
+                      rolling={isMyTurn && rolling && myRoll == null}
                     />
                   </>
                 ) : (
@@ -816,27 +834,18 @@ export default function OnlineGameV2Screen() {
                   style={styles.btnWide}
                 />
               </View>
-              <View style={styles.menuRow}>
+              <View style={styles.bottomRow}>
                 <StyledButton
                   label="Quit Game"
-                  variant="outline"
-                  onPress={() =>
-                    Alert.alert('Quit Game', 'Are you sure you want to leave the game?', [
-                      { text: 'Cancel', style: 'cancel' },
-                      {
-                        text: 'Leave Game',
-                        style: 'destructive',
-                        onPress: () => router.replace('/online'),
-                      },
-                    ])
-                  }
-                  style={styles.menuButton}
+                  variant="ghost"
+                  onPress={handleQuitGame}
+                  style={styles.btn}
                 />
                 <StyledButton
                   label="View Rules"
-                  variant="outline"
+                  variant="ghost"
                   onPress={() => setRulesOpen(true)}
-                  style={styles.menuButton}
+                  style={styles.btn}
                 />
               </View>
             </View>
