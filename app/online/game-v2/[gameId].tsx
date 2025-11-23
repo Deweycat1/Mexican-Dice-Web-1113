@@ -597,10 +597,10 @@ export default function OnlineGameV2Screen() {
             <View style={styles.controls}>
               <View style={styles.actionRow}>
                 <StyledButton
-                  label="Roll"
+                  label={canRoll ? 'Roll' : 'Claim'}
                   variant="success"
-                  onPress={handleRoll}
-                  disabled={!canRoll}
+                  onPress={canRoll ? handleRoll : () => handleClaim(myRoll!)}
+                  disabled={canRoll ? !canRoll : !canClaim}
                   style={styles.btn}
                 />
                 <StyledButton
