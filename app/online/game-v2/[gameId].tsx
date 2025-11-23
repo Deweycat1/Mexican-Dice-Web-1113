@@ -511,7 +511,6 @@ export default function OnlineGameV2Screen() {
       <FeltBackground>
         <SafeAreaView style={styles.safe}>
           <ScrollView contentContainerStyle={styles.content}>
-            <Text style={styles.breadcrumb} onPress={() => router.push('/')}>← Menu</Text>
             <View style={styles.headerCard}>
               <View style={styles.headerRow}>
                 <View style={styles.playerColumn}>
@@ -620,6 +619,20 @@ export default function OnlineGameV2Screen() {
                   style={styles.btnWide}
                 />
               </View>
+              <View style={styles.menuRow}>
+                <StyledButton
+                  label="Menu"
+                  variant="outline"
+                  onPress={() => router.push('/')}
+                  style={styles.menuButton}
+                />
+                <StyledButton
+                  label="View Rules"
+                  variant="outline"
+                  onPress={() => router.push('/rules')}
+                  style={styles.menuButton}
+                />
+              </View>
             </View>
 
             {game.status === 'finished' && (
@@ -680,12 +693,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     textAlign: 'center',
-  },
-  breadcrumb: {
-    color: '#E0B50C',
-    fontWeight: '700',
-    fontSize: 16,
-    marginBottom: 12,
   },
   headerCard: {
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -820,6 +827,16 @@ const styles = StyleSheet.create({
   },
   btnWide: {
     alignSelf: 'stretch',
+  },
+  menuRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  menuButton: {
+    flex: 1,
+    marginHorizontal: 6,
   },
   dangerButton: {
     backgroundColor: '#6C1115',
