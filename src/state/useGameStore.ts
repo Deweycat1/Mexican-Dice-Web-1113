@@ -762,15 +762,15 @@ export const useGameStore = create<Store>((set, get) => {
 
       const message = (() => {
         if (previousClaim != null && isReverseOf(previousClaim, claim)) {
-          return `The Rival reversed ${previousClaim} with ${claim}. Your move... roll & claim or call bluff.`;
+          return `The Rival reversed ${previousClaim} with ${claim}. Your move...roll & claim or call bluff.`;
         }
         if (claim === 21) {
-          return `The Rival claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31... otherwise call bluff.`;
+          return `The Rival claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31...otherwise call bluff.`;
         }
         if (isAlwaysClaimable(claim)) {
-          return `The Rival claims ${claim}. Your move... roll & claim or call bluff.`;
+          return `The Rival claims ${claim}. Your move...roll & claim or call bluff.`;
         }
-        return `The Rival claims ${claim}. Your move... roll & claim or call bluff.`;
+        return `The Rival claims ${claim}. Your move...roll & claim or call bluff.`;
       })();
 
       // record CPU claim in survival mode (truth vs bluff)

@@ -263,7 +263,7 @@ export default function OnlineScreen() {
 
 			{!isLoading && (
 				<View style={styles.gameCreationContainer}>
-					<Text style={styles.label}>Friend&apos;s Username</Text>
+					<Text style={styles.label}>Friend’s Username (case-sensitive)</Text>
 					<TextInput
 						style={styles.input}
 						value={friendUsername}
