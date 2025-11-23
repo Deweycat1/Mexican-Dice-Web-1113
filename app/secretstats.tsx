@@ -117,7 +117,6 @@ export default function SecretStatsScreen() {
         const [
           survivalBestRes,
           quickPlayBestRes,
-          survivalAvgRes,
           winsRes,
           uniqueDevicesRes,
           behaviorRes,
@@ -130,10 +129,6 @@ export default function SecretStatsScreen() {
             headers: { 'Content-Type': 'application/json' },
           }),
           fetch(`${baseUrl}/api/quickplay-best`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-          fetch(`${baseUrl}/api/survival-average`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
           }),
@@ -174,12 +169,11 @@ export default function SecretStatsScreen() {
 
         if (!survivalBestRes.ok) throw new Error('Failed to fetch survival best');
         if (!quickPlayBestRes.ok) throw new Error('Failed to fetch quick play best');
-        if (!survivalAvgRes.ok) throw new Error('Failed to fetch survival average');
         if (!winsRes.ok) throw new Error('Failed to fetch win stats');
 
         const survivalBestData: SurvivalBestData = await survivalBestRes.json();
         const quickPlayBestData: QuickPlayBestData = await quickPlayBestRes.json();
-        const survivalAvgData: SurvivalAverageData = await survivalAvgRes.json();
+        // `survival-average` endpoint was removed; average is not fetched here
         const winsData: WinStatsData = await winsRes.json();
         
         // Fetch unique devices count (non-critical)
@@ -223,7 +217,7 @@ export default function SecretStatsScreen() {
         // Set survival stats
         setSurvivalBest(survivalBestData);
         setQuickPlayBest(quickPlayBestData);
-        setAverageStreak(survivalAvgData.average ?? 0);
+        // Average streak not available (endpoint removed); keep as null so UI shows fallback
 
         // Set win stats
         setPlayerWins(winsData.playerWins ?? 0);
