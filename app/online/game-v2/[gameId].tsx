@@ -653,7 +653,7 @@ export default function OnlineGameV2Screen() {
                   label="Call Bluff"
                   variant="primary"
                   onPress={handleCallBluff}
-                  disabled={!canCallBluff}
+                  disabled={!canCallBluff || myRoll !== null}
                   style={[styles.btn, styles.dangerButton]}
                 />
               </View>
