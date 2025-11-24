@@ -1,12 +1,16 @@
 // src/components/StyledButton.tsx
-import React from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import {
-    Pressable,
-    StyleProp,
-    StyleSheet,
-    Text,
-    ViewStyle,
+  Animated,
+  Easing,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Try to use your theme colors, but fall back if the file/path changes.
 let ThemeColors: any = {
@@ -45,6 +49,51 @@ export default function StyledButton({
   testID,
 }: Props) {
   const v = getVariant(variant);
+  const sparkleProgress = useRef(new Animated.Value(0)).current;
+
+  const sparkleSweepOpacity = sparkleProgress.interpolate({
+    inputRange: [0, 0.15, 0.55, 1],
+    outputRange: [0, 0.8, 0.45, 0],
+    extrapolate: 'clamp',
+  });
+
+  const sparkleSweepTranslate = sparkleProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-150, 150],
+  });
+
+  type SparkleBurstConfig = {
+    key: string;
+    start: number;
+    rotation: string;
+    position: Partial<Record<'top' | 'bottom' | 'left' | 'right', number | string>>;
+  };
+
+  const sparkles = useMemo<SparkleBurstConfig[]>(
+    () => [
+      { key: 'spark-a', start: 0, rotation: '-20deg', position: { top: '18%', left: '18%' } },
+      { key: 'spark-b', start: 0.18, rotation: '15deg', position: { top: '20%', right: '16%' } },
+      { key: 'spark-c', start: 0.35, rotation: '5deg', position: { bottom: '20%', left: '42%' } },
+    ],
+    []
+  );
+
+  const triggerSparkle = useCallback(() => {
+    sparkleProgress.stopAnimation(() => {
+      sparkleProgress.setValue(0);
+      Animated.timing(sparkleProgress, {
+        toValue: 1,
+        duration: 620,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [sparkleProgress]);
+
+  const handlePressIn = useCallback(() => {
+    if (disabled) return;
+    triggerSparkle();
+  }, [disabled, triggerSparkle]);
 
   return (
     <Pressable
@@ -53,6 +102,7 @@ export default function StyledButton({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
+      onPressIn={handlePressIn}
       android_ripple={
         variant === 'ghost' || variant === 'outline'
           ? undefined
@@ -68,9 +118,59 @@ export default function StyledButton({
         ])
       }
     >
-      <Text style={[styles.label, v.label, disabled && styles.labelDisabled]}>
-        {label}
-      </Text>
+      <View style={styles.contentWrapper}>
+        <Text style={[styles.label, v.label, disabled && styles.labelDisabled]}>
+          {label}
+        </Text>
+
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.sparkleSweep,
+            {
+              opacity: sparkleSweepOpacity,
+              transform: [{ translateX: sparkleSweepTranslate }, { rotate: '18deg' }],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.7)', 'rgba(255,255,255,0)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        </Animated.View>
+
+        {sparkles.map((sparkle) => {
+          const mid = Math.min(1, sparkle.start + 0.28);
+          const end = Math.min(1, sparkle.start + 0.6);
+          const opacity = sparkleProgress.interpolate({
+            inputRange: [sparkle.start, mid, end],
+            outputRange: [0, 0.9, 0],
+            extrapolate: 'clamp',
+          });
+          const scale = sparkleProgress.interpolate({
+            inputRange: [sparkle.start, mid, end],
+            outputRange: [0.4, 1.25, 0.7],
+            extrapolate: 'clamp',
+          });
+
+          return (
+            <Animated.View
+              key={sparkle.key}
+              pointerEvents="none"
+              style={[
+                styles.sparkleBurst,
+                sparkle.position,
+                {
+                  opacity,
+                  transform: [{ scale }, { scaleX: 1.4 }, { rotate: sparkle.rotation }],
+                },
+              ]}
+            />
+          );
+        })}
+      </View>
     </Pressable>
   );
 }
@@ -135,6 +235,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     // Elevation (Android)
     elevation: 4,
+    position: 'relative',
+  },
+  contentWrapper: {
+    width: '100%',
+    minHeight: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
   },
   label: {
     fontSize: 16,
@@ -152,5 +262,23 @@ const styles = StyleSheet.create({
   labelDisabled: {
     // keep contrast strong when disabled
     opacity: 0.9,
+  },
+  sparkleSweep: {
+    position: 'absolute',
+    top: -28,
+    bottom: -28,
+    width: 110,
+  },
+  sparkleBurst: {
+    position: 'absolute',
+    width: 18,
+    height: 18,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    shadowColor: '#fff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 6,
   },
 });
