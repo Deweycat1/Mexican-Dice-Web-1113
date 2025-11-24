@@ -942,12 +942,12 @@ export default function OnlineGameV2Screen() {
                   style={styles.btnWide}
                 />
               </View>
-              <View style={styles.menuRow}>
+              <View style={styles.bottomRow}>
                 <StyledButton
                   label="Quit Game"
                   variant="ghost"
                   onPress={handleQuitGame}
-                  style={styles.menuButton}
+                  style={[styles.btn, styles.goldOutlineButton]}
                 />
                 <StyledButton
                   label={
@@ -963,16 +963,13 @@ export default function OnlineGameV2Screen() {
                     setWinkArmed((prev) => !prev);
                   }}
                   disabled={!canToggleWink}
-                  style={[
-                    styles.menuButton,
-                    winkArmed ? styles.winkButtonOn : styles.winkButtonOff,
-                  ]}
+                  style={[styles.btn, winkArmed ? styles.winkButtonOn : styles.winkButtonOff]}
                 />
                 <StyledButton
                   label="View Rules"
                   variant="ghost"
                   onPress={() => setRulesOpen(true)}
-                  style={styles.menuButton}
+                  style={[styles.btn, styles.goldOutlineButton]}
                 />
               </View>
             </View>
@@ -1063,6 +1060,8 @@ export default function OnlineGameV2Screen() {
     </View>
   );
 }
+
+const BAR_BG = '#115E38';
 
 const styles = StyleSheet.create({
   root: {
@@ -1217,35 +1216,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   controls: {
+    backgroundColor: BAR_BG,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     marginTop: 8,
   },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: 12,
+    marginBottom: 8,
   },
   btn: {
     flex: 1,
-    marginHorizontal: 6,
   },
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-    marginTop: 4,
+    marginTop: 8,
   },
   btnWide: {
     flex: 1,
   },
-  menuRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  menuButton: {
-    flex: 1,
-    marginHorizontal: 6,
+  goldOutlineButton: {
+    borderWidth: 2,
+    borderColor: '#E0B50C',
   },
   winkButtonOff: {
     backgroundColor: '#0B8A42',
