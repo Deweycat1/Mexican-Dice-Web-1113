@@ -23,6 +23,8 @@ import FeltBackground from '../../../src/components/FeltBackground';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
 import RulesContent from '../../../src/components/RulesContent';
+import { LinearGradient } from 'expo-linear-gradient';
+import RulesContent from '../../../src/components/RulesContent';
 import ThinkingIndicator from '../../../src/components/ThinkingIndicator';
 import {
   claimMatchesRoll,
@@ -397,6 +399,7 @@ export default function OnlineGameV2Screen() {
     }
   }, [roundState.socialRevealNonce, roundState.socialRevealDice, startSocialReveal]);
   const lastWinkNonceRef = useRef(roundState.lastWinkNonce ?? 0);
+  const winkGlowAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const winkNonce = roundState.lastWinkNonce ?? 0;
     const winkBy = roundState.lastWinkBy ?? null;
@@ -407,7 +410,19 @@ export default function OnlineGameV2Screen() {
     if (winkBy === myRole) return;
     if (game.status !== 'in_progress') return;
     setBanner({ type: 'wink', text: '😉 WINK WINK 😉' });
-  }, [roundState.lastWinkNonce, roundState.lastWinkBy, game?.status, myRole]);
+    winkGlowAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(winkGlowAnim, { toValue: 1, duration: 250, useNativeDriver: false }),
+      Animated.timing(winkGlowAnim, { toValue: 0, duration: 250, useNativeDriver: false }),
+    ]).start();
+  }, [roundState.lastWinkNonce, roundState.lastWinkBy, game?.status, myRole, winkGlowAnim]);
+  const glowStyle = {
+    borderWidth: 2,
+    borderColor: winkGlowAnim.interpolate({ inputRange: [0, 1], outputRange: ['transparent', '#F9E28F'] }),
+    shadowColor: '#F9E28F',
+    shadowOpacity: winkGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] }),
+    shadowRadius: winkGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 12] }),
+  };
   const bluffResultNonceRef = useRef(roundState.bluffResultNonce ?? 0);
   useEffect(() => {
     const bluffNonce = roundState.bluffResultNonce ?? 0;
@@ -847,17 +862,29 @@ export default function OnlineGameV2Screen() {
             </View>
 
             {banner && (
-              <View
+              <Animated.View
                 style={[
+                  styles.bannerContainer,
                   styles.banner,
                   banner.type === 'got-em' && styles.bannerSuccess,
                   banner.type === 'womp-womp' && styles.bannerFail,
                   banner.type === 'social' && styles.bannerSocial,
-                  banner.type === 'wink' && styles.bannerWink,
+                  banner.type === 'wink' && glowStyle,
                 ]}
               >
-                <Text style={styles.bannerText}>{banner.text}</Text>
-              </View>
+                {banner.type === 'wink' ? (
+                  <LinearGradient
+                    colors={['#E0B50C', '#F1D96B']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.winkBanner}
+                  >
+                    <Text style={styles.winkText}>{banner.text}</Text>
+                  </LinearGradient>
+                ) : (
+                  <Text style={styles.bannerText}>{banner.text}</Text>
+                )}
+              </Animated.View>
             )}
 
             <Pressable
@@ -1172,6 +1199,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 18,
   },
+  bannerContainer: {
+    marginVertical: 10,
+    borderRadius: 12,
+  },
   bannerSuccess: {
     backgroundColor: '#0F5132',
     borderColor: '#0C4128',
@@ -1185,8 +1216,19 @@ const styles = StyleSheet.create({
     borderColor: '#5E471F',
   },
   bannerWink: {
-    backgroundColor: '#E0B50C',
     borderColor: '#D9A307',
+  },
+  winkBanner: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  winkText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#222',
   },
   historyBox: {
     alignSelf: 'center',
