@@ -12,12 +12,8 @@ export default function RulesScreen() {
   const {
     isLoaded,
     isPlaying,
-    isMuted,
-    volume,
-    toggle,
-    mute,
-    unmute,
-    setVolume,
+    play,
+    pause,
   } = useBackgroundMusic({
     source: music,
     startPaused: true,
@@ -26,54 +22,43 @@ export default function RulesScreen() {
     storageKey: 'rules_sound_allowed',
   });
 
-  const volumePercent = Math.round(volume * 100);
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mexican Dice...Rules</Text>
+      <Text style={styles.title}>Mexican Dice...Rules!</Text>
 
       <View style={styles.musicSection}>
-        <Text style={styles.statusLabel}>
-          {isLoaded ? (isPlaying ? 'Music: Playing' : 'Music: Paused') : 'Loading music...'}
-        </Text>
-
-        <View style={styles.buttonRow}>
-          <Pressable
-            onPress={toggle}
-            style={({ pressed }) =>
-              StyleSheet.flatten([
-                styles.button,
-                isPlaying ? styles.playingButton : styles.playButton,
-                pressed && styles.buttonPressed,
-              ])
-            }
-          >
-            <Text style={styles.buttonText}>{isPlaying ? 'Pause' : 'Play'}</Text>
-          </Pressable>
-          <Pressable
-            onPress={isMuted ? unmute : mute}
-            style={({ pressed }) =>
-              StyleSheet.flatten([styles.button, styles.mutedButton, pressed && styles.buttonPressed])
-            }
-          >
-            <Text style={styles.buttonText}>{isMuted ? 'Unmute' : 'Mute'}</Text>
-          </Pressable>
-        </View>
-
-        <View className="volumeRow" style={styles.volumeRow}>
-          <Pressable
-            onPress={() => setVolume(Math.max(0, volume - 0.1))}
-            style={({ pressed }) => StyleSheet.flatten([styles.volumeButton, pressed && styles.buttonPressed])}
-          >
-            <Text style={styles.buttonText}>– Vol</Text>
-          </Pressable>
-          <Text style={styles.volumeLabel}>Vol: {volumePercent}%</Text>
-          <Pressable
-            onPress={() => setVolume(Math.min(1, volume + 0.1))}
-            style={({ pressed }) => StyleSheet.flatten([styles.volumeButton, pressed && styles.buttonPressed])}
-          >
-            <Text style={styles.buttonText}>+ Vol</Text>
-          </Pressable>
+        <View style={styles.musicControlsRow}>
+          <Text style={styles.statusLabel}>Theme Song:</Text>
+          <View style={styles.buttonRow}>
+            <Pressable
+              onPress={play}
+              disabled={!isLoaded}
+              style={({ pressed }) =>
+                StyleSheet.flatten([
+                  styles.button,
+                  isPlaying ? styles.playingButton : styles.playButton,
+                  pressed && styles.buttonPressed,
+                  !isLoaded && styles.buttonDisabled,
+                ])
+              }
+            >
+              <Text style={styles.buttonText}>{isPlaying ? 'Playing' : 'Play'}</Text>
+            </Pressable>
+            <Pressable
+              onPress={pause}
+              disabled={!isLoaded}
+              style={({ pressed }) =>
+                StyleSheet.flatten([
+                  styles.button,
+                  styles.mutedButton,
+                  pressed && styles.buttonPressed,
+                  !isLoaded && styles.buttonDisabled,
+                ])
+              }
+            >
+              <Text style={styles.buttonText}>{isPlaying ? 'Pause/Mute' : 'Muted'}</Text>
+            </Pressable>
+          </View>
         </View>
 
         {Platform.OS === 'web' && !isPlaying && (
@@ -211,6 +196,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#fff',
     textAlign: 'center',
+    marginTop: 35,
     marginBottom: 18,
   },
   musicSection: {
@@ -221,16 +207,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
+  musicControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    flexWrap: 'wrap',
+  },
   statusLabel: {
     color: '#E6FFE6',
     fontSize: 14,
-    marginBottom: 14,
+    fontWeight: '700',
+    marginRight: 12,
   },
   buttonRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 0,
   },
   button: {
     borderRadius: 999,
@@ -250,28 +244,12 @@ const styles = StyleSheet.create({
   buttonPressed: {
     opacity: 0.8,
   },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
   buttonText: {
     color: '#ffffff',
     fontWeight: '700',
-  },
-  volumeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  volumeButton: {
-    backgroundColor: '#343a40',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 12,
-    marginHorizontal: 6,
-  },
-  volumeLabel: {
-    color: '#E6FFE6',
-    fontWeight: '600',
-    minWidth: 90,
-    textAlign: 'center',
   },
   helperNote: {
     marginTop: 6,
