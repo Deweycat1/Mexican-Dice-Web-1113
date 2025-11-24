@@ -71,6 +71,9 @@ export type Store = {
   cpuSocialDice: DicePair | null;
   cpuSocialRevealNonce: number;
   socialBannerNonce: number;
+  lastBluffCaller: Turn | null;
+  lastBluffDefenderTruth: boolean | null;
+  bluffResultNonce: number;
   
   // Turn timing tracking
   playerTurnStartTime: number | null;
@@ -499,6 +502,9 @@ export const useGameStore = create<Store>((set, get) => {
       cpuSocialDice: null,
       cpuSocialRevealNonce: 0,
       socialBannerNonce: 0,
+      lastBluffCaller: null,
+      lastBluffDefenderTruth: null,
+      bluffResultNonce: 0,
       playerTurnStartTime: null,
       turn: 'player',
     });
@@ -527,6 +533,9 @@ export const useGameStore = create<Store>((set, get) => {
       cpuSocialDice: null,
       cpuSocialRevealNonce: 0,
       socialBannerNonce: 0,
+      lastBluffCaller: null,
+      lastBluffDefenderTruth: null,
+      bluffResultNonce: 0,
       playerTurnStartTime: null,
       turn: 'player',
     });
@@ -632,6 +641,12 @@ export const useGameStore = create<Store>((set, get) => {
       penalty: displayPenalty,
       useEmDash: false,
     });
+
+    set((prevState) => ({
+      lastBluffCaller: caller,
+      lastBluffDefenderTruth: defenderToldTruth,
+      bluffResultNonce: (prevState.bluffResultNonce ?? 0) + 1,
+    }));
 
     // Add history entry when Rival incorrectly calls player's bluff
     if (caller === 'cpu' && prevBy === 'player' && defenderToldTruth) {
@@ -847,6 +862,9 @@ export const useGameStore = create<Store>((set, get) => {
     cpuSocialDice: null,
     cpuSocialRevealNonce: 0,
     socialBannerNonce: 0,
+    lastBluffCaller: null,
+    lastBluffDefenderTruth: null,
+    bluffResultNonce: 0,
     
     // Turn timing tracking
     playerTurnStartTime: null,

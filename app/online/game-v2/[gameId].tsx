@@ -71,6 +71,9 @@ export type RoundState = {
   lastClaimHadWink: boolean;
   lastWinkBy: 'host' | 'guest' | null;
   lastWinkNonce: number;
+  lastBluffCaller: 'host' | 'guest' | null;
+  lastBluffDefenderTruth: boolean | null;
+  bluffResultNonce: number;
 };
 
 type HistoryItem =
@@ -112,6 +115,9 @@ const defaultRoundState: RoundState = {
   lastClaimHadWink: false,
   lastWinkBy: null,
   lastWinkNonce: 0,
+  lastBluffCaller: null,
+  lastBluffDefenderTruth: null,
+  bluffResultNonce: 0,
 };
 
 const clampScore = (value: number) => Math.max(0, value);
@@ -313,6 +319,16 @@ export default function OnlineGameV2Screen() {
             : null,
         lastWinkNonce:
           typeof (raw as any).lastWinkNonce === 'number' ? (raw as any).lastWinkNonce : 0,
+        lastBluffCaller:
+          (raw as any).lastBluffCaller === 'host' || (raw as any).lastBluffCaller === 'guest'
+            ? (raw as any).lastBluffCaller
+            : null,
+        lastBluffDefenderTruth:
+          typeof (raw as any).lastBluffDefenderTruth === 'boolean'
+            ? (raw as any).lastBluffDefenderTruth
+            : null,
+        bluffResultNonce:
+          typeof (raw as any).bluffResultNonce === 'number' ? (raw as any).bluffResultNonce : 0,
       };
     }
     return defaultRoundState;
@@ -423,6 +439,19 @@ export default function OnlineGameV2Screen() {
     if (game.status !== 'in_progress') return;
     setBanner({ type: 'wink', text: '😉 WINK WINK 😉' });
   }, [roundState.lastWinkNonce, roundState.lastWinkBy, game?.status, myRole]);
+  const bluffResultNonceRef = useRef(roundState.bluffResultNonce ?? 0);
+  useEffect(() => {
+    const bluffNonce = roundState.bluffResultNonce ?? 0;
+    const caller = roundState.lastBluffCaller ?? null;
+    const defenderTruth = typeof (roundState.lastBluffDefenderTruth) === 'boolean' ? roundState.lastBluffDefenderTruth : null;
+    if (!caller || defenderTruth === null) return;
+    if (bluffNonce <= bluffResultNonceRef.current) return;
+    bluffResultNonceRef.current = bluffNonce;
+    const defenderRole = caller === 'host' ? 'guest' : 'host';
+    if (defenderRole !== myRole) return;
+    if (game?.status !== 'in_progress') return;
+    setBanner(defenderTruth ? { type: 'got-em', text: "GOT 'EM!!!" } : { type: 'womp-womp', text: 'WOMP WOMP' });
+  }, [roundState.bluffResultNonce, roundState.lastBluffCaller, roundState.lastBluffDefenderTruth, myRole, game?.status]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -678,7 +707,7 @@ export default function OnlineGameV2Screen() {
     }, 1800);
     const eventText = liar
       ? `${callerName} caught ${defenderName} bluffing!`
-      : `${callerName} was wrong — ${defenderName} told the truth.`;
+      : `${callerName} was wrong, ${defenderName} told the truth.`;
 
     const nextHistory = appendHistory({ id: uuid(), type: 'event', text: eventText, timestamp: new Date().toISOString() });
 
@@ -700,6 +729,9 @@ export default function OnlineGameV2Screen() {
       lastClaimHadWink: false,
       lastWinkBy: roundState.lastWinkBy ?? null,
       lastWinkNonce: roundState.lastWinkNonce ?? 0,
+      lastBluffCaller: myRole,
+      lastBluffDefenderTruth: !liar,
+      bluffResultNonce: (roundState.bluffResultNonce ?? 0) + 1,
     };
     const payload: Record<string, any> = {
       host_score: nextHostScore,

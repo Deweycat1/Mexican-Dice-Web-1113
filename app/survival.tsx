@@ -172,6 +172,9 @@ export default function Survival() {
     cpuSocialDice,
     cpuSocialRevealNonce,
     socialBannerNonce,
+    lastBluffCaller,
+    lastBluffDefenderTruth,
+    bluffResultNonce,
     // survival controls
     startSurvival,
     restartSurvival,
@@ -745,6 +748,13 @@ export default function Survival() {
     }
     socialBannerNonceRef.current = socialBannerNonce;
   }, [socialBannerNonce, triggerRivalBluffBanner]);
+
+  useEffect(() => {
+    if (!bluffResultNonce) return;
+    if (lastBluffCaller !== 'cpu') return;
+    if (typeof lastBluffDefenderTruth !== 'boolean') return;
+    triggerRivalBluffBanner(lastBluffDefenderTruth ? 'got-em' : 'womp-womp');
+  }, [bluffResultNonce, lastBluffCaller, lastBluffDefenderTruth, triggerRivalBluffBanner]);
 
   function handleRollOrClaim() {
     if (controlsDisabled || isRevealAnimating) {

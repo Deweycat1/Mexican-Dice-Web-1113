@@ -211,6 +211,9 @@ export default function Game() {
     cpuSocialDice,
     cpuSocialRevealNonce,
     socialBannerNonce,
+    lastBluffCaller,
+    lastBluffDefenderTruth,
+    bluffResultNonce,
   } = useGameStore();
 
   const narration = (buildBanner?.() || message || '').trim();
@@ -524,6 +527,13 @@ export default function Game() {
     }
     socialBannerNonceRef.current = socialBannerNonce;
   }, [socialBannerNonce, triggerRivalBluffBanner]);
+
+  useEffect(() => {
+    if (!bluffResultNonce) return;
+    if (lastBluffCaller !== 'cpu') return;
+    if (typeof lastBluffDefenderTruth !== 'boolean') return;
+    triggerRivalBluffBanner(lastBluffDefenderTruth ? 'got-em' : 'womp-womp');
+  }, [bluffResultNonce, lastBluffCaller, lastBluffDefenderTruth, triggerRivalBluffBanner]);
 
   function handleRollOrClaim() {
     if (controlsDisabled || isRevealAnimating) return;
