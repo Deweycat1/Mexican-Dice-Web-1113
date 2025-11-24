@@ -384,6 +384,10 @@ export default function OnlineGameV2Screen() {
       setWinkArmed(false);
     }
   }, [isMyTurn, myRoll]);
+  const winkLabelBase =
+    winkUsesRemaining > 0 ? `Send with 😉 (${winkUsesRemaining})` : 'No winks left';
+  const winkLabel =
+    winkArmed && winkUsesRemaining > 0 ? `${winkLabelBase} (Active)` : winkLabelBase;
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
@@ -950,13 +954,7 @@ export default function OnlineGameV2Screen() {
                   style={[styles.btn, styles.goldOutlineButton]}
                 />
                 <StyledButton
-                  label={
-                    winkUsesRemaining > 0
-                      ? winkArmed
-                        ? `Send with 😉 (${winkUsesRemaining} left)`
-                        : `Send with 😉 (${winkUsesRemaining})`
-                      : 'No winks left'
-                  }
+                  label={winkLabel}
                   variant="ghost"
                   onPress={() => {
                     if (!canToggleWink) return;
