@@ -7,8 +7,8 @@ import {
   Animated,
   Image,
   Modal,
-  Pressable,
   Platform,
+  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -16,14 +16,14 @@ import {
   View,
 } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
 import BluffModal from '../../../src/components/BluffModal';
 import Dice from '../../../src/components/Dice';
 import FeltBackground from '../../../src/components/FeltBackground';
+import RulesContent from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
-import RulesContent from '../../../src/components/RulesContent';
-import { LinearGradient } from 'expo-linear-gradient';
 import ThinkingIndicator from '../../../src/components/ThinkingIndicator';
 import {
   claimMatchesRoll,
