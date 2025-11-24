@@ -24,7 +24,6 @@ import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
 import RulesContent from '../../../src/components/RulesContent';
 import { LinearGradient } from 'expo-linear-gradient';
-import RulesContent from '../../../src/components/RulesContent';
 import ThinkingIndicator from '../../../src/components/ThinkingIndicator';
 import {
   claimMatchesRoll,
