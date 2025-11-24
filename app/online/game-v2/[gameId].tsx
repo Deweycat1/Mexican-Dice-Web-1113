@@ -963,7 +963,11 @@ export default function OnlineGameV2Screen() {
                     setWinkArmed((prev) => !prev);
                   }}
                   disabled={!canToggleWink}
-                  style={[styles.btn, winkArmed ? styles.winkButtonOn : styles.winkButtonOff]}
+                  style={[
+                    styles.btn,
+                    styles.winkButton,
+                    winkArmed && styles.winkButtonActive,
+                  ]}
                 />
                 <StyledButton
                   label="View Rules"
@@ -1244,15 +1248,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#E0B50C',
   },
-  winkButtonOff: {
-    backgroundColor: '#0B8A42',
-    borderColor: '#E0B50C',
+  winkButton: {
     borderWidth: 2,
+    borderColor: '#E0B50C',
+    backgroundColor: 'transparent',
   },
-  winkButtonOn: {
-    backgroundColor: '#E0B50C',
-    borderColor: '#E0B50C',
-    borderWidth: 2,
+  winkButtonActive: {
+    backgroundColor: '#0B8A42',
   },
   dangerButton: {
     backgroundColor: '#6C1115',
