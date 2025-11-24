@@ -160,7 +160,7 @@ export default function OnlineGameV2Screen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
-  const [banner, setBanner] = useState<{ type: 'got-em' | 'womp-womp' | 'social'; text: string } | null>(null);
+  const [banner, setBanner] = useState<{ type: 'got-em' | 'womp-womp' | 'social' | 'wink'; text: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hostName, setHostName] = useState<string>('Host');
@@ -592,6 +592,9 @@ export default function OnlineGameV2Screen() {
         if (claim === 41) {
           setBanner({ type: 'social', text: '🍻 SOCIAL!!! 🍻' });
         }
+        if (effectiveUseWink) {
+          setBanner({ type: 'wink', text: '😉 WINK WINK 😉' });
+        }
       } catch (err: any) {
         Alert.alert('Claim failed', err.message ?? 'Could not save claim.');
       }
@@ -820,6 +823,7 @@ export default function OnlineGameV2Screen() {
                   banner.type === 'got-em' && styles.bannerSuccess,
                   banner.type === 'womp-womp' && styles.bannerFail,
                   banner.type === 'social' && styles.bannerSocial,
+                  banner.type === 'wink' && styles.bannerWink,
                 ]}
               >
                 <Text style={styles.bannerText}>{banner.text}</Text>
@@ -1152,6 +1156,10 @@ const styles = StyleSheet.create({
   bannerSocial: {
     backgroundColor: '#8C6B2F',
     borderColor: '#5E471F',
+  },
+  bannerWink: {
+    backgroundColor: '#E0B50C',
+    borderColor: '#D9A307',
   },
   historyBox: {
     alignSelf: 'center',
