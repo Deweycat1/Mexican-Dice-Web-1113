@@ -66,10 +66,13 @@ export type RoundState = {
   lastClaimRoll: number | null;
   socialRevealDice: [number | null, number | null] | null;
   socialRevealNonce: number;
+  hostWinksUsed: number;
+  guestWinksUsed: number;
+  lastClaimHadWink: boolean;
 };
 
 type HistoryItem =
-  | { id: string; type: 'claim'; who: 'host' | 'guest'; claim: number; timestamp: string }
+  | { id: string; type: 'claim'; who: 'host' | 'guest'; claim: number; timestamp: string; wink?: boolean }
   | { id: string; type: 'event'; text: string; timestamp: string };
 
 type GameStatus = 'waiting' | 'in_progress' | 'finished' | 'cancelled';
@@ -102,6 +105,9 @@ const defaultRoundState: RoundState = {
   lastClaimRoll: null,
   socialRevealDice: null,
   socialRevealNonce: 0,
+  hostWinksUsed: 0,
+  guestWinksUsed: 0,
+  lastClaimHadWink: false,
 };
 
 const clampScore = (value: number) => Math.max(0, value);
@@ -168,6 +174,7 @@ export default function OnlineGameV2Screen() {
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
+  const [winkArmed, setWinkArmed] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -288,6 +295,14 @@ export default function OnlineGameV2Screen() {
                   : null,
               ]
             : null,
+        hostWinksUsed:
+          typeof (raw as any).hostWinksUsed === 'number' ? (raw as any).hostWinksUsed : 0,
+        guestWinksUsed:
+          typeof (raw as any).guestWinksUsed === 'number' ? (raw as any).guestWinksUsed : 0,
+        lastClaimHadWink:
+          typeof (raw as any).lastClaimHadWink === 'boolean'
+            ? (raw as any).lastClaimHadWink
+            : false,
       };
     }
     return defaultRoundState;
@@ -323,10 +338,10 @@ export default function OnlineGameV2Screen() {
   const opponentScore = myRole === 'host' ? game?.guest_score ?? 0 : game?.host_score ?? 0;
   const claimToCheck = roundState.baselineClaim ?? lastClaim;
   const [dieHi, dieLo] = facesFromRoll(myRoll);
-  const claimSummary = useMemo(
-    () => `Current claim: ${formatClaim(lastClaim)}     Your roll: ${formatRoll(myRoll)}`,
-    [lastClaim, myRoll]
-  );
+  const claimSummary = useMemo(() => {
+    const winkSuffix = roundState.lastClaimHadWink ? ' 😉' : '';
+    return `Current claim: ${formatClaim(lastClaim)}${winkSuffix}     Your roll: ${formatRoll(myRoll)}`;
+  }, [lastClaim, myRoll, roundState.lastClaimHadWink]);
   const isOpponentClaimPhase = useMemo(() => {
     if (!game) return false;
     if (!isMyTurn) return false;
@@ -339,6 +354,26 @@ export default function OnlineGameV2Screen() {
     if (isMyTurn) return myRoll == null ? 'prompt' : 'values';
     return 'values';
   }, [isOpponentClaimPhase, isMyTurn, myRoll]);
+  const myWinksUsed =
+    myRole === 'host'
+      ? roundState.hostWinksUsed ?? 0
+      : myRole === 'guest'
+      ? roundState.guestWinksUsed ?? 0
+      : 0;
+  const WINK_LIMIT = 3;
+  const winkUsesRemaining = Math.max(0, WINK_LIMIT - myWinksUsed);
+  const canToggleWink =
+    !!myRole &&
+    isMyTurn &&
+    game?.status === 'in_progress' &&
+    myRoll != null &&
+    winkUsesRemaining > 0 &&
+    !isRevealAnimating;
+  useEffect(() => {
+    if (!isMyTurn || myRoll == null) {
+      setWinkArmed(false);
+    }
+  }, [isMyTurn, myRoll]);
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
@@ -383,7 +418,8 @@ export default function OnlineGameV2Screen() {
       if (entry.type === 'event') return entry.text;
       const whoLabel = entry.who === myRole ? 'You' : opponentName;
       const verb = entry.claim === 41 ? 'rolled' : 'claimed';
-      return `${whoLabel} ${verb} ${formatClaim(entry.claim)}`;
+      const winkSuffix = entry.wink ? ' 😉' : '';
+      return `${whoLabel} ${verb} ${formatClaim(entry.claim)}${winkSuffix}`;
     },
     [myRole, opponentName]
   );
@@ -461,7 +497,7 @@ export default function OnlineGameV2Screen() {
   );
 
   const handleClaim = useCallback(
-    async (claim: number) => {
+    async (claim: number, useWink?: boolean) => {
       if (!game || !myRole || !opponentRole || !isMyTurn || isRevealAnimating) return;
       const prev = lastClaim;
       if (prev === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
@@ -478,6 +514,7 @@ export default function OnlineGameV2Screen() {
         return;
       }
 
+      const effectiveUseWink = !!useWink && myRole != null && winkUsesRemaining > 0;
       const timestamp = new Date().toISOString();
       const newHistory = appendHistory({
         id: uuid(),
@@ -485,6 +522,7 @@ export default function OnlineGameV2Screen() {
         who: myRole,
         claim,
         timestamp,
+        wink: effectiveUseWink,
       });
       const isReverseClaim = prev != null && isReverseOf(prev, claim);
       const nextBaseline = claim === 41 ? null : isReverseClaim ? (roundState.baselineClaim ?? prev) : claim;
@@ -509,6 +547,15 @@ export default function OnlineGameV2Screen() {
         lastClaimRoll: claim === 41 ? null : myCurrentRoll,
         socialRevealDice: claim === 41 ? socialDice : roundState.socialRevealDice,
         socialRevealNonce: nextSocialNonce,
+        hostWinksUsed:
+          myRole === 'host'
+            ? roundState.hostWinksUsed + (effectiveUseWink ? 1 : 0)
+            : roundState.hostWinksUsed,
+        guestWinksUsed:
+          myRole === 'guest'
+            ? roundState.guestWinksUsed + (effectiveUseWink ? 1 : 0)
+            : roundState.guestWinksUsed,
+        lastClaimHadWink: !!effectiveUseWink && claim !== 41,
       };
 
       if (myRole === 'host') {
@@ -526,6 +573,7 @@ export default function OnlineGameV2Screen() {
         nextRound.guestMustBluff = false;
         nextRound.lastAction = 'normal';
         nextRound.lastClaimer = null;
+        nextRound.lastClaimHadWink = false;
         if (socialDice) {
           startSocialReveal(socialDice);
           socialRevealNonceRef.current = nextSocialNonce;
@@ -540,6 +588,7 @@ export default function OnlineGameV2Screen() {
       try {
         await handleUpdate(payload, nextRound);
         setClaimPickerOpen(false);
+        setWinkArmed(false);
         if (claim === 41) {
           setBanner({ type: 'social', text: '🍻 SOCIAL!!! 🍻' });
         }
@@ -561,12 +610,13 @@ export default function OnlineGameV2Screen() {
       hostName,
       guestName,
       startSocialReveal,
+      winkUsesRemaining,
     ]
   );
 
   const handleShowSocial = useCallback(() => {
-    handleClaim(41);
-  }, [handleClaim]);
+    handleClaim(41, winkArmed);
+  }, [handleClaim, winkArmed]);
 
   const handleCallBluff = useCallback(async () => {
     if (!game || !myRole || !opponentRole || !isMyTurn || lastClaim == null || isRevealAnimating) {
@@ -615,6 +665,9 @@ export default function OnlineGameV2Screen() {
       history: nextHistory,
       socialRevealNonce: roundState.socialRevealNonce ?? 0,
       socialRevealDice: null,
+      hostWinksUsed: roundState.hostWinksUsed,
+      guestWinksUsed: roundState.guestWinksUsed,
+      lastClaimHadWink: false,
     };
     const payload: Record<string, any> = {
       host_score: nextHostScore,
@@ -832,7 +885,14 @@ export default function OnlineGameV2Screen() {
                 <StyledButton
                   label={canRoll ? 'Roll' : 'Claim'}
                   variant="success"
-                  onPress={canRoll ? handleRoll : () => handleClaim(myRoll!)}
+                  onPress={
+                    canRoll
+                      ? handleRoll
+                      : () => {
+                          if (!canClaim || myRoll == null) return;
+                          handleClaim(myRoll, winkArmed);
+                        }
+                  }
                   disabled={isRevealAnimating || (canRoll ? !canRoll : !canClaim)}
                   style={styles.btn}
                 />
@@ -853,18 +913,37 @@ export default function OnlineGameV2Screen() {
                   style={styles.btnWide}
                 />
               </View>
-              <View style={styles.bottomRow}>
+              <View style={styles.menuRow}>
                 <StyledButton
                   label="Quit Game"
                   variant="ghost"
                   onPress={handleQuitGame}
-                  style={[styles.btn, styles.menuBottomButton]}
+                  style={styles.menuButton}
+                />
+                <StyledButton
+                  label={
+                    winkUsesRemaining > 0
+                      ? winkArmed
+                        ? `Send with 😉 (${winkUsesRemaining} left)`
+                        : `Send with 😉 (${winkUsesRemaining})`
+                      : 'No winks left'
+                  }
+                  variant="ghost"
+                  onPress={() => {
+                    if (!canToggleWink) return;
+                    setWinkArmed((prev) => !prev);
+                  }}
+                  disabled={!canToggleWink}
+                  style={[
+                    styles.menuButton,
+                    winkArmed ? styles.winkButtonOn : styles.winkButtonOff,
+                  ]}
                 />
                 <StyledButton
                   label="View Rules"
                   variant="ghost"
                   onPress={() => setRulesOpen(true)}
-                  style={[styles.btn, styles.menuBottomButton]}
+                  style={styles.menuButton}
                 />
               </View>
             </View>
@@ -890,7 +969,7 @@ export default function OnlineGameV2Screen() {
         visible={claimPickerOpen}
         options={claimOptions}
         onCancel={() => setClaimPickerOpen(false)}
-        onSelect={handleClaim}
+        onSelect={(value) => handleClaim(value, winkArmed)}
         canShowSocial={canShowSocial}
         onShowSocial={handleShowSocial}
       />
@@ -1125,10 +1204,6 @@ const styles = StyleSheet.create({
   btnWide: {
     flex: 1,
   },
-  menuBottomButton: {
-    borderWidth: 2,
-    borderColor: '#E0B50C', // same as claimText color
-  },
   menuRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1138,6 +1213,16 @@ const styles = StyleSheet.create({
   menuButton: {
     flex: 1,
     marginHorizontal: 6,
+  },
+  winkButtonOff: {
+    backgroundColor: '#0B8A42',
+    borderColor: '#E0B50C',
+    borderWidth: 2,
+  },
+  winkButtonOn: {
+    backgroundColor: '#E0B50C',
+    borderColor: '#E0B50C',
+    borderWidth: 2,
   },
   dangerButton: {
     backgroundColor: '#6C1115',
