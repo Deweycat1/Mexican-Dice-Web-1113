@@ -69,6 +69,8 @@ export type RoundState = {
   hostWinksUsed: number;
   guestWinksUsed: number;
   lastClaimHadWink: boolean;
+  lastWinkBy: 'host' | 'guest' | null;
+  lastWinkNonce: number;
 };
 
 type HistoryItem =
@@ -108,6 +110,8 @@ const defaultRoundState: RoundState = {
   hostWinksUsed: 0,
   guestWinksUsed: 0,
   lastClaimHadWink: false,
+  lastWinkBy: null,
+  lastWinkNonce: 0,
 };
 
 const clampScore = (value: number) => Math.max(0, value);
@@ -303,6 +307,12 @@ export default function OnlineGameV2Screen() {
           typeof (raw as any).lastClaimHadWink === 'boolean'
             ? (raw as any).lastClaimHadWink
             : false,
+        lastWinkBy:
+          (raw as any).lastWinkBy === 'host' || (raw as any).lastWinkBy === 'guest'
+            ? (raw as any).lastWinkBy
+            : null,
+        lastWinkNonce:
+          typeof (raw as any).lastWinkNonce === 'number' ? (raw as any).lastWinkNonce : 0,
       };
     }
     return defaultRoundState;
@@ -397,6 +407,18 @@ export default function OnlineGameV2Screen() {
       startSocialReveal(roundState.socialRevealDice);
     }
   }, [roundState.socialRevealNonce, roundState.socialRevealDice, startSocialReveal]);
+  const lastWinkNonceRef = useRef(roundState.lastWinkNonce ?? 0);
+  useEffect(() => {
+    const winkNonce = roundState.lastWinkNonce ?? 0;
+    const winkBy = roundState.lastWinkBy ?? null;
+    if (!game || !myRole) return;
+    if (!winkNonce || !winkBy) return;
+    if (winkNonce <= lastWinkNonceRef.current) return;
+    lastWinkNonceRef.current = winkNonce;
+    if (winkBy === myRole) return;
+    if (game.status !== 'in_progress') return;
+    setBanner({ type: 'wink', text: '😉 WINK WINK 😉' });
+  }, [roundState.lastWinkNonce, roundState.lastWinkBy, game?.status, myRole]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -515,6 +537,8 @@ export default function OnlineGameV2Screen() {
       }
 
       const effectiveUseWink = !!useWink && myRole != null && winkUsesRemaining > 0;
+      const prevWinkNonce = roundState.lastWinkNonce ?? 0;
+      const nextWinkNonce = effectiveUseWink ? prevWinkNonce + 1 : prevWinkNonce;
       const timestamp = new Date().toISOString();
       const newHistory = appendHistory({
         id: uuid(),
@@ -556,6 +580,8 @@ export default function OnlineGameV2Screen() {
             ? roundState.guestWinksUsed + (effectiveUseWink ? 1 : 0)
             : roundState.guestWinksUsed,
         lastClaimHadWink: !!effectiveUseWink && claim !== 41,
+        lastWinkBy: effectiveUseWink ? myRole : roundState.lastWinkBy ?? null,
+        lastWinkNonce: nextWinkNonce,
       };
 
       if (myRole === 'host') {
@@ -591,9 +617,6 @@ export default function OnlineGameV2Screen() {
         setWinkArmed(false);
         if (claim === 41) {
           setBanner({ type: 'social', text: '🍻 SOCIAL!!! 🍻' });
-        }
-        if (effectiveUseWink) {
-          setBanner({ type: 'wink', text: '😉 WINK WINK 😉' });
         }
       } catch (err: any) {
         Alert.alert('Claim failed', err.message ?? 'Could not save claim.');
@@ -671,6 +694,8 @@ export default function OnlineGameV2Screen() {
       hostWinksUsed: roundState.hostWinksUsed,
       guestWinksUsed: roundState.guestWinksUsed,
       lastClaimHadWink: false,
+      lastWinkBy: roundState.lastWinkBy ?? null,
+      lastWinkNonce: roundState.lastWinkNonce ?? 0,
     };
     const payload: Record<string, any> = {
       host_score: nextHostScore,
