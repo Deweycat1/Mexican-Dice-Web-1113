@@ -22,6 +22,7 @@ import { ScoreDie } from '../src/components/ScoreDie';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import StyledButton from '../src/components/StyledButton';
 import ThinkingIndicator from '../src/components/ThinkingIndicator';
+import RulesContent from '../src/components/RulesContent';
 import { isAlwaysClaimable, meetsOrBeats, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { buildClaimOptions } from '../src/lib/claimOptions';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
@@ -29,7 +30,7 @@ import { useGameStore } from '../src/state/useGameStore';
 
 // ---------- helpers ----------
 function formatClaim(value: number | null | undefined): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
   if (value === 21) return '21 (Mexican)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
@@ -38,7 +39,7 @@ function formatClaim(value: number | null | undefined): string {
   return `${hi}${lo}`;
 }
 function formatRoll(value: number | null | undefined): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) return '—';
+  if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
   const [hi, lo] = splitClaim(value);
   return `${hi}${lo}`;
 }
@@ -108,39 +109,6 @@ const DEMONIC_LINES = [
 
 const pickRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
-const RULES_TEXT = `General Gameplay
-
-	Roll two dice and read them higher-first (3 and 5 → 53). Doubles beat mixed rolls, and Special Rolls beat everything. After you roll, claim a number to the next player...truth or bluff. You may claim any roll that matches or beats the last claim, or a Special Roll (21 or 31...you cannot lie about a 41).
-
-Special Rolls
-
-🎲 21 “Mexican”: Claiming a Mexican makes the round worth 2 points. The next player must either accept the challenge and roll for a real 21, or Call Bluff. Whoever is wrong (caller or claimer) loses 2 points. Reverse does not reduce the penalty.
-
-🔄 31 “Reverse”: Sends the challenge back so the previous player must now match or beat the reflected roll. Reverse can always be claimed (truth or bluff). If a Mexican is reversed onto someone, the 2-point penalty still applies.
-
-	🍺 41 “Social”: Must be shown, never bluffed. When rolled, the round resets...all claims clear, no points are lost, and the dice pass to the next player.
-
-Bluffs
-
-If a bluff is suspected, the player may Call Bluff instead of accepting the claim.
-• In normal rounds:
-  • Claim true → caller loses 1 point
-  • Claim false → bluffer loses 1 point
-
-• In Mexican rounds:
-  • The loser always loses 2 points
-
-Scoring & Scorekeeper Dice
-
-Everyone starts with 5 points. When you lose points, your scorekeeper die counts up instead of down:
-• At full health (5 points), your die shows 1
-• As you lose points, the die climbs toward 6
-	• When your die hits 6, you’ve reached 0 points...and you’re out
-
-This makes it easy to see danger at a glance:
-• Low die = safe
-• High die = close to elimination
-• Face 6 = game over`;
 // ------------------------------
 
 export default function Game() {
@@ -1006,7 +974,7 @@ export default function Game() {
                   </Pressable>
                 </View>
                 <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
-                  <Text style={styles.rulesText}>{RULES_TEXT}</Text>
+                  <RulesContent />
                 </ScrollView>
               </View>
             </View>
@@ -1374,11 +1342,6 @@ const styles = StyleSheet.create({
   },
   rulesScroll: {
     maxHeight: '100%',
-  },
-  rulesText: {
-    color: '#E6FFE6',
-    fontSize: 15,
-    lineHeight: 22,
   },
   // End-of-game banner styles
   endBannerContainer: {

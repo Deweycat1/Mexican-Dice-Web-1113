@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useBackgroundMusic } from '../src/hooks/useBackgroundMusic';
+import RulesContent from '../src/components/RulesContent';
 
 // IMPORTANT: add the audio asset at assets/audio/mexican-dice-game.mp3
 const music = require('../assets/audio/mexican-dice-game.mp3');
@@ -66,76 +67,11 @@ export default function RulesScreen() {
         )}
       </View>
 
-           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
-  <View style={styles.rulesCard}>
-
-        
-        <Text style={[styles.body, { fontWeight: '700', fontSize: 17 }]}>
-          General Gameplay
-        </Text>
-        <Text style={styles.body}>
-          Roll two dice and read them higher-first (3 and 5 → 53). Doubles beat mixed rolls, and Special Rolls beat
-          everything. After you roll, claim a number to the next player...truth or bluff. You may claim any roll that
-          matches or beats the last claim, or a Special Roll (21 or 31...you cannot lie about a 41).
-        </Text>
-
-        <Text style={[styles.body, { fontWeight: '700', fontSize: 17, marginTop: 10 }]}>
-          Special Rolls
-        </Text>
-
-        <Text style={styles.body}>
-          <Image source={require('../assets/images/mexican-dice-logo.png')} style={{ width: 18, height: 18, marginBottom: -2 }} /> 21
-          &ldquo;Mexican&rdquo;: Claiming a Mexican makes the round worth 2 points. The next player must either accept the challenge
-          and roll for a real 21, or Call Bluff. Whoever is wrong (caller or claimer) loses 2 points. Reverse does not reduce
-          the penalty.
-        </Text>
-
-        <Text style={styles.body}>
-          🔄 31 “Reverse”: Sends the challenge back so the previous player must now match or beat the reflected roll. Reverse can
-          always be claimed (truth or bluff). If a Mexican is reversed onto someone, the 2-point penalty still applies.
-        </Text>
-
-        <Text style={styles.body}>
-          🍺 41 “Social”: Must be shown, never bluffed. When rolled, the round resets...all claims clear, no points
-          are lost, and the dice pass to the next player.
-        </Text>
-
-        <Text style={[styles.body, { fontWeight: '700', fontSize: 17, marginTop: 10 }]}>
-          Bluffs
-        </Text>
-        <Text style={styles.body}>
-          If a bluff is suspected, the player may Call Bluff instead of accepting the claim.
-        </Text>
-        <Text style={styles.body}>
-          • In normal rounds:{'\n'}
-          {'  '}• Claim true → caller loses 1 point{'\n'}
-          {'  '}• Claim false → bluffer loses 1 point
-        </Text>
-        <Text style={styles.body}>
-          • In Mexican <Image source={require('../assets/images/mexican-dice-logo.png')} style={{ width: 18, height: 18, marginBottom: -2 }} /> rounds:{'\n'}
-          {'  '}• The loser always loses 2 points
-        </Text>
-
-        <Text style={[styles.body, { fontWeight: '700', fontSize: 17, marginTop: 10 }]}>
-          Scoring &amp; Scorekeeper Dice
-        </Text>
-        <Text style={styles.body}>
-          Everyone starts with 5 points. When you lose points, your scorekeeper die counts up instead of down:
-        </Text>
-        <Text style={styles.body}>
-          • At full health (5 points), your die shows 1{'\n'}
-          • As you lose points, the die climbs toward 6{'\n'}
-          • When your die hits 6, you’ve reached 0 points...and you’re out
-        </Text>
-        <Text style={styles.body}>
-          This makes it easy to see danger at a glance:{'\n'}
-          • Low die = safe{'\n'}
-          • High die = close to elimination{'\n'}
-          • Face 6 = game over
-        </Text>
-
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={styles.rulesCard}>
+          <RulesContent />
         </View>
-</ScrollView>
+      </ScrollView>
 
 
       <View
@@ -261,10 +197,5 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
     rowGap: 12,
-  },
-  body: {
-    fontSize: 15,
-    color: '#E6FFE6',
-    lineHeight: 22,
   },
 });

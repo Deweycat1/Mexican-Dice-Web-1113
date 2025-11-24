@@ -23,7 +23,8 @@ export function formatCallBluffMessage(opts: {
     return `${prefix}${defenderPhrase} telling the truth${separator}${callerName} lost ${penalty} ${pointText}`;
   }
 
-  return `${prefix}${defenderName} was bluffing${separator}${defenderName} lost ${penalty} ${pointText}`;
+  const bluffPhrase = defenderName === 'You' ? 'You were bluffing' : `${defenderName} was bluffing`;
+  return `${prefix}${bluffPhrase}${separator}${defenderName} lost ${penalty} ${pointText}`;
 }
 
 export default formatCallBluffMessage;

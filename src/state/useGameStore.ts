@@ -651,9 +651,9 @@ export const useGameStore = create<Store>((set, get) => {
     // Add history entry when Rival incorrectly calls player's bluff
     if (caller === 'cpu' && prevBy === 'player' && defenderToldTruth) {
       if (state.mode === 'survival') {
-        pushSurvivalEvent('Rival called your bluff incorrectly.');
+        pushSurvivalEvent('The Rival called your bluff incorrectly.');
       } else if (state.mode === 'normal') {
-        pushEvent('Rival called your bluff incorrectly.');
+        pushEvent('The Rival called your bluff incorrectly.');
       }
     }
 
@@ -896,7 +896,7 @@ export const useGameStore = create<Store>((set, get) => {
         lastCpuRoll: null,
         isRolling: false,
         mustBluff: false,
-        message: 'New game — good luck!',
+        message: 'New game. Good luck!',
         history: [],
         claims: [],
         playerTurnStartTime: null,
@@ -1040,7 +1040,7 @@ export const useGameStore = create<Store>((set, get) => {
         resetRound();
         set((prevState) => ({
           turn: 'cpu',
-          message: 'Social (41) shown — round resets.',
+          message: 'Social (41) shown. Round resets.',
           socialBannerNonce: prevState.socialBannerNonce + 1,
         }));
         set({ isBusy: false });
@@ -1057,10 +1057,10 @@ export const useGameStore = create<Store>((set, get) => {
           return `You reversed ${prev} with ${claim}.`;
         }
         if (claim === 21) {
-          return `You claim 21 (Mexican ${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31 — otherwise call bluff.`;
+          return `You claim 21 (Mexican ${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
         }
         if (claim === 31 || claim === 41) {
-          return `You claim ${claim}. The Rival must roll a real 21 or bluff 21/31 — otherwise call bluff.`;
+          return `You claim ${claim}. The Rival must roll a real 21 or bluff 21/31, otherwise call bluff.`;
         }
         return `You claim ${claim}.`;
       })();
@@ -1155,8 +1155,8 @@ export const useGameStore = create<Store>((set, get) => {
       const state = get();
       if (isMexican(state.lastClaim)) {
         return state.turn === 'player'
-          ? `The Rival claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31 — otherwise call bluff.`
-          : `You claimed 21 (Mexican ${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31 — otherwise call bluff.`;
+          ? `The Rival claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`
+          : `You claimed 21 (Mexican ${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
       }
       return state.message;
     },
