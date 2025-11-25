@@ -2,7 +2,6 @@
 import { Platform } from 'react-native';
 
 const DEVICE_ID_KEY = 'device_id';
-const DEVICE_COUNTED_KEY = 'unique_device_counted';
 
 /**
  * Get FileSystem for native platforms
@@ -107,28 +106,5 @@ export async function getOrCreateDeviceId(): Promise<string> {
     console.error('Error getting/creating device ID:', error);
     // Return a fallback ID if storage fails
     return 'fallback-' + Date.now();
-  }
-}
-
-/**
- * Check if this device has already been counted
- */
-export async function isDeviceCounted(): Promise<boolean> {
-  try {
-    const counted = await storage.getItem(DEVICE_COUNTED_KEY);
-    return counted === 'true';
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Mark this device as counted
- */
-export async function markDeviceAsCounted(): Promise<void> {
-  try {
-    await storage.setItem(DEVICE_COUNTED_KEY, 'true');
-  } catch (error) {
-    console.error('Error marking device as counted:', error);
   }
 }

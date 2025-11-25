@@ -6,45 +6,8 @@ import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
-import { getOrCreateDeviceId, isDeviceCounted, markDeviceAsCounted } from '../src/utils/deviceId';
 
 export default function RootLayout() {
-  // Initialize device tracking
-  useEffect(() => {
-    const initDeviceTracking = async () => {
-      try {
-        // Get or create device ID
-        const deviceId = await getOrCreateDeviceId();
-        
-        // Check if this device has already been counted
-        const alreadyCounted = await isDeviceCounted();
-        
-        if (!alreadyCounted) {
-          // Call API to register this device
-          const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-          
-          const response = await fetch(`${baseUrl}/api/update-unique-devices`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ deviceId }),
-          });
-          
-          if (response.ok) {
-            // Mark device as counted
-            await markDeviceAsCounted();
-            const data = await response.json();
-            console.log('Device registered. Total unique devices:', data.count);
-          }
-        }
-      } catch (error) {
-        console.error('Error initializing device tracking:', error);
-        // Silently fail - don't block app initialization
-      }
-    };
-    
-    initDeviceTracking();
-  }, []);
-
   // Ensure web root/background fills viewport and uses the canonical dark green
   useEffect(() => {
     if (Platform.OS !== 'web') return;
