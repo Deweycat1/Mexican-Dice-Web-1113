@@ -1,17 +1,23 @@
-import { kv } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { supabaseServer } from '../../src/lib/supabaseServer';
 
-type CityCount = {
+type CityVisit = {
   city: string;
-  count: number;
+  region: string | null;
+  country: string;
+  visit_count: number;
 };
 
 type CitiesResponse = {
-  cities: CityCount[];
+  cities: Array<{
+    city: string;
+    region: string | null;
+    country: string;
+    visitCount: number;
+  }>;
   totalCities: number;
+  totalVisits: number;
 };
-
-const CITY_COUNTS_HASH = 'stats:cityCounts';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -20,23 +26,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const rawCounts = (await kv.hgetall<number | string>(CITY_COUNTS_HASH)) ?? {};
-    const entries = Object.entries(rawCounts)
-      .map(([city, rawCount]) => ({
-        city: city.trim(),
-        count: typeof rawCount === 'number' ? rawCount : parseInt(rawCount ?? '0', 10) || 0,
-      }))
-      .filter((entry) => entry.city.length > 0 && entry.count > 0)
-      .sort((a, b) => a.city.localeCompare(b.city));
+    const { data, error } = await supabaseServer
+      .from('city_visits')
+      .select('city, region, country, visit_count')
+      .order('visit_count', { ascending: false });
+
+    if (error) {
+      console.error('[cities-played] error fetching cities', error);
+      return res.status(500).json({ error: 'Failed to load city stats' });
+    }
+
+    const cities = (data ?? []).map((entry: CityVisit) => ({
+      city: entry.city,
+      region: entry.region ?? null,
+      country: entry.country,
+      visitCount: entry.visit_count ?? 0,
+    }));
+
+    const totalVisits = cities.reduce((sum, city) => sum + city.visitCount, 0);
 
     const response: CitiesResponse = {
-      cities: entries,
-      totalCities: entries.length,
+      cities,
+      totalCities: cities.length,
+      totalVisits,
     };
 
     return res.status(200).json(response);
   } catch (error) {
-    console.error('cities-played error:', error);
+    console.error('[cities-played] unexpected error', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

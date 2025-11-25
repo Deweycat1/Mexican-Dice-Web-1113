@@ -11,8 +11,9 @@ import {
 } from 'react-native';
 
 interface CitiesPlayedData {
-  cities: { city: string; count: number }[];
+  cities: { city: string; region: string | null; country: string; visitCount: number }[];
   totalCities: number;
+  totalVisits: number;
 }
 
 interface SurvivalBestData {
@@ -116,12 +117,12 @@ export default function SecretStatsScreen() {
       }
 
       const data: CitiesPlayedData = await response.json();
-      const sorted = {
+      const normalized = {
         ...data,
-        cities: [...(data.cities || [])].sort((a, b) => a.city.localeCompare(b.city)),
+        cities: [...(data.cities || [])],
       };
-      setCitiesPlayed(sorted);
-      return sorted;
+      setCitiesPlayed(normalized);
+      return normalized;
     } catch (error) {
       console.error('Error fetching cities stats:', error);
       return null;
@@ -398,13 +399,13 @@ export default function SecretStatsScreen() {
             pressed && styles.cardPressed,
           ]}
         >
-          <Text style={styles.cardTitle}>🌍 Cities Where the Game Has Been Played</Text>
+          <Text style={styles.cardTitle}>🌍 Cities Visiting Mexican Dice</Text>
           {citiesPlayed ? (
             <Text style={styles.bigNumber}>{citiesPlayed.totalCities}</Text>
           ) : (
             <ActivityIndicator size="small" color="#0FA958" />
           )}
-          <Text style={styles.cardSubtitle}>Tap to view per-city play counts</Text>
+          <Text style={styles.cardSubtitle}>Tap to view per-city visit counts</Text>
         </Pressable>
 
         <View style={styles.card}>
@@ -675,10 +676,14 @@ export default function SecretStatsScreen() {
             )}
             {!citiesError && citiesPlayed && citiesPlayed.cities.length > 0 && (
               <ScrollView style={styles.modalList}>
-                {citiesPlayed.cities.map(({ city, count }) => (
-                  <View key={city} style={styles.modalRow}>
-                    <Text style={styles.modalCity}>{city}</Text>
-                    <Text style={styles.modalCount}>{count.toLocaleString()}</Text>
+                {citiesPlayed.cities.map(({ city, region, country, visitCount }) => (
+                  <View key={`${city}-${country}`} style={styles.modalRow}>
+                    <Text style={styles.modalCity}>
+                      {[city, region, country].filter((part) => part && part.length).join(', ')}
+                    </Text>
+                    <Text style={styles.modalCount}>
+                      {visitCount.toLocaleString()} visit{visitCount === 1 ? '' : 's'}
+                    </Text>
                   </View>
                 ))}
               </ScrollView>
