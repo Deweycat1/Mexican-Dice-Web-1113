@@ -14,7 +14,7 @@ export default function RootLayout() {
     const KEY = 'mexican_dice_location_tracked_v1';
     try {
       if (window.localStorage.getItem(KEY)) return;
-      fetch('/api/track-location', { method: 'POST' })
+      fetch('/api/secret-stats/cities-played', { method: 'POST' })
         .then(() => {
           window.localStorage.setItem(KEY, 'true');
         })
