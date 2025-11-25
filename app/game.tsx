@@ -23,7 +23,7 @@ import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import StyledButton from '../src/components/StyledButton';
 import ThinkingIndicator from '../src/components/ThinkingIndicator';
 import RulesContent from '../src/components/RulesContent';
-import { isAlwaysClaimable, meetsOrBeats, resolveBluff, splitClaim } from '../src/engine/mexican';
+import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { buildClaimOptions } from '../src/lib/claimOptions';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { useGameStore } from '../src/state/useGameStore';
@@ -185,7 +185,7 @@ export default function Game() {
   } = useGameStore();
 
   const narration = (buildBanner?.() || message || '').trim();
-  const lastClaimValue = baselineClaim ?? lastClaim ?? null;
+  const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
 
   // Helper component to render claim with inline logo for Mexican
   const renderClaim = (value: number | null | undefined) => {

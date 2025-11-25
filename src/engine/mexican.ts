@@ -15,6 +15,17 @@ export const isReverse = (n: number | null) =>
   typeof n === 'number' && (n === 31 || n === 41);
 export const isAlwaysClaimable = (n: number | null) =>
   typeof n === 'number' && REVERSE_SET.has(n);
+export const isChallengeClaim = (n: number | null | undefined): n is number =>
+  typeof n === 'number' && n !== 31 && n !== 41;
+export const resolveActiveChallenge = (
+  baseline: number | null | undefined,
+  lastClaim: number | null | undefined
+): number | null => {
+  if (typeof baseline === 'number') {
+    return baseline;
+  }
+  return isChallengeClaim(lastClaim) ? lastClaim : null;
+};
 
 export const isReverseOf = (prev: number | null, next: number | null) => {
   if (prev == null || next == null) return false;

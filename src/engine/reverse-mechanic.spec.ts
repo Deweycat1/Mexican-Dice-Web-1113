@@ -531,6 +531,56 @@ describe('31 Reverse Mechanic', () => {
       expect(state.turn).toBe('cpu');
     });
 
+    test('Mexican challenge persists through chained reverses', () => {
+      useGameStore.setState({
+        turn: 'player',
+        lastClaim: 21,
+        baselineClaim: 21,
+        lastAction: 'normal',
+        lastCpuRoll: 21,
+        lastPlayerRoll: null,
+        playerScore: 5,
+        cpuScore: 5,
+        gameOver: null,
+        turnLock: false,
+        isBusy: false,
+      });
+
+      useGameStore.getState().playerClaim(31);
+      let state = useGameStore.getState();
+      expect(state.lastClaim).toBe(31);
+      expect(state.baselineClaim).toBe(21);
+
+      useGameStore.setState({
+        ...state,
+        turn: 'player',
+        lastClaim: 31,
+        baselineClaim: 21,
+        turnLock: false,
+        isBusy: false,
+      });
+      useGameStore.getState().playerClaim(31);
+      state = useGameStore.getState();
+      expect(state.lastClaim).toBe(31);
+      expect(state.baselineClaim).toBe(21);
+
+      useGameStore.setState({
+        ...state,
+        turn: 'player',
+        lastClaim: 31,
+        baselineClaim: 21,
+        turnLock: false,
+        isBusy: false,
+      });
+      const beforeScore = state.playerScore;
+      useGameStore.getState().playerClaim(61);
+      state = useGameStore.getState();
+      expect(state.lastClaim).toBeNull();
+      expect(state.baselineClaim).toBeNull();
+      expect(state.playerScore).toBe(beforeScore - 2);
+      expect(state.message).toContain('Mexican');
+    });
+
     test('Multiple reverses preserve penalty structure on bluff calls', () => {
       // After 31 → 31 → 31, a bluff call should use standard 1-point penalty
       // (not 2-point Mexican penalty, unless one of the 31s was after a 21)

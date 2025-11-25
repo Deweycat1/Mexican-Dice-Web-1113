@@ -24,7 +24,7 @@ import RulesContent from '../src/components/RulesContent';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StreakEndPopup, { getRandomPun } from '../src/components/StreakEndPopup';
 import StyledButton from '../src/components/StyledButton';
-import { isAlwaysClaimable, meetsOrBeats, resolveBluff, splitClaim } from '../src/engine/mexican';
+import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { buildClaimOptions } from '../src/lib/claimOptions';
 import { useGameStore } from '../src/state/useGameStore';
 
@@ -570,7 +570,7 @@ export default function Survival() {
   }, [currentStreak, globalBest, hasShownNewLeader, dimAnim]);
 
   const narration = (buildBanner?.() || message || '').trim();
-  const lastClaimValue = baselineClaim ?? lastClaim ?? null;
+  const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
 
   // Helper component to render claim with inline logo for Mexican
   const renderClaim = (value: number | null | undefined) => {

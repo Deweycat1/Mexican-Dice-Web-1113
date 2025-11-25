@@ -1,7 +1,9 @@
 import {
-    isLegalRaise,
-    isReverseOf,
-    resolveBluff as resolveBluffCore,
+	isLegalRaise,
+	isReverseOf,
+	resolveActiveChallenge,
+	resolveBluff as resolveBluffCore,
+	isChallengeClaim,
 } from './mexican';
 
 export type CoreGameState = {
@@ -40,9 +42,11 @@ export function applyClaim(
 	}
 
 	const prev = state.currentClaim ? parseInt(state.currentClaim, 10) : null;
+	const baseline = state.baselineClaim ? parseInt(state.baselineClaim, 10) : null;
+	const activeChallenge = resolveActiveChallenge(baseline, prev);
 
 	// Mexican lockdown violation
-	if (prev === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
+	if (activeChallenge === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
 		const loser = state.currentPlayer;
 		const newScore = loser === 'player1'
 			? Math.max(0, state.player1Score - 2)
@@ -67,7 +71,7 @@ export function applyClaim(
 	}
 
 	// Check if claim is legal
-	const claimToCheck = state.baselineClaim ? parseInt(state.baselineClaim, 10) : prev;
+	const claimToCheck = activeChallenge;
 	if (!isLegalRaise(claimToCheck, claim)) {
 		return {
 			success: false,
@@ -98,13 +102,16 @@ export function applyClaim(
 
 	// Action type
 	const action: 'normal' | 'reverseVsMexican' =
-		prev === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
+		activeChallenge === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
 
-	// Baseline logic: preserve baseline through reverses
-	const isReverseClaim = isReverseOf(prev, claim);
-	const newBaseline = isReverseClaim
-		? (state.baselineClaim ?? String(prev))
-		: String(claim);
+	// Baseline logic: persist last non-reverse, non-social claim
+	const isReverseClaim = claim === 31;
+	const shouldResetBaseline = claim === 41;
+	const nextBaseline = shouldResetBaseline
+		? null
+		: isReverseClaim
+			? state.baselineClaim ?? (isChallengeClaim(prev) ? String(prev) : null)
+			: String(claim);
 
 	// Switch turns
 	const otherPlayer = state.currentPlayer === 'player1' ? 'player2' : 'player1';
@@ -114,7 +121,7 @@ export function applyClaim(
 		newState: {
 			...state,
 			currentClaim: String(claim),
-			baselineClaim: newBaseline,
+			baselineClaim: nextBaseline,
 			lastAction: action,
 			currentPlayer: otherPlayer,
 			currentRoll: null,

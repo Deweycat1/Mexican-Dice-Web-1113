@@ -27,8 +27,10 @@ import StyledButton from '../../../src/components/StyledButton';
 import ThinkingIndicator from '../../../src/components/ThinkingIndicator';
 import {
   claimMatchesRoll,
+  isChallengeClaim,
   isLegalRaise,
   isReverseOf,
+  resolveActiveChallenge,
   resolveBluff,
   splitClaim,
 } from '../../../src/engine/mexican';
@@ -332,7 +334,7 @@ export default function OnlineGameV2Screen() {
   const opponentName = myRole === 'host' ? guestName : hostName;
   const myScore = myRole === 'host' ? game?.host_score ?? 0 : game?.guest_score ?? 0;
   const opponentScore = myRole === 'host' ? game?.guest_score ?? 0 : game?.host_score ?? 0;
-  const claimToCheck = roundState.baselineClaim ?? lastClaim;
+  const claimToCheck = resolveActiveChallenge(roundState.baselineClaim, lastClaim);
   const [dieHi, dieLo] = facesFromRoll(myRoll);
   const claimSummary = useMemo(() => {
     const winkSuffix = roundState.lastClaimHadWink ? ' 😉' : '';
@@ -538,11 +540,12 @@ export default function OnlineGameV2Screen() {
     async (claim: number, useWink?: boolean) => {
       if (!game || !myRole || !opponentRole || !isMyTurn || isRevealAnimating) return;
       const prev = lastClaim;
-      if (prev === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
+      const activeChallenge = resolveActiveChallenge(roundState.baselineClaim, prev);
+      if (activeChallenge === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
         Alert.alert('Invalid claim', 'After Mexican (21), only 21, 31, or 41 are legal.');
         return;
       }
-      const baseline = roundState.baselineClaim ?? prev;
+      const baseline = activeChallenge;
       if (!isLegalRaise(baseline ?? null, claim)) {
         Alert.alert('Invalid raise', baseline == null ? 'Choose a valid claim.' : `Claim ${claim} must beat ${baseline}.`);
         return;
@@ -564,9 +567,14 @@ export default function OnlineGameV2Screen() {
         timestamp,
         wink: effectiveUseWink,
       });
-      const isReverseClaim = prev != null && isReverseOf(prev, claim);
-      const nextBaseline = claim === 41 ? null : isReverseClaim ? (roundState.baselineClaim ?? prev) : claim;
-      const actionFlag: RoundState['lastAction'] = prev === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
+      const nextBaseline =
+        claim === 41
+          ? null
+          : claim === 31
+            ? roundState.baselineClaim ?? (isChallengeClaim(prev) ? prev : null)
+            : claim;
+      const actionFlag: RoundState['lastAction'] =
+        activeChallenge === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
       const opponentId = opponentRole === 'host' ? game.host_id : game.guest_id;
       if (!opponentId) {
         Alert.alert('Opponent missing', 'Waiting for an opponent to join.');

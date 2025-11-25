@@ -11,11 +11,13 @@ import {
     claimMatchesRoll,
     compareClaims,
     isAlwaysClaimable,
+    isChallengeClaim,
     isLegalRaise,
     isMexican,
     isReverseOf,
     nextHigherClaim,
     normalizeRoll,
+    resolveActiveChallenge,
     resolveBluff
 } from '../engine/mexican';
 import { formatCallBluffMessage } from '../utils/narration';
@@ -723,7 +725,7 @@ export const useGameStore = create<Store>((set, get) => {
       }
 
       // Use baselineClaim for AI decisions (preserves original claim through reverses)
-      const claimForAI = baselineClaim ?? lastClaim ?? null;
+      const claimForAI = resolveActiveChallenge(baselineClaim, lastClaim);
       const action = aiOpponent.decideAction('player', claimForAI, dicePair, roundIndexCounter, lastClaim);
 
       if (action.type === 'call_bluff') {
@@ -745,10 +747,11 @@ export const useGameStore = create<Store>((set, get) => {
       }
 
       // Check if we're in Mexican lockdown (either direct 21, or 31 from reverseVsMexican)
-      const inMexicanLockdown = isMexican(lastClaim) || state.lastAction === 'reverseVsMexican';
+      const activeChallenge = resolveActiveChallenge(state.baselineClaim, lastClaim);
+      const inMexicanLockdown = isMexican(activeChallenge) || state.lastAction === 'reverseVsMexican';
       
       // Use baselineClaim for legality checks (preserves original claim through reverses)
-      const claimToCheck = state.baselineClaim ?? lastClaim;
+      const claimToCheck = resolveActiveChallenge(state.baselineClaim, lastClaim);
       
       if (inMexicanLockdown) {
         // In Mexican lockdown, only 21, 31, 41 are legal
@@ -815,14 +818,17 @@ export const useGameStore = create<Store>((set, get) => {
 
       // Update baseline logic: preserve baseline through reverses
       const currentState = get();
-      const isReverseClaim = previousClaim != null && isReverseOf(previousClaim, claim);
-      const newBaseline = isReverseClaim 
-        ? (currentState.baselineClaim ?? previousClaim)  // Keep existing baseline or use prev if first reverse
-        : claim;  // Non-reverse claims become new baseline
+      const nextBaseline = (() => {
+        if (claim === 41) return null;
+        if (claim === 31) {
+          return currentState.baselineClaim ?? (isChallengeClaim(previousClaim) ? previousClaim : null);
+        }
+        return claim;
+      })();
 
       set({
         lastClaim: claim,
-        baselineClaim: newBaseline,
+        baselineClaim: nextBaseline,
         lastAction: actionFlag,
         turn: 'player',
         lastPlayerRoll: null,
@@ -989,8 +995,9 @@ export const useGameStore = create<Store>((set, get) => {
       set({ isBusy: true });
 
       const prev = state.lastClaim;
+      const activeChallenge = resolveActiveChallenge(state.baselineClaim, prev);
 
-      if (prev === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
+      if (activeChallenge === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
         const result = applyLoss('player', 2, `You failed to answer Mexican ${MEXICAN_ICON} with 21, 31, or 41. You lose 2.`);
         aiOpponent.observeRoundOutcome(true);
         persistAiState();
@@ -1008,7 +1015,7 @@ export const useGameStore = create<Store>((set, get) => {
       }
 
       // Use baselineClaim for legality checks (preserves original claim through reverses)
-      const claimToCheck = state.baselineClaim ?? prev;
+      const claimToCheck = resolveActiveChallenge(state.baselineClaim, prev);
       
       if (!isLegalRaise(claimToCheck, claim)) {
         set({
@@ -1090,14 +1097,17 @@ export const useGameStore = create<Store>((set, get) => {
       }
 
       // Update baseline logic: preserve baseline through reverses
-      const isReverseClaim = isReverseOf(prev, claim);
-      const newBaseline = isReverseClaim 
-        ? (state.baselineClaim ?? prev)  // Keep existing baseline or use prev if first reverse
-        : claim;  // Non-reverse claims become new baseline
+      const nextBaseline = (() => {
+        if (claim === 41) return null;
+        if (claim === 31) {
+          return state.baselineClaim ?? (isChallengeClaim(prev) ? prev : null);
+        }
+        return claim;
+      })();
 
       set({
         lastClaim: claim,
-        baselineClaim: newBaseline,
+        baselineClaim: nextBaseline,
         lastAction: action,
         turn: 'cpu',
         mustBluff: false,
