@@ -374,6 +374,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(15, 169, 88, 0.3)',
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   highlightCardWide: {
     flex: 1,
@@ -381,12 +382,14 @@ const styles = StyleSheet.create({
   highlightIcon: {
     fontSize: 32,
     marginBottom: 8,
+    textAlign: 'center',
   },
   highlightValue: {
     fontSize: 24,
     fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 4,
+    textAlign: 'center',
   },
   highlightLabel: {
     fontSize: 12,
