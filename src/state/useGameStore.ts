@@ -132,6 +132,31 @@ export type Store = {
   recordSurvivalRun(streak: number): Promise<void>;
 };
 
+const buildSurvivalChallengeReset = (): Pick<
+  Store,
+  | 'lastClaim'
+  | 'baselineClaim'
+  | 'lastAction'
+  | 'lastPlayerRoll'
+  | 'lastCpuRoll'
+  | 'mustBluff'
+  | 'history'
+  | 'survivalHistory'
+  | 'survivalClaims'
+> => ({
+  lastClaim: null,
+  baselineClaim: null,
+  lastAction: 'normal',
+  lastPlayerRoll: null,
+  lastCpuRoll: null,
+  mustBluff: false,
+  history: [] as Store['history'],
+  survivalHistory: [] as Store['survivalHistory'],
+  survivalClaims: [] as Store['survivalClaims'],
+});
+
+const isTestEnv = process.env.NODE_ENV === 'test';
+
 export const useGameStore = create<Store>((set, get) => {
   const beginTurnLock = () => set({ turnLock: true });
   const endTurnLock = () => set({ turnLock: false });
@@ -147,6 +172,7 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const recordRollStat = async (normalized: number) => {
+    if (isTestEnv) return;
     try {
       // Convert normalized roll to string format (high die first)
       const rollStr = String(normalized);
@@ -163,6 +189,7 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const recordClaimStat = async (claim: number) => {
+    if (isTestEnv) return;
     try {
       const claimStr = String(claim);
       await fetch('/api/claim-stats', {
@@ -176,6 +203,7 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const recordWin = async (winner: 'player' | 'cpu') => {
+    if (isTestEnv) return;
     try {
       await fetch('/api/win-stats', {
         method: 'POST',
@@ -188,6 +216,7 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const recordSurvivalRun = async (streak: number) => {
+    if (isTestEnv) return;
     try {
       try {
         // Notify server of this device's survival run so we can track per-device bests
@@ -214,6 +243,7 @@ export const useGameStore = create<Store>((set, get) => {
     winningClaim?: string | null; 
     losingClaim?: string | null;
   }) => {
+    if (isTestEnv) return;
     try {
       await fetch('/api/claim-outcome-stats', {
         method: 'POST',
@@ -230,6 +260,7 @@ export const useGameStore = create<Store>((set, get) => {
     | { type: 'bluff-call'; caller: 'player' | 'rival'; correct: boolean };
 
   const postBehaviorEvent = async (event: BehaviorEvent) => {
+    if (isTestEnv) return;
     try {
       await fetch('/api/behavior-stats', {
         method: 'POST',
@@ -243,6 +274,7 @@ export const useGameStore = create<Store>((set, get) => {
 
   // Meta-stats helpers
   const incrementKV = async (key: string) => {
+    if (isTestEnv) return;
     try {
       await fetch('/api/increment-kv', {
         method: 'POST',
@@ -273,6 +305,7 @@ export const useGameStore = create<Store>((set, get) => {
 
   // Track turn timing for Random Stats
   const recordTurnDuration = async (durationMs: number) => {
+    if (isTestEnv) return;
     try {
       await fetch('/api/random-stats', {
         method: 'POST',
@@ -286,6 +319,7 @@ export const useGameStore = create<Store>((set, get) => {
 
   // Track low-roll bluff behavior for Random Stats
   const recordLowRollBehavior = async (actualRoll: number, wasBluff: boolean) => {
+    if (isTestEnv) return;
     try {
       if (actualRoll < 61) {
         await fetch('/api/random-stats', {
@@ -484,19 +518,14 @@ export const useGameStore = create<Store>((set, get) => {
   // Survival controls
   const startSurvival = () => {
     // Reset survival scores and round state when starting a run
+    const survivalReset = buildSurvivalChallengeReset();
     set({
+      ...survivalReset,
       mode: 'survival',
       currentStreak: 0,
       isSurvivalOver: false,
       survivalPlayerScore: STARTING_SCORE,
       survivalCpuScore: STARTING_SCORE,
-      survivalHistory: [],
-      history: [],
-      survivalClaims: [],
-      lastClaim: null,
-      lastAction: 'normal',
-      lastPlayerRoll: null,
-      lastCpuRoll: null,
       turnLock: false,
       isBusy: false,
       gameOver: null,
@@ -516,18 +545,13 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const restartSurvival = () => {
+    const survivalReset = buildSurvivalChallengeReset();
     set({
+      ...survivalReset,
       currentStreak: 0,
       isSurvivalOver: false,
       survivalPlayerScore: STARTING_SCORE,
       survivalCpuScore: STARTING_SCORE,
-      survivalHistory: [],
-      history: [],
-      survivalClaims: [],
-      lastClaim: null,
-      lastAction: 'normal',
-      lastPlayerRoll: null,
-      lastCpuRoll: null,
       turnLock: false,
       isBusy: false,
       gameOver: null,
@@ -553,6 +577,7 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const fetchGlobalBest = async () => {
+    if (isTestEnv) return;
     try {
       const response = await fetch('/api/survival-best', { method: 'GET' });
       if (!response.ok) throw new Error('Failed to fetch global best');
@@ -567,6 +592,7 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const submitGlobalBest = async (streak: number) => {
+    if (isTestEnv) return;
     try {
       const response = await fetch('/api/survival-best', {
         method: 'POST',

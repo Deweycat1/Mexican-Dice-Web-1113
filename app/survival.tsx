@@ -586,6 +586,8 @@ export default function Survival() {
   };
 
   const claimText = useMemo(() => {
+    const hasClaim = lastClaimValue != null || lastPlayerRoll != null;
+    if (!hasClaim) return null;
     const rollPart = formatRoll(lastPlayerRoll);
     return (
       <>
@@ -903,7 +905,11 @@ export default function Survival() {
                 <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Mode</Animated.Text>
               </View>
               <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Streak: {currentStreak} | Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
-              <Text style={styles.subtle}>{claimText}</Text>
+              {claimText ? (
+                <Text style={styles.subtle}>{claimText}</Text>
+              ) : (
+                <Text style={styles.subtle}>No active claim yet.</Text>
+              )}
               <Text style={styles.status} numberOfLines={2}>
                 {narration || 'Ready to roll.'}
               </Text>
