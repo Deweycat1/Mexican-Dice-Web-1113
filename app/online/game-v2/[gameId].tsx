@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -150,
+    marginTop: -135,
   },
   actionRow: {
     flexDirection: 'row',
