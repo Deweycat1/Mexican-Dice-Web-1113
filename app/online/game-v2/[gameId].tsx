@@ -1280,6 +1280,7 @@ const styles = StyleSheet.create({
     padding: 20,
     flexGrow: 1,
     paddingBottom: 60,
+    transform: [{ scale: 0.9 }],
   },
   centered: {
     flex: 1,
