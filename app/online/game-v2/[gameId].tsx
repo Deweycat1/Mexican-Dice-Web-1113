@@ -1017,6 +1017,7 @@ export default function OnlineGameV2Screen() {
 
             {banner && (
               <Animated.View
+                pointerEvents="none"
                 style={[
                   styles.bannerContainer,
                   styles.banner,
@@ -1367,7 +1368,6 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    marginBottom: 12,
     alignItems: 'center',
     borderWidth: 1,
   },
@@ -1377,8 +1377,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   bannerContainer: {
-    marginVertical: 10,
-    borderRadius: 12,
+    position: 'absolute',
+    top: 270,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 30,
   },
   bannerSuccess: {
     backgroundColor: '#0F5132',
@@ -1433,7 +1437,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 260,
-    marginTop: -134,
+    marginTop: -144,
     marginBottom: 0,
   },
   diceRow: {
