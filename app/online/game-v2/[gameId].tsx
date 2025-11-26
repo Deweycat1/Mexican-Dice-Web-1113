@@ -980,7 +980,7 @@ export default function OnlineGameV2Screen() {
     <View style={styles.root}>
       <FeltBackground>
         <SafeAreaView style={styles.safe}>
-          <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.content}>
             <View style={styles.headerCard}>
               <View style={styles.headerRow}>
                 <View style={styles.playerColumn}>
@@ -1192,7 +1192,7 @@ export default function OnlineGameV2Screen() {
                 />
               </View>
             )}
-          </ScrollView>
+          </View>
         </SafeAreaView>
       </FeltBackground>
 
@@ -1277,10 +1277,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
+    flex: 1,
     padding: 20,
-    flexGrow: 1,
-    paddingBottom: 60,
-    transform: [{ scale: 0.9 }],
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    transform: [{ scale: 1.05 }],
   },
   centered: {
     flex: 1,
