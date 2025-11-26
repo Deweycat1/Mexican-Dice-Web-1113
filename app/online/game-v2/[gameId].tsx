@@ -1135,6 +1135,7 @@ export default function OnlineGameV2Screen() {
                   onPress={handleQuitGame}
                   style={[styles.btn, styles.goldOutlineButton]}
                 />
+
                 {showRematchButton ? (
                   <View style={[styles.btn, styles.rematchWrapper]}>
                     <StyledButton
@@ -1142,10 +1143,7 @@ export default function OnlineGameV2Screen() {
                       variant="ghost"
                       onPress={handleRematchPress}
                       disabled={!myRole || hasRequestedRematch || isRequestingRematch}
-                      style={[
-                        styles.btn,
-                        styles.winkButton,
-                      ]}
+                      style={[styles.winkButton, styles.rematchButton]}
                     />
                     {(waitingForRematch || opponentWantsRematch) && (
                       <Text style={styles.rematchStatusText}>
@@ -1171,6 +1169,7 @@ export default function OnlineGameV2Screen() {
                     ]}
                   />
                 )}
+
                 <StyledButton
                   label="View Rules"
                   variant="ghost"
@@ -1473,13 +1472,18 @@ const styles = StyleSheet.create({
   winkButtonActive: {
     backgroundColor: '#0B8A42',
   },
+  rematchButton: {
+    backgroundColor: '#E0B50C',
+    borderColor: '#E0B50C',
+    paddingVertical: 8,
+  },
   rematchWrapper: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   rematchStatusText: {
-    marginTop: 6,
-    fontSize: 12,
+    marginTop: 4,
+    fontSize: 11,
     color: '#E6FFE6',
     textAlign: 'center',
   },
