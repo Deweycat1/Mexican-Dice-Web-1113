@@ -1433,7 +1433,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 260,
-    marginTop: -134,
+    marginTop: -144,
     marginBottom: 0,
   },
   diceRow: {
@@ -1480,7 +1480,8 @@ const styles = StyleSheet.create({
   },
   rematchButton: {
     backgroundColor: '#E0B50C',
-    borderColor: '#E0B50C',
+    borderColor: '#000',
+    borderWidth: 2,
     paddingVertical: 8,
   },
   rematchWrapper: {
