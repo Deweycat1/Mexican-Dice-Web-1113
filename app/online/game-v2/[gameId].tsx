@@ -1068,30 +1068,30 @@ export default function OnlineGameV2Screen() {
                     onRevealComplete={handleSocialRevealComplete}
                   />
                 ) : isRevealingBluff && revealDiceValues ? (
-                  <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={110} />
+                  <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={100} />
                 ) : isMyTurn ? (
                   <>
                     <Dice
                       value={dieHi}
-                      displayMode={diceDisplayMode}
-                      overlayText={overlayTextHi}
                       rolling={isMyTurn && rolling && myRoll == null}
-                      size={110 * 0.85 * 0.9}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                      size={100}
                     />
                     <View style={{ width: 24 }} />
                     <Dice
                       value={dieLo}
-                      displayMode={diceDisplayMode}
-                      overlayText={overlayTextLo}
                       rolling={isMyTurn && rolling && myRoll == null}
-                      size={110 * 0.85 * 0.9}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                      size={100}
                     />
                   </>
                 ) : (
                   <>
-                    <ThinkingIndicator size={110} position="left" />
+                    <ThinkingIndicator size={100} position="left" />
                     <View style={{ width: 24 }} />
-                    <ThinkingIndicator size={110} position="right" />
+                    <ThinkingIndicator size={100} position="right" />
                   </>
                 )}
               </View>
@@ -1301,17 +1301,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   headerCard: {
+    position: 'relative',
     backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 22,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    padding: 14,
     marginTop: 8,
   },
   headerRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 12,
   },
   playerColumn: {
     alignItems: 'center',
@@ -1433,7 +1433,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 260,
-    marginTop: -144,
+    marginTop: -134,
     marginBottom: 0,
   },
   diceRow: {
