@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Image,
   Modal,
   Platform,
@@ -137,6 +138,10 @@ export type OnlineGameRematchInfo = {
 };
 
 const STARTING_SCORE = 5;
+
+const { height } = Dimensions.get('window');
+
+const CONTENT_SCALE = height < 700 ? 0.9 : height < 800 ? 1.0 : 1.05;
 
 async function createRematchFromGame(game: OnlineGameV2): Promise<OnlineGameRematchInfo> {
   if (!game.host_id || !game.guest_id) {
@@ -980,7 +985,12 @@ export default function OnlineGameV2Screen() {
     <View style={styles.root}>
       <FeltBackground>
         <SafeAreaView style={styles.safe}>
-          <View style={styles.content}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              { transform: [{ scale: CONTENT_SCALE }] },
+            ]}
+          >
             <View style={styles.headerCard}>
               <View style={styles.headerRow}>
                 <View style={styles.playerColumn}>
@@ -1192,7 +1202,7 @@ export default function OnlineGameV2Screen() {
                 />
               </View>
             )}
-          </View>
+          </ScrollView>
         </SafeAreaView>
       </FeltBackground>
 
@@ -1277,11 +1287,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flex: 1,
     padding: 20,
+    flexGrow: 1,
+    paddingBottom: 40,
     justifyContent: 'flex-start',
     alignItems: 'stretch',
-    transform: [{ scale: 1.05 }],
   },
   centered: {
     flex: 1,
