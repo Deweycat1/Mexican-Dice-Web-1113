@@ -1439,7 +1439,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 260,
-    marginTop: -144,
+    marginTop: -134,
     marginBottom: 0,
   },
   diceRow: {
@@ -1452,7 +1452,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -125,
+    marginTop: -105,
   },
   actionRow: {
     flexDirection: 'row',
