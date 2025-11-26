@@ -144,6 +144,7 @@ async function createRematchFromGame(game: OnlineGameV2): Promise<OnlineGameRema
   }
 
   const parentGameId = game.parent_game_id ?? game.id;
+  console.log('[rematch] creating new game from', game.id, 'parent:', parentGameId);
 
   const { data: newGame, error: insertError } = await supabase
     .from('games_v2')
@@ -161,6 +162,7 @@ async function createRematchFromGame(game: OnlineGameV2): Promise<OnlineGameRema
     .single();
 
   if (insertError || !newGame) {
+    console.error('[rematch] insert error', insertError);
     throw new Error(insertError?.message ?? 'Failed to create rematch game');
   }
 
@@ -174,9 +176,11 @@ async function createRematchFromGame(game: OnlineGameV2): Promise<OnlineGameRema
     .eq('id', game.id);
 
   if (linkError) {
+    console.error('[rematch] link error', linkError);
     throw new Error(linkError.message);
   }
 
+  console.log('[rematch] created new game', newGame.id, 'for parent', game.id);
   return { parentGameId: game.id, newGameId: newGame.id };
 }
 
@@ -188,6 +192,7 @@ async function requestRematchForGame(game: OnlineGameV2, myPlayerId: string): Pr
   }
 
   const column = isHost ? 'rematch_requested_by_host' : 'rematch_requested_by_guest';
+  console.log('[rematch] requesting rematch for game', game.id, 'as', isHost ? 'host' : 'guest');
 
   const { data, error } = await supabase
     .from('games_v2')
@@ -197,10 +202,16 @@ async function requestRematchForGame(game: OnlineGameV2, myPlayerId: string): Pr
     .single();
 
   if (error || !data) {
+    console.error('[rematch] update error', error);
     throw new Error(error?.message ?? 'Failed to request rematch');
   }
 
   const updated = data as OnlineGameV2;
+  console.log('[rematch] updated flags', {
+    host: updated.rematch_requested_by_host,
+    guest: updated.rematch_requested_by_guest,
+    rematch_game_id: updated.rematch_game_id,
+  });
 
   if (
     updated.rematch_requested_by_host &&
@@ -339,6 +350,8 @@ export default function OnlineGameV2Screen() {
     if (!game || game.status !== 'finished') return;
     if (!game.rematch_game_id) return;
     if (game.rematch_game_id === game.id) return;
+
+    console.log('[rematch] navigating to rematch game', game.rematch_game_id, 'from', game.id);
     router.replace(`/online/game-v2/${game.rematch_game_id}`);
   }, [game?.rematch_game_id, game?.status, router]);
 
@@ -490,6 +503,7 @@ export default function OnlineGameV2Screen() {
       : opponentWantsRematch
         ? 'Accept Rematch'
         : 'Rematch?';
+  const showRematchButton = isGameFinished && !!myRole;
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
@@ -1121,7 +1135,7 @@ export default function OnlineGameV2Screen() {
                   onPress={handleQuitGame}
                   style={[styles.btn, styles.goldOutlineButton]}
                 />
-                {isGameFinished ? (
+                {showRematchButton ? (
                   <View style={[styles.btn, styles.rematchWrapper]}>
                     <StyledButton
                       label={rematchButtonLabel}
@@ -1166,7 +1180,7 @@ export default function OnlineGameV2Screen() {
               </View>
             </View>
 
-            {game.status === 'finished' && (
+            {game.status === 'finished' && !showRematchButton && (
               <View style={styles.finishedBox}>
                 <Text style={styles.finishedText}>
                   Match over! {myScore === 0 ? 'You lost.' : opponentScore === 0 ? 'You won!' : ''}
