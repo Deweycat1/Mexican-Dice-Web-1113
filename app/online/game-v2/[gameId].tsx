@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   Image,
   Modal,
   Platform,
@@ -138,10 +137,6 @@ export type OnlineGameRematchInfo = {
 };
 
 const STARTING_SCORE = 5;
-
-const { height } = Dimensions.get('window');
-
-const CONTENT_SCALE = height < 700 ? 0.9 : height < 800 ? 1.0 : 1.05;
 
 async function createRematchFromGame(game: OnlineGameV2): Promise<OnlineGameRematchInfo> {
   if (!game.host_id || !game.guest_id) {
@@ -985,12 +980,7 @@ export default function OnlineGameV2Screen() {
     <View style={styles.root}>
       <FeltBackground>
         <SafeAreaView style={styles.safe}>
-          <ScrollView
-            contentContainerStyle={[
-              styles.content,
-              { transform: [{ scale: CONTENT_SCALE }] },
-            ]}
-          >
+          <View style={styles.content}>
             <View style={styles.headerCard}>
               <View style={styles.headerRow}>
                 <View style={styles.playerColumn}>
@@ -1202,7 +1192,7 @@ export default function OnlineGameV2Screen() {
                 />
               </View>
             )}
-          </ScrollView>
+          </View>
         </SafeAreaView>
       </FeltBackground>
 
@@ -1287,11 +1277,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
-    flexGrow: 1,
-    paddingBottom: 40,
-    justifyContent: 'flex-start',
-    alignItems: 'stretch',
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingBottom: 20,
   },
   centered: {
     flex: 1,
@@ -1316,7 +1304,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 18,
+    marginTop: 8,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1439,8 +1427,12 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   diceArea: {
-    marginBottom: 24,
+    flexGrow: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 260,
+    marginTop: -134,
+    marginBottom: 0,
   },
   diceRow: {
     flexDirection: 'row',
@@ -1452,7 +1444,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: 8,
+    marginTop: -150,
   },
   actionRow: {
     flexDirection: 'row',
