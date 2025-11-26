@@ -1076,6 +1076,7 @@ export default function OnlineGameV2Screen() {
                       displayMode={diceDisplayMode}
                       overlayText={overlayTextHi}
                       rolling={isMyTurn && rolling && myRoll == null}
+                      size={110 * 0.85}
                     />
                     <View style={{ width: 24 }} />
                     <Dice
@@ -1083,6 +1084,7 @@ export default function OnlineGameV2Screen() {
                       displayMode={diceDisplayMode}
                       overlayText={overlayTextLo}
                       rolling={isMyTurn && rolling && myRoll == null}
+                      size={110 * 0.85}
                     />
                   </>
                 ) : (
