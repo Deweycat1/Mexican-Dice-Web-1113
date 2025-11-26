@@ -990,7 +990,9 @@ export default function OnlineGameV2Screen() {
                       style={styles.avatarImage}
                     />
                   </View>
-                  <Text style={styles.playerLabel}>You</Text>
+                  <Text style={styles.playerLabel}>
+                    Your{'\n'}Score
+                  </Text>
                   <ScoreDie points={myScore} style={styles.scoreDie} size={38} />
                 </View>
 
@@ -1450,7 +1452,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -135,
+    marginTop: -125,
   },
   actionRow: {
     flexDirection: 'row',
