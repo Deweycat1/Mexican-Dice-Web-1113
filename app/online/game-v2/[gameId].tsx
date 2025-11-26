@@ -100,6 +100,10 @@ type OnlineGameV2 = {
   created_at: string;
   updated_at: string;
   round_state?: RoundState | null;
+  rematch_requested_by_host?: boolean;
+  rematch_requested_by_guest?: boolean;
+  rematch_game_id?: string | null;
+  parent_game_id?: string | null;
 };
 
 const defaultRoundState: RoundState = {
@@ -126,6 +130,91 @@ const defaultRoundState: RoundState = {
 
 const clampScore = (value: number) => Math.max(0, value);
 const uuid = () => Math.random().toString(36).slice(2, 10);
+
+export type OnlineGameRematchInfo = {
+  parentGameId: string;
+  newGameId: string;
+};
+
+const STARTING_SCORE = 5;
+
+async function createRematchFromGame(game: OnlineGameV2): Promise<OnlineGameRematchInfo> {
+  if (!game.host_id || !game.guest_id) {
+    throw new Error('Both players must be present for a rematch.');
+  }
+
+  const parentGameId = game.parent_game_id ?? game.id;
+
+  const { data: newGame, error: insertError } = await supabase
+    .from('games_v2')
+    .insert({
+      host_id: game.host_id,
+      guest_id: game.guest_id,
+      status: 'in_progress',
+      current_player_id: game.host_id,
+      host_score: STARTING_SCORE,
+      guest_score: STARTING_SCORE,
+      parent_game_id: parentGameId,
+      round_state: defaultRoundState,
+    })
+    .select('*')
+    .single();
+
+  if (insertError || !newGame) {
+    throw new Error(insertError?.message ?? 'Failed to create rematch game');
+  }
+
+  const { error: linkError } = await supabase
+    .from('games_v2')
+    .update({
+      rematch_game_id: newGame.id,
+      rematch_requested_by_host: false,
+      rematch_requested_by_guest: false,
+    })
+    .eq('id', game.id);
+
+  if (linkError) {
+    throw new Error(linkError.message);
+  }
+
+  return { parentGameId: game.id, newGameId: newGame.id };
+}
+
+async function requestRematchForGame(game: OnlineGameV2, myPlayerId: string): Promise<string | null> {
+  const isHost = myPlayerId === game.host_id;
+  const isGuest = myPlayerId === game.guest_id;
+  if (!isHost && !isGuest) {
+    throw new Error('Only players in the match can request a rematch.');
+  }
+
+  const column = isHost ? 'rematch_requested_by_host' : 'rematch_requested_by_guest';
+
+  const { data, error } = await supabase
+    .from('games_v2')
+    .update({ [column]: true })
+    .eq('id', game.id)
+    .select('*')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Failed to request rematch');
+  }
+
+  const updated = data as OnlineGameV2;
+
+  if (
+    updated.rematch_requested_by_host &&
+    updated.rematch_requested_by_guest
+  ) {
+    if (updated.rematch_game_id) {
+      return updated.rematch_game_id;
+    }
+    const info = await createRematchFromGame(updated);
+    return info.newGameId;
+  }
+
+  return updated.rematch_game_id ?? null;
+}
 
 
 export default function OnlineGameV2Screen() {
@@ -157,6 +246,7 @@ export default function OnlineGameV2Screen() {
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
   const [winkArmed, setWinkArmed] = useState(false);
+  const [isRequestingRematch, setIsRequestingRematch] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -244,6 +334,14 @@ export default function OnlineGameV2Screen() {
       if (bannerTimer.current) clearTimeout(bannerTimer.current);
     };
   }, [banner]);
+
+  useEffect(() => {
+    if (!game || game.status !== 'finished') return;
+    if (!game.rematch_game_id) return;
+    if (game.rematch_game_id === game.id) return;
+    router.replace(`/online/game-v2/${game.rematch_game_id}`);
+  }, [game?.rematch_game_id, game?.status, router]);
+
   useEffect(() => {
     return () => {
       if (revealTimer.current) clearTimeout(revealTimer.current);
@@ -376,6 +474,22 @@ export default function OnlineGameV2Screen() {
     winkUsesRemaining > 0 ? `Send with 😉 (${winkUsesRemaining})` : 'No winks left';
   const winkLabel =
     winkArmed && winkUsesRemaining > 0 ? `${winkLabelBase} (Active)` : winkLabelBase;
+  const isGameFinished = game?.status === 'finished';
+  const hostRequestedRematch = game?.rematch_requested_by_host ?? false;
+  const guestRequestedRematch = game?.rematch_requested_by_guest ?? false;
+  const hasRequestedRematch =
+    myRole === 'host' ? hostRequestedRematch : myRole === 'guest' ? guestRequestedRematch : false;
+  const opponentRequestedRematch =
+    myRole === 'host' ? guestRequestedRematch : myRole === 'guest' ? hostRequestedRematch : false;
+  const waitingForRematch = isGameFinished && hasRequestedRematch && !opponentRequestedRematch;
+  const opponentWantsRematch = isGameFinished && opponentRequestedRematch && !hasRequestedRematch;
+  const rematchButtonLabel = isRequestingRematch
+    ? 'Requesting…'
+    : waitingForRematch
+      ? 'Waiting…'
+      : opponentWantsRematch
+        ? 'Accept Rematch'
+        : 'Rematch?';
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
@@ -769,6 +883,25 @@ export default function OnlineGameV2Screen() {
     );
   }, [router]);
 
+  const handleRematchPress = useCallback(async () => {
+    if (!game || !userId) return;
+    setIsRequestingRematch(true);
+    try {
+      const newGameId = await requestRematchForGame(game, userId);
+      if (newGameId) {
+        router.replace(`/online/game-v2/${newGameId}`);
+      }
+    } catch (err) {
+      console.error('[OnlineGameV2] Rematch request failed', err);
+      Alert.alert(
+        'Rematch failed',
+        err instanceof Error ? err.message : 'Could not request rematch.'
+      );
+    } finally {
+      setIsRequestingRematch(false);
+    }
+  }, [game, userId, router]);
+
   if (loading) {
     return (
       <View style={styles.root}>
@@ -988,20 +1121,42 @@ export default function OnlineGameV2Screen() {
                   onPress={handleQuitGame}
                   style={[styles.btn, styles.goldOutlineButton]}
                 />
-                <StyledButton
-                  label={winkLabel}
-                  variant="ghost"
-                  onPress={() => {
-                    if (!canToggleWink) return;
-                    setWinkArmed((prev) => !prev);
-                  }}
-                  disabled={!canToggleWink}
-                  style={[
-                    styles.btn,
-                    styles.winkButton,
-                    winkArmed && styles.winkButtonActive,
-                  ]}
-                />
+                {isGameFinished ? (
+                  <View style={[styles.btn, styles.rematchWrapper]}>
+                    <StyledButton
+                      label={rematchButtonLabel}
+                      variant="ghost"
+                      onPress={handleRematchPress}
+                      disabled={!myRole || hasRequestedRematch || isRequestingRematch}
+                      style={[
+                        styles.btn,
+                        styles.winkButton,
+                      ]}
+                    />
+                    {(waitingForRematch || opponentWantsRematch) && (
+                      <Text style={styles.rematchStatusText}>
+                        {waitingForRematch
+                          ? 'Waiting for rival to accept…'
+                          : 'Rival wants a rematch!'}
+                      </Text>
+                    )}
+                  </View>
+                ) : (
+                  <StyledButton
+                    label={winkLabel}
+                    variant="ghost"
+                    onPress={() => {
+                      if (!canToggleWink) return;
+                      setWinkArmed((prev) => !prev);
+                    }}
+                    disabled={!canToggleWink}
+                    style={[
+                      styles.btn,
+                      styles.winkButton,
+                      winkArmed && styles.winkButtonActive,
+                    ]}
+                  />
+                )}
                 <StyledButton
                   label="View Rules"
                   variant="ghost"
@@ -1303,6 +1458,16 @@ const styles = StyleSheet.create({
   },
   winkButtonActive: {
     backgroundColor: '#0B8A42',
+  },
+  rematchWrapper: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  rematchStatusText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#E6FFE6',
+    textAlign: 'center',
   },
   dangerButton: {
     backgroundColor: '#6C1115',
