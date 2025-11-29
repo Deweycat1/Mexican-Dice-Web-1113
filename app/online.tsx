@@ -312,7 +312,7 @@ export default function OnlineLobbyScreen() {
     (game: LobbyGame) => {
       if (!userId) return;
 
-      console.log('[OnlineLobby] Resign pressed (no confirm)', {
+      console.log('[OnlineLobby] Resign pressed', {
         gameId: game.id,
         userId,
         host_id: game.host_id,
@@ -356,7 +356,10 @@ export default function OnlineLobbyScreen() {
         }
       };
 
-      run();
+      Alert.alert('Quit game?', 'Are you sure you want to forfeit the game?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Yes, forfeit', style: 'destructive', onPress: () => run() },
+      ]);
     },
     [buildRoundState, loadGames, userId]
   );
@@ -565,7 +568,7 @@ export default function OnlineLobbyScreen() {
           <View style={styles.cardLinks}>
             {canResign && (
               <TouchableOpacity onPress={() => handleResign(game)}>
-                <Text style={styles.secondaryAction}>Resign</Text>
+                <Text style={styles.secondaryAction}>Quit Game</Text>
               </TouchableOpacity>
             )}
             {canDelete && (
