@@ -62,6 +62,19 @@ const friendlyHint =
 
 const makeId = () => Math.random().toString(36).slice(2, 10);
 
+const MAX_USERNAME_LENGTH = 40;
+
+// Allow only letters, spaces, and hyphens for friend usernames
+const isValidFriendUsername = (raw: string) => {
+  const value = raw.trim();
+  if (!value) return false;
+  if (value.length > MAX_USERNAME_LENGTH) return false;
+
+  // Only A–Z, a–z, spaces, and hyphens
+  const safePattern = /^[A-Za-z\s-]+$/;
+  return safePattern.test(value);
+};
+
 const SCORE_DIE_BASE_SIZE = 38;
 const CURRENT_CLAIM_DIE_SCALE = 0.8;
 
@@ -244,18 +257,26 @@ export default function OnlineLobbyScreen() {
       let friendlyName: string | null = null;
       const trimmed = friendCode.trim();
       if (trimmed) {
+        if (!isValidFriendUsername(trimmed)) {
+          Alert.alert(
+            'Invalid username',
+            'Usernames can only contain letters, spaces, and hyphens, up to 40 characters.'
+          );
+          return;
+        }
+
         const normalized = normalizeColorAnimal(trimmed);
         if (!normalized) {
           Alert.alert(
-            'Invalid code',
-            'Could not parse that color-animal code. Double-check and try again.'
+            'Invalid username',
+            'Could not parse that username. Double-check the spelling and try again.'
           );
           return;
         }
         const { data: friend, error: friendError } = await supabase
           .from('users')
           .select('id, username')
-          .eq('username', normalized)
+          .ilike('username', normalized)
           .single();
         if (friendError || !friend) {
           Alert.alert(
@@ -633,7 +654,7 @@ export default function OnlineLobbyScreen() {
         )}
         <TextInput
           style={styles.input}
-          placeholder="Friend’s color-animal code (optional)"
+          placeholder="Friend’s Username"
               placeholderTextColor="#9FBBA6"
               value={friendCode}
               onChangeText={setFriendCode}
