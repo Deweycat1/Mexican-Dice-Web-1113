@@ -425,6 +425,7 @@ export default function OnlineLobbyScreen() {
 
   const renderGameCard = (game: LobbyGame) => {
     if (!userId) return null;
+
     const isHost = game.host_id === userId;
     const hostName = usernamesById[game.host_id];
     const guestName = game.guest_id ? usernamesById[game.guest_id] : undefined;
@@ -434,10 +435,45 @@ export default function OnlineLobbyScreen() {
         ? guestName || 'Opponent'
         : 'Waiting for opponent'
       : hostName || 'Opponent';
-    const youScore = isHost ? game.host_score ?? STARTING_SCORE : game.guest_score ?? STARTING_SCORE;
+
+    const youScore = isHost
+      ? game.host_score ?? STARTING_SCORE
+      : game.guest_score ?? STARTING_SCORE;
     const themScore = isHost
       ? game.guest_score ?? STARTING_SCORE
       : game.host_score ?? STARTING_SCORE;
+
+    const isCompleted = game.status === 'finished';
+
+    // Derive outcome for completed games
+    let outcomeLabel: string | null = null;
+    if (isCompleted) {
+      const history = (game.round_state as any)?.history;
+      const lastEvent =
+        Array.isArray(history) && history.length > 0 ? history[history.length - 1] : null;
+      const lastText: string | undefined =
+        lastEvent && typeof lastEvent.text === 'string' ? lastEvent.text : undefined;
+
+      const hostResigned = !!lastText && lastText.includes('Host resigned the match.');
+      const guestResigned = !!lastText && lastText.includes('Guest resigned the match.');
+
+      if (hostResigned || guestResigned) {
+        const youAreHost = isHost;
+        if (hostResigned) {
+          outcomeLabel = youAreHost ? 'You resigned (forfeit)' : 'Opponent resigned (forfeit)';
+        } else if (guestResigned) {
+          outcomeLabel = youAreHost ? 'Opponent resigned (forfeit)' : 'You resigned (forfeit)';
+        }
+      } else {
+        if (youScore > themScore) {
+          outcomeLabel = 'You won';
+        } else if (youScore < themScore) {
+          outcomeLabel = 'You lost';
+        } else {
+          outcomeLabel = 'Game over';
+        }
+      }
+    }
 
     let statusLabel = '';
 
@@ -477,20 +513,21 @@ export default function OnlineLobbyScreen() {
         </View>
         <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
         <View style={styles.cardActions}>
-          <StyledButton
-            label="Open Match"
-            variant="outline"
-            onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
-            style={styles.openMatchButton}
-          />
+          {isCompleted ? (
+            <View style={styles.completedOutcomeContainer}>
+              <Text style={styles.completedOutcomeText}>{outcomeLabel ?? 'Game over'}</Text>
+            </View>
+          ) : (
+            <StyledButton
+              label="Open Match"
+              variant="outline"
+              onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
+              style={styles.openMatchButton}
+            />
+          )}
           <View style={styles.cardLinks}>
             {canResign && (
-              <TouchableOpacity
-                onPress={() => {
-                  console.log(`[OnlineLobby] Resign tapped for game ${game.id}`);
-                  handleResign(game);
-                }}
-              >
+              <TouchableOpacity onPress={() => handleResign(game)}>
                 <Text style={styles.secondaryAction}>Resign</Text>
               </TouchableOpacity>
             )}
@@ -703,6 +740,16 @@ const styles = StyleSheet.create({
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  completedOutcomeContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  completedOutcomeText: {
+    color: '#E6FFE6',
+    fontSize: 14,
+    fontWeight: '700',
   },
   openMatchButton: {
     flex: 1,
