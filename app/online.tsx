@@ -133,13 +133,7 @@ export default function OnlineLobbyScreen() {
     setLoadingGames(true);
     const { data, error } = await supabase
       .from('games_v2')
-      .select(
-        `
-        *,
-        host:host_id (username),
-        guest:guest_id (username)
-      `
-      )
+      .select('*')
       .or(`host_id.eq.${userId},guest_id.eq.${userId}`)
       .order('updated_at', { ascending: false });
 
@@ -386,8 +380,10 @@ export default function OnlineLobbyScreen() {
     if (!userId) return null;
     const isHost = game.host_id === userId;
     const opponentName = isHost
-      ? game.guest?.username ?? (game.guest_id ? 'Opponent' : 'Waiting for opponent')
-      : game.host?.username ?? 'Opponent';
+      ? game.guest_id
+        ? 'Opponent'
+        : 'Waiting for opponent'
+      : 'Opponent';
     const youScore = isHost ? game.host_score ?? STARTING_SCORE : game.guest_score ?? STARTING_SCORE;
     const themScore = isHost
       ? game.guest_score ?? STARTING_SCORE
