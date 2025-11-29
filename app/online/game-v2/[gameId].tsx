@@ -130,6 +130,7 @@ const defaultRoundState: RoundState = {
 
 const clampScore = (value: number) => Math.max(0, value);
 const uuid = () => Math.random().toString(36).slice(2, 10);
+const OUT_OF_TURN_ERROR = 'OUT_OF_TURN_ERROR';
 
 export type OnlineGameRematchInfo = {
   parentGameId: string;
@@ -611,15 +612,23 @@ export default function OnlineGameV2Screen() {
   }, [claimToCheck, myRoll]);
 
   const handleUpdate = useCallback(
-    async (payload: Record<string, any>, nextRound?: RoundState) => {
+    async (
+      payload: Record<string, any>,
+      nextRound?: RoundState,
+      options?: { requireCurrentPlayerId?: string | null }
+    ) => {
       if (!normalizedGameId) throw new Error('Missing game id');
       const updatePayload = { ...payload };
       if (nextRound) updatePayload.round_state = nextRound;
-      const { error: updateError } = await supabase
-        .from('games_v2')
-        .update(updatePayload)
-        .eq('id', normalizedGameId);
+      let query = supabase.from('games_v2').update(updatePayload).eq('id', normalizedGameId);
+      if (options?.requireCurrentPlayerId) {
+        query = query.eq('current_player_id', options.requireCurrentPlayerId);
+      }
+      const { data, error: updateError } = await query.select('id');
       if (updateError) throw new Error(updateError.message);
+      if (!data || data.length === 0) {
+        throw new Error(OUT_OF_TURN_ERROR);
+      }
     },
     [normalizedGameId]
   );
@@ -647,14 +656,19 @@ export default function OnlineGameV2Screen() {
           last_roll_1: values[0],
           last_roll_2: values[1],
         },
-        nextRound
+        nextRound,
+        { requireCurrentPlayerId: userId }
       );
     } catch (err: any) {
-      Alert.alert('Roll failed', err.message ?? 'Could not save roll.');
+      if (err?.message === OUT_OF_TURN_ERROR) {
+        Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
+      } else {
+        Alert.alert('Roll failed', err.message ?? 'Could not save roll.');
+      }
     } finally {
       setTimeout(() => setRollingAnim(false), 400);
     }
-  }, [game, myRole, isMyTurn, isRevealAnimating, roundState, claimToCheck, handleUpdate]);
+  }, [game, myRole, isMyTurn, isRevealAnimating, roundState, claimToCheck, handleUpdate, userId]);
 
   const appendHistory = useCallback(
     (entry: HistoryItem): HistoryItem[] => {
@@ -764,14 +778,18 @@ export default function OnlineGameV2Screen() {
       };
 
       try {
-        await handleUpdate(payload, nextRound);
+        await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
         setClaimPickerOpen(false);
         setWinkArmed(false);
         if (claim === 41) {
           setBanner({ type: 'social', text: '🍻 SOCIAL!!! 🍻' });
         }
       } catch (err: any) {
-        Alert.alert('Claim failed', err.message ?? 'Could not save claim.');
+        if (err?.message === OUT_OF_TURN_ERROR) {
+          Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
+        } else {
+          Alert.alert('Claim failed', err.message ?? 'Could not save claim.');
+        }
       }
     },
     [
@@ -789,6 +807,7 @@ export default function OnlineGameV2Screen() {
       guestName,
       startSocialReveal,
       winkUsesRemaining,
+      userId,
     ]
   );
 
@@ -861,15 +880,19 @@ export default function OnlineGameV2Screen() {
     };
 
     try {
-      await handleUpdate(payload, nextRound);
+      await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
       setBanner(liar ? { type: 'got-em', text: "GOT 'EM!!!" } : { type: 'womp-womp', text: 'WOMP WOMP' });
     } catch (err: any) {
-      Alert.alert('Bluff call failed', err.message ?? 'Could not resolve bluff.');
+      if (err?.message === OUT_OF_TURN_ERROR) {
+        Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
+      } else {
+        Alert.alert('Bluff call failed', err.message ?? 'Could not resolve bluff.');
+      }
     }
-  }, [game, myRole, opponentRole, isMyTurn, lastClaim, isRevealAnimating, roundState, appendHistory, handleUpdate, hostName, guestName]);
+  }, [game, myRole, opponentRole, isMyTurn, lastClaim, isRevealAnimating, roundState, appendHistory, handleUpdate, hostName, guestName, userId]);
 
   const handleQuitGame = useCallback(() => {
-    console.log('[OnlineGameV2] Quit Game pressed');
+    console.log('[OnlineGameV2] Leave Game pressed');
 
     // On web, Alert is effectively a no-op, so fall back to window.confirm
     if (Platform.OS === 'web') {
@@ -883,7 +906,7 @@ export default function OnlineGameV2Screen() {
 
     // Native iOS/Android: use Alert.alert as before
     Alert.alert(
-      'Quit Game',
+      'Leave Game',
       'Are you sure you want to leave the game?',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -1137,7 +1160,7 @@ export default function OnlineGameV2Screen() {
               </View>
               <View style={styles.bottomRow}>
                 <StyledButton
-                  label="Quit Game"
+                  label="Leave Game"
                   variant="ghost"
                   onPress={handleQuitGame}
                   style={[styles.btn, styles.goldOutlineButton]}
