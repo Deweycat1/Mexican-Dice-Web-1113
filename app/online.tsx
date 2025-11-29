@@ -149,6 +149,19 @@ export default function OnlineLobbyScreen() {
       setGames([]);
     } else {
       setGames((data ?? []) as LobbyGame[]);
+      console.log(
+        '[OnlineLobby] Loaded games for',
+        userId,
+        (data ?? []).map((g: any) => ({
+          id: g.id,
+          status: g.status,
+          host_id: g.host_id,
+          guest_id: g.guest_id,
+          current_player_id: g.current_player_id,
+          host_score: g.host_score,
+          guest_score: g.guest_score,
+        }))
+      );
     }
     setLoadingGames(false);
   }, [userId]);
@@ -343,13 +356,12 @@ export default function OnlineLobbyScreen() {
     }
 
     const challenges = games.filter((game) => {
-      const isGuest = game.guest_id === userId;
-      const isActive = game.status === 'waiting' || game.status === 'in_progress';
-      const hostHasTurn = game.current_player_id === game.host_id;
+      if (!game.guest_id || game.guest_id !== userId) return false;
+      if (game.status !== 'in_progress') return false;
+      if (game.current_player_id !== game.host_id) return false;
       const hostScore = game.host_score ?? STARTING_SCORE;
       const guestScore = game.guest_score ?? STARTING_SCORE;
-      const isFresh = hostScore === STARTING_SCORE && guestScore === STARTING_SCORE;
-      return isGuest && isActive && hostHasTurn && isFresh;
+      return hostScore === STARTING_SCORE && guestScore === STARTING_SCORE;
     });
 
     const yourTurn = games.filter(
@@ -362,8 +374,7 @@ export default function OnlineLobbyScreen() {
       const isInProgress = game.status === 'in_progress';
       const someoneToMove = !!game.current_player_id;
       const notYou = game.current_player_id !== userId;
-      const notAlreadyChallenge = !(game.guest_id === userId);
-      return isInProgress && someoneToMove && notYou && notAlreadyChallenge;
+      return isInProgress && someoneToMove && notYou;
     });
 
     const completed = games.filter((game) => game.status === 'finished').slice(0, 5);
@@ -386,8 +397,10 @@ export default function OnlineLobbyScreen() {
 
     const isChallengeForYou =
       game.guest_id === userId &&
-      (game.status === 'waiting' || game.status === 'in_progress') &&
-      game.current_player_id === game.host_id;
+      game.status === 'in_progress' &&
+      game.current_player_id === game.host_id &&
+      (game.host_score ?? STARTING_SCORE) === STARTING_SCORE &&
+      (game.guest_score ?? STARTING_SCORE) === STARTING_SCORE;
 
     if (game.status === 'finished') {
       statusLabel = 'Game over';
