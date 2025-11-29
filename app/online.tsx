@@ -9,6 +9,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Platform,
 } from 'react-native';
 
 import FeltBackground from '../src/components/FeltBackground';
@@ -355,6 +356,15 @@ export default function OnlineLobbyScreen() {
           Alert.alert('Unable to resign', err?.message ?? 'Please try again.');
         }
       };
+
+      if (Platform.OS === 'web') {
+        // eslint-disable-next-line no-alert
+        const confirmed = window.confirm('Are you sure you want to forfeit the game?');
+        if (confirmed) {
+          run();
+        }
+        return;
+      }
 
       Alert.alert('Quit game?', 'Are you sure you want to forfeit the game?', [
         { text: 'Cancel', style: 'cancel' },
