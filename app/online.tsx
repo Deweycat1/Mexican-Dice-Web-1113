@@ -307,7 +307,7 @@ export default function OnlineLobbyScreen() {
     (game: LobbyGame) => {
       if (!userId) return;
 
-      console.log('[OnlineLobby] Resign pressed', {
+      console.log('[OnlineLobby] Resign pressed (no confirm)', {
         gameId: game.id,
         userId,
         host_id: game.host_id,
@@ -316,60 +316,42 @@ export default function OnlineLobbyScreen() {
         current_player_id: game.current_player_id,
       });
 
-      Alert.alert(
-        'Resign this match?',
-        'Are you sure you want to resign this match? Your opponent will win this game.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Resign',
-            style: 'destructive',
-            onPress: async () => {
-              console.log('[OnlineLobby] Resign confirmed', { gameId: game.id, userId });
-              try {
-                const isHost = game.host_id === userId;
-                const resignText = isHost
-                  ? 'Host resigned the match.'
-                  : 'Guest resigned the match.';
+      const run = async () => {
+        try {
+          const isHost = game.host_id === userId;
+          const resignText = isHost ? 'Host resigned the match.' : 'Guest resigned the match.';
 
-                const nextRound = buildRoundState(game.round_state, resignText);
+          const nextRound = buildRoundState(game.round_state, resignText);
 
-                const payload: Record<string, any> = {
-                  status: 'finished',
-                  current_player_id: null,
-                  round_state: nextRound,
-                };
-                payload[isHost ? 'host_score' : 'guest_score'] = 0;
+          const payload: Record<string, any> = {
+            status: 'finished',
+            current_player_id: null,
+            round_state: nextRound,
+          };
+          payload[isHost ? 'host_score' : 'guest_score'] = 0;
 
-                const { data, error } = await supabase
-                  .from('games_v2')
-                  .update(payload)
-                  .eq('id', game.id)
-                  .select('id, status, host_score, guest_score')
-                  .single();
+          const { data, error } = await supabase
+            .from('games_v2')
+            .update(payload)
+            .eq('id', game.id)
+            .select('id, status, host_score, guest_score')
+            .single();
 
-                console.log('[OnlineLobby] Resign Supabase response', { data, error });
+          if (error) {
+            console.error('[OnlineLobby] Resign Supabase error', error);
+            Alert.alert('Unable to resign', error.message ?? 'Please try again.');
+            return;
+          }
 
-                if (error) {
-                  console.error('[OnlineLobby] Resign Supabase error', error);
-                  throw error;
-                }
+          console.log('[OnlineLobby] Resign success', data);
+          await loadGames();
+        } catch (err: any) {
+          console.error('[OnlineLobby] Resign failed', err);
+          Alert.alert('Unable to resign', err?.message ?? 'Please try again.');
+        }
+      };
 
-                console.log('[OnlineLobby] Resign success', data);
-                await loadGames();
-                console.log(`[OnlineLobby] Resign completed for game ${game.id}`);
-              } catch (err: any) {
-                console.error('[OnlineLobby] Resign failed', err);
-                const errorMessage =
-                  typeof err?.message === 'string'
-                    ? `Unable to resign: ${err.message}`
-                    : 'Please check the console for details and try again.';
-                Alert.alert('Unable to resign', errorMessage);
-              }
-            },
-          },
-        ]
-      );
+      run();
     },
     [buildRoundState, loadGames, userId]
   );
