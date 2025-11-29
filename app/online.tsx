@@ -334,21 +334,41 @@ export default function OnlineLobbyScreen() {
 
   const sections = useMemo(() => {
     if (!userId) {
-      return { yourTurn: [], theirTurn: [], completed: [] as LobbyGame[] };
+      return {
+        challenges: [] as LobbyGame[],
+        yourTurn: [] as LobbyGame[],
+        theirTurn: [] as LobbyGame[],
+        completed: [] as LobbyGame[],
+      };
     }
+
+    const challenges = games.filter((game) => {
+      const isGuest = game.guest_id === userId;
+      const isActive = game.status === 'waiting' || game.status === 'in_progress';
+      const hostHasTurn = game.current_player_id === game.host_id;
+      const hostScore = game.host_score ?? STARTING_SCORE;
+      const guestScore = game.guest_score ?? STARTING_SCORE;
+      const isFresh = hostScore === STARTING_SCORE && guestScore === STARTING_SCORE;
+      return isGuest && isActive && hostHasTurn && isFresh;
+    });
+
     const yourTurn = games.filter(
       (game) =>
         (game.status === 'in_progress' && game.current_player_id === userId) ||
         (game.status === 'waiting' && game.host_id === userId && !game.guest_id)
     );
-    const theirTurn = games.filter(
-      (game) =>
-        game.status === 'in_progress' &&
-        game.current_player_id &&
-        game.current_player_id !== userId
-    );
+
+    const theirTurn = games.filter((game) => {
+      const isInProgress = game.status === 'in_progress';
+      const someoneToMove = !!game.current_player_id;
+      const notYou = game.current_player_id !== userId;
+      const notAlreadyChallenge = !(game.guest_id === userId);
+      return isInProgress && someoneToMove && notYou && notAlreadyChallenge;
+    });
+
     const completed = games.filter((game) => game.status === 'finished').slice(0, 5);
-    return { yourTurn, theirTurn, completed };
+
+    return { challenges, yourTurn, theirTurn, completed };
   }, [games, userId]);
 
   const renderGameCard = (game: LobbyGame) => {
@@ -363,8 +383,16 @@ export default function OnlineLobbyScreen() {
       : game.host_score ?? STARTING_SCORE;
 
     let statusLabel = '';
+
+    const isChallengeForYou =
+      game.guest_id === userId &&
+      (game.status === 'waiting' || game.status === 'in_progress') &&
+      game.current_player_id === game.host_id;
+
     if (game.status === 'finished') {
       statusLabel = 'Game over';
+    } else if (isChallengeForYou) {
+      statusLabel = 'New challenge';
     } else if (game.status === 'waiting' && !game.guest_id) {
       statusLabel = 'Waiting for opponent';
     } else if (game.current_player_id === userId) {
@@ -477,6 +505,7 @@ export default function OnlineLobbyScreen() {
             </View>
           ) : (
             <>
+              {renderSection('Challenges', sections.challenges, 'No new challenges yet.')}
               {renderSection('Your Turn', sections.yourTurn, 'No games where it’s your turn yet.')}
               {renderSection('Their Turn', sections.theirTurn, 'No games waiting on your friends.')}
               {renderSection('Completed games', sections.completed, 'No completed games yet.')}
