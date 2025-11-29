@@ -79,6 +79,7 @@ export default function OnlineLobbyScreen() {
   const [creatingMatch, setCreatingMatch] = useState(false);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [games, setGames] = useState<LobbyGame[]>([]);
+  const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
   const [loadingGames, setLoadingGames] = useState(false);
 
   useEffect(() => {
@@ -142,11 +143,13 @@ export default function OnlineLobbyScreen() {
       Alert.alert('Unable to load matches', error.message);
       setGames([]);
     } else {
-      setGames((data ?? []) as LobbyGame[]);
+      const rows = (data ?? []) as LobbyGame[];
+      setGames(rows);
+
       console.log(
         '[OnlineLobby] Loaded games for',
         userId,
-        (data ?? []).map((g: any) => ({
+        rows.map((g: any) => ({
           id: g.id,
           status: g.status,
           host_id: g.host_id,
@@ -156,6 +159,34 @@ export default function OnlineLobbyScreen() {
           guest_score: g.guest_score,
         }))
       );
+
+      // Build a unique list of player IDs for these games
+      const ids = Array.from(
+        new Set(
+          rows
+            .flatMap((g) => [g.host_id, g.guest_id])
+            .filter((id): id is string => !!id)
+        )
+      );
+
+      if (ids.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, username')
+          .in('id', ids);
+
+        if (!usersError && usersData) {
+          const map: Record<string, string> = {};
+          for (const u of usersData) {
+            if (u.id && u.username) {
+              map[u.id] = u.username;
+            }
+          }
+          setUsernamesById(map);
+        } else if (usersError) {
+          console.warn('[OnlineLobby] Failed to load usernames', usersError);
+        }
+      }
     }
     setLoadingGames(false);
   }, [userId]);
@@ -275,6 +306,16 @@ export default function OnlineLobbyScreen() {
   const handleResign = useCallback(
     (game: LobbyGame) => {
       if (!userId) return;
+
+      console.log('[OnlineLobby] Resign pressed', {
+        gameId: game.id,
+        userId,
+        host_id: game.host_id,
+        guest_id: game.guest_id,
+        status: game.status,
+        current_player_id: game.current_player_id,
+      });
+
       Alert.alert(
         'Resign this match?',
         'Are you sure you want to resign this match? Your opponent will win this game.',
@@ -284,22 +325,42 @@ export default function OnlineLobbyScreen() {
             text: 'Resign',
             style: 'destructive',
             onPress: async () => {
+              console.log('[OnlineLobby] Resign confirmed', { gameId: game.id, userId });
               try {
                 const isHost = game.host_id === userId;
-                const resignText = isHost ? 'Host resigned the match.' : 'Guest resigned the match.';
+                const resignText = isHost
+                  ? 'Host resigned the match.'
+                  : 'Guest resigned the match.';
+
                 const nextRound = buildRoundState(game.round_state, resignText);
+
                 const payload: Record<string, any> = {
                   status: 'finished',
                   current_player_id: null,
                   round_state: nextRound,
                 };
                 payload[isHost ? 'host_score' : 'guest_score'] = 0;
-                const { error } = await supabase.from('games_v2').update(payload).eq('id', game.id);
-                if (error) throw error;
+
+                const { data, error } = await supabase
+                  .from('games_v2')
+                  .update(payload)
+                  .eq('id', game.id)
+                  .select('id, status, host_score, guest_score')
+                  .single();
+
+                if (error) {
+                  console.error('[OnlineLobby] Resign Supabase error', error);
+                  throw error;
+                }
+
+                console.log('[OnlineLobby] Resign success', data);
                 await loadGames();
               } catch (err: any) {
                 console.error('[OnlineLobby] Resign failed', err);
-                Alert.alert('Unable to resign', err?.message ?? 'Please try again.');
+                Alert.alert(
+                  'Unable to resign',
+                  err?.message ?? 'Please check the console for details and try again.'
+                );
               }
             },
           },
@@ -379,11 +440,14 @@ export default function OnlineLobbyScreen() {
   const renderGameCard = (game: LobbyGame) => {
     if (!userId) return null;
     const isHost = game.host_id === userId;
+    const hostName = usernamesById[game.host_id];
+    const guestName = game.guest_id ? usernamesById[game.guest_id] : undefined;
+
     const opponentName = isHost
       ? game.guest_id
-        ? 'Opponent'
+        ? guestName || 'Opponent'
         : 'Waiting for opponent'
-      : 'Opponent';
+      : hostName || 'Opponent';
     const youScore = isHost ? game.host_score ?? STARTING_SCORE : game.guest_score ?? STARTING_SCORE;
     const themScore = isHost
       ? game.guest_score ?? STARTING_SCORE
