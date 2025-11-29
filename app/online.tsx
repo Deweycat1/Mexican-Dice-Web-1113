@@ -42,7 +42,7 @@ const INITIAL_ROUND_STATE = {
 
 type LobbyGame = {
   id: string;
-  status: string;
+  status: 'waiting' | 'in_progress' | 'finished' | 'cancelled';
   host_id: string;
   guest_id: string | null;
   host_score: number | null;
@@ -59,17 +59,26 @@ const friendlyHint =
 
 const makeId = () => Math.random().toString(36).slice(2, 10);
 
+const normalizeColorAnimal = (value: string) => {
+  if (!value) return '';
+  return value
+    .trim()
+    .replace(/\s+/g, '-')
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('-');
+};
+
 export default function OnlineLobbyScreen() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [friendCode, setFriendCode] = useState('');
+  const [creatingMatch, setCreatingMatch] = useState(false);
+  const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [games, setGames] = useState<LobbyGame[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
-  const [friendUsername, setFriendUsername] = useState('');
-  const [createMessage, setCreateMessage] = useState<string | null>(null);
-  const [creatingMatch, setCreatingMatch] = useState(false);
-  const [joinCode, setJoinCode] = useState('');
-  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -94,17 +103,18 @@ export default function OnlineLobbyScreen() {
     };
   }, []);
 
-  const getActiveGameCount = useCallback(async (id: string) => {
-    const { count, error } = await supabase
-      .from('games_v2')
-      .select('id', { count: 'exact', head: true })
-      .in('status', ['waiting', 'in_progress'])
-      .or(`host_id.eq.${id},guest_id.eq.${id}`);
-    if (error) {
-      throw new Error(error.message);
-    }
-    return count ?? 0;
-  }, []);
+  const getActiveGameCount = useCallback(
+    async (id: string) => {
+      const { count, error } = await supabase
+        .from('games_v2')
+        .select('id', { count: 'exact', head: true })
+        .in('status', ['waiting', 'in_progress'])
+        .or(`host_id.eq.${id},guest_id.eq.${id}`);
+      if (error) throw new Error(error.message);
+      return count ?? 0;
+    },
+    []
+  );
 
   const loadGames = useCallback(async () => {
     if (!userId) return;
@@ -132,9 +142,7 @@ export default function OnlineLobbyScreen() {
   }, [userId]);
 
   useEffect(() => {
-    if (userId) {
-      loadGames();
-    }
+    if (userId) loadGames();
   }, [userId, loadGames]);
 
   useFocusEffect(
@@ -142,137 +150,6 @@ export default function OnlineLobbyScreen() {
       loadGames();
     }, [loadGames])
   );
-
-  const handleCreateMatch = useCallback(async () => {
-    if (!userId) return;
-    setCreateMessage(null);
-    setCreatingMatch(true);
-    try {
-      const activeCount = await getActiveGameCount(userId);
-      if (activeCount >= MAX_ACTIVE_GAMES) {
-        Alert.alert(
-          'Too many matches',
-          'You already have 5 active matches. Finish or delete one before starting a new one.'
-        );
-        return;
-      }
-
-      let guestId: string | null = null;
-      let friendlyName = '';
-      if (friendUsername.trim()) {
-        const { data: friend, error: friendError } = await supabase
-          .from('users')
-          .select('id, username')
-          .eq('username', friendUsername.trim())
-          .single();
-        if (friendError || !friend) {
-          Alert.alert('User not found', 'We could not find that username.');
-          return;
-        }
-        if (friend.id === userId) {
-          Alert.alert('Invalid opponent', 'You cannot start a match against yourself.');
-          return;
-        }
-        guestId = friend.id;
-        friendlyName = friend.username ?? friendUsername.trim();
-      }
-
-      const { data, error } = await supabase
-        .from('games_v2')
-        .insert({
-          host_id: userId,
-          guest_id: guestId,
-          status: guestId ? 'in_progress' : 'waiting',
-          current_player_id: userId,
-          host_score: STARTING_SCORE,
-          guest_score: STARTING_SCORE,
-          round_state: INITIAL_ROUND_STATE,
-        })
-        .select('id')
-        .single();
-
-      if (error || !data) {
-        throw error ?? new Error('Unable to create match');
-      }
-
-      if (guestId) {
-        setCreateMessage(`Match started with ${friendlyName}.`);
-      } else {
-        setCreateMessage(`Match created! Share this code with a friend: ${data.id}`);
-      }
-      setFriendUsername('');
-      await loadGames();
-    } catch (err: any) {
-      console.error('[OnlineLobby] Create match failed', err);
-      Alert.alert('Could not start match', err?.message ?? 'Please try again.');
-    } finally {
-      setCreatingMatch(false);
-    }
-  }, [friendUsername, getActiveGameCount, loadGames, userId]);
-
-  const handleJoinByCode = useCallback(async () => {
-    if (!userId) return;
-    if (!joinCode.trim()) {
-      Alert.alert('Enter a code', 'Please enter the match code shared by your friend.');
-      return;
-    }
-    setJoining(true);
-    try {
-      const { data: game, error } = await supabase
-        .from('games_v2')
-        .select('*')
-        .eq('id', joinCode.trim())
-        .single();
-      if (error || !game) {
-        throw new Error('Match not found. Double-check the code and try again.');
-      }
-      if (game.host_id === userId) {
-        Alert.alert('Already your match', 'You created this match.');
-        return;
-      }
-      if (game.guest_id && game.guest_id !== userId) {
-        Alert.alert('Match full', 'Two players are already in this match.');
-        return;
-      }
-      if (game.status !== 'waiting') {
-        Alert.alert('Match already started', 'This match is no longer open for joining.');
-        return;
-      }
-
-      const activeCount = await getActiveGameCount(userId);
-      if (activeCount >= MAX_ACTIVE_GAMES) {
-        Alert.alert(
-          'Too many matches',
-          'You already have 5 active matches. Finish or delete one before joining another.'
-        );
-        return;
-      }
-
-      const { error: updateError } = await supabase
-        .from('games_v2')
-        .update({
-          guest_id: userId,
-          status: 'in_progress',
-          current_player_id: game.current_player_id ?? game.host_id ?? userId,
-          guest_score: game.guest_score ?? STARTING_SCORE,
-        })
-        .eq('id', game.id)
-        .is('guest_id', null);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      setJoinCode('');
-      await loadGames();
-      Alert.alert('Match joined', 'Good luck!');
-    } catch (err: any) {
-      console.error('[OnlineLobby] Join match failed', err);
-      Alert.alert('Could not join match', err?.message ?? 'Please try again.');
-    } finally {
-      setJoining(false);
-    }
-  }, [getActiveGameCount, joinCode, loadGames, userId]);
 
   const buildRoundState = useCallback((roundState: any, text: string) => {
     const base =
@@ -290,6 +167,92 @@ export default function OnlineLobbyScreen() {
     return base;
   }, []);
 
+  const handleCreateMatch = useCallback(async () => {
+    if (!userId) {
+      Alert.alert('Account missing', 'Please wait for your account to load.');
+      return;
+    }
+    setCreateMessage(null);
+    setCreatingMatch(true);
+    try {
+      const activeCount = await getActiveGameCount(userId);
+      if (activeCount >= MAX_ACTIVE_GAMES) {
+        Alert.alert(
+          'Too many matches',
+          'You already have 5 active matches. Finish or delete one before starting a new one.'
+        );
+        return;
+      }
+
+      let guestId: string | null = null;
+      let friendlyName: string | null = null;
+      const trimmed = friendCode.trim();
+      if (trimmed) {
+        const normalized = normalizeColorAnimal(trimmed);
+        if (!normalized) {
+          Alert.alert(
+            'Invalid code',
+            'Could not parse that color-animal code. Double-check and try again.'
+          );
+          return;
+        }
+        const { data: friend, error: friendError } = await supabase
+          .from('users')
+          .select('id, username')
+          .eq('username', normalized)
+          .single();
+        if (friendError || !friend) {
+          Alert.alert(
+            'User not found',
+            'Could not find a player with that color-animal code. Double-check the spelling and try again.'
+          );
+          return;
+        }
+        if (friend.id === userId) {
+          Alert.alert('Invalid opponent', 'You cannot start a match against yourself.');
+          return;
+        }
+        guestId = friend.id;
+        friendlyName = friend.username ?? normalized;
+      }
+
+      const payload: Record<string, any> = {
+        host_id: userId,
+        guest_id: guestId,
+        status: guestId ? 'in_progress' : 'waiting',
+        current_player_id: userId,
+        host_score: STARTING_SCORE,
+        guest_score: STARTING_SCORE,
+        last_roll_1: null,
+        last_roll_2: null,
+        last_claim: null,
+        round_state: INITIAL_ROUND_STATE,
+      };
+
+      const { data, error } = await supabase.from('games_v2').insert(payload).select('id').single();
+      if (error || !data) {
+        throw error ?? new Error('Unable to create match');
+      }
+
+      setFriendCode('');
+      setCreateMessage(
+        guestId
+          ? `Match started with ${friendlyName ?? 'your friend'}.`
+          : 'Match created! Invite a friend to join whenever they are ready.'
+      );
+      await loadGames();
+
+      if (guestId) {
+        router.push(`/online/game-v2/${data.id}` as const);
+      }
+    } catch (err: any) {
+      console.error('[OnlineLobby] Create match failed', err);
+      Alert.alert('Could not start match', err?.message ?? 'Please try again.');
+    } finally {
+      setCreatingMatch(false);
+    }
+  }, [friendCode, getActiveGameCount, loadGames, router, userId]);
+
   const handleResign = useCallback(
     (game: LobbyGame) => {
       if (!userId) return;
@@ -304,11 +267,12 @@ export default function OnlineLobbyScreen() {
             onPress: async () => {
               try {
                 const isHost = game.host_id === userId;
-                const resignText = isHost ? 'Host resigned.' : 'Guest resigned.';
+                const resignText = isHost ? 'Host resigned the match.' : 'Guest resigned the match.';
+                const nextRound = buildRoundState(game.round_state, resignText);
                 const payload: Record<string, any> = {
                   status: 'finished',
                   current_player_id: null,
-                  round_state: buildRoundState(game.round_state, resignText),
+                  round_state: nextRound,
                 };
                 payload[isHost ? 'host_score' : 'guest_score'] = 0;
                 const { error } = await supabase.from('games_v2').update(payload).eq('id', game.id);
@@ -345,7 +309,7 @@ export default function OnlineLobbyScreen() {
                 if (error) throw error;
                 await loadGames();
               } catch (err: any) {
-                console.error('[OnlineLobby] Delete waiting match failed', err);
+                console.error('[OnlineLobby] Delete match failed', err);
                 Alert.alert('Unable to delete match', err?.message ?? 'Please try again.');
               }
             },
@@ -358,34 +322,20 @@ export default function OnlineLobbyScreen() {
 
   const sections = useMemo(() => {
     if (!userId) {
-      return { yourTurn: [], theirTurn: [], completed: [] };
+      return { yourTurn: [], theirTurn: [], completed: [] as LobbyGame[] };
     }
-    const activeStatuses = ['waiting', 'in_progress'];
-    const isUserInGame = (game: LobbyGame) =>
-      game.host_id === userId || game.guest_id === userId;
     const yourTurn = games.filter(
       (game) =>
-        activeStatuses.includes(game.status) &&
-        isUserInGame(game) &&
-        game.current_player_id === userId
+        (game.status === 'in_progress' && game.current_player_id === userId) ||
+        (game.status === 'waiting' && game.host_id === userId && !game.guest_id)
     );
     const theirTurn = games.filter(
       (game) =>
-        activeStatuses.includes(game.status) &&
-        isUserInGame(game) &&
+        game.status === 'in_progress' &&
         game.current_player_id &&
         game.current_player_id !== userId
     );
-    const completed = games
-      .filter(
-        (game) =>
-          ['finished', 'cancelled'].includes(game.status) && isUserInGame(game)
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-      )
-      .slice(0, 5);
+    const completed = games.filter((game) => game.status === 'finished').slice(0, 5);
     return { yourTurn, theirTurn, completed };
   }, [games, userId]);
 
@@ -395,30 +345,27 @@ export default function OnlineLobbyScreen() {
     const opponentName = isHost
       ? game.guest?.username ?? (game.guest_id ? 'Opponent' : 'Waiting for opponent')
       : game.host?.username ?? 'Opponent';
-    const youScore = isHost
-      ? game.host_score ?? STARTING_SCORE
-      : game.guest_score ?? STARTING_SCORE;
-    const opponentScore = isHost
+    const youScore = isHost ? game.host_score ?? STARTING_SCORE : game.guest_score ?? STARTING_SCORE;
+    const themScore = isHost
       ? game.guest_score ?? STARTING_SCORE
       : game.host_score ?? STARTING_SCORE;
+
     let statusLabel = '';
     if (game.status === 'finished') {
       statusLabel = 'Game over';
-    } else if (game.status === 'cancelled') {
-      statusLabel = 'Cancelled';
-    } else if (!game.guest_id) {
+    } else if (game.status === 'waiting' && !game.guest_id) {
       statusLabel = 'Waiting for opponent';
-    } else if (!game.current_player_id) {
-      statusLabel = 'Paused';
     } else if (game.current_player_id === userId) {
       statusLabel = 'Your turn';
-    } else {
+    } else if (game.current_player_id) {
       statusLabel = 'Waiting on friend';
+    } else {
+      statusLabel = 'Paused';
     }
 
     const canResign =
-      ['waiting', 'in_progress'].includes(game.status) &&
-      game.guest_id &&
+      game.status === 'in_progress' &&
+      !!game.guest_id &&
       (game.host_id === userId || game.guest_id === userId);
     const canDelete =
       game.status === 'waiting' && !game.guest_id && game.host_id === userId;
@@ -429,7 +376,7 @@ export default function OnlineLobbyScreen() {
           <Text style={styles.gameOpponent}>{opponentName}</Text>
           <Text style={styles.gameStatus}>{statusLabel}</Text>
         </View>
-        <Text style={styles.gameScore}>{`You: ${youScore} • Opponent: ${opponentScore}`}</Text>
+        <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
         <View style={styles.cardActions}>
           <StyledButton
             label="Open Match"
@@ -454,17 +401,16 @@ export default function OnlineLobbyScreen() {
     );
   };
 
-  const renderSection = (title: string, data: LobbyGame[]) => {
-    if (!data.length) {
-      return null;
-    }
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {data.map(renderGameCard)}
-      </View>
-    );
-  };
+  const renderSection = (title: string, data: LobbyGame[], emptyText: string) => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {data.length === 0 ? (
+        <Text style={styles.emptyTextSmall}>{emptyText}</Text>
+      ) : (
+        data.map(renderGameCard)
+      )}
+    </View>
+  );
 
   if (loadingUser) {
     return (
@@ -479,48 +425,31 @@ export default function OnlineLobbyScreen() {
     <View style={styles.root}>
       <FeltBackground>
         <ScrollView contentContainerStyle={styles.content}>
-          <Text style={styles.hint}>{friendlyHint}</Text>
+          <View style={styles.banner}>
+            <Text style={styles.bannerText}>{friendlyHint}</Text>
+          </View>
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Start a new match</Text>
             <Text style={styles.cardSubtitle}>
-              Invite a friend by username or leave it blank to create a shareable code.
+              Invite a friend using their color-animal code (for example: "Blue Llama").
             </Text>
             <TextInput
               style={styles.input}
-              placeholder="Friend username (optional)"
+              placeholder="Friend’s color-animal code (optional)"
               placeholderTextColor="#9FBBA6"
-              value={friendUsername}
-              onChangeText={setFriendUsername}
-              autoCapitalize="none"
+              value={friendCode}
+              onChangeText={setFriendCode}
+              autoCapitalize="words"
               autoCorrect={false}
             />
             <StyledButton
-              label={creatingMatch ? 'Creating…' : 'Start Match'}
+              label={creatingMatch ? 'Starting…' : 'Start Match'}
               onPress={handleCreateMatch}
               disabled={creatingMatch || !userId}
               style={styles.primaryButton}
             />
             {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Join a match</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter match code"
-              placeholderTextColor="#9FBBA6"
-              value={joinCode}
-              onChangeText={setJoinCode}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <StyledButton
-              label={joining ? 'Joining…' : 'Join Match'}
-              onPress={handleJoinByCode}
-              disabled={joining || !userId}
-              style={styles.primaryButton}
-            />
           </View>
 
           {loadingGames ? (
@@ -530,14 +459,9 @@ export default function OnlineLobbyScreen() {
             </View>
           ) : (
             <>
-              {renderSection('Your Turn', sections.yourTurn)}
-              {renderSection('Their Turn', sections.theirTurn)}
-              {renderSection('Completed games', sections.completed)}
-              {!sections.yourTurn.length &&
-                !sections.theirTurn.length &&
-                !sections.completed.length && (
-                  <Text style={styles.emptyText}>No matches yet.</Text>
-                )}
+              {renderSection('Your Turn', sections.yourTurn, 'No games where it’s your turn yet.')}
+              {renderSection('Their Turn', sections.theirTurn, 'No games waiting on your friends.')}
+              {renderSection('Completed games', sections.completed, 'No completed games yet.')}
             </>
           )}
         </ScrollView>
@@ -553,6 +477,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -565,11 +490,19 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  hint: {
+  banner: {
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  bannerText: {
     color: '#E6FFE6',
     textAlign: 'center',
-    marginBottom: 16,
-    fontSize: 15,
+    fontSize: 13,
   },
   card: {
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -583,12 +516,12 @@ const styles = StyleSheet.create({
     color: '#E0B50C',
     fontWeight: '800',
     fontSize: 18,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   cardSubtitle: {
     color: '#C9F0D6',
     fontSize: 13,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   input: {
     borderWidth: 1,
@@ -600,7 +533,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   primaryButton: {
-    marginBottom: 8,
+    marginBottom: 6,
   },
   shareHint: {
     color: '#C9F0D6',
@@ -608,13 +541,18 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   sectionTitle: {
     color: '#E0B50C',
     fontWeight: '800',
     fontSize: 18,
     marginBottom: 10,
+  },
+  emptyTextSmall: {
+    color: '#C9F0D6',
+    textAlign: 'center',
+    fontSize: 13,
   },
   gameCard: {
     backgroundColor: 'rgba(0,0,0,0.35)',
@@ -645,7 +583,6 @@ const styles = StyleSheet.create({
   cardActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   openMatchButton: {
     flex: 1,
@@ -663,10 +600,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
-  },
-  emptyText: {
-    color: '#C9F0D6',
-    textAlign: 'center',
-    marginTop: 30,
   },
 });
