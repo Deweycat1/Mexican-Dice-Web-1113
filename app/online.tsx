@@ -598,8 +598,8 @@ export default function OnlineLobbyScreen() {
           )}
           <View style={styles.cardLinks}>
             {canResign && (
-              <TouchableOpacity onPress={() => handleResign(game)}>
-                <Text style={styles.secondaryAction}>Quit Game</Text>
+              <TouchableOpacity onPress={() => handleResign(game)} style={styles.quitActionButton}>
+                <Text style={styles.quitActionText}>Quit Game</Text>
               </TouchableOpacity>
             )}
             {canDelete && (
@@ -637,6 +637,12 @@ export default function OnlineLobbyScreen() {
     <View style={styles.root}>
       <FeltBackground>
         <ScrollView contentContainerStyle={styles.content}>
+          <View style={styles.breadcrumbRow}>
+            <TouchableOpacity onPress={() => router.push('/')}>
+              <Text style={styles.breadcrumbText}>{'\u2190'} Main menu</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.banner}>
             <Text style={styles.bannerText}>{friendlyHint}</Text>
           </View>
@@ -665,7 +671,8 @@ export default function OnlineLobbyScreen() {
               label={creatingMatch ? 'Starting…' : 'Start Match'}
               onPress={handleCreateMatch}
               disabled={creatingMatch || !userId}
-              style={styles.primaryButton}
+              style={[styles.primaryButton, styles.startMatchGreen]}
+              textStyle={styles.startMatchGreenText}
             />
             {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
           </View>
@@ -718,6 +725,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
+  breadcrumbRow: {
+    marginBottom: 10,
+  },
+  breadcrumbText: {
+    color: '#E0B50C',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   bannerText: {
     color: '#E6FFE6',
     textAlign: 'center',
@@ -753,6 +768,15 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     marginBottom: 6,
+  },
+  startMatchGreen: {
+    backgroundColor: '#2ECC71',
+    borderColor: '#27AE60',
+    borderWidth: 2,
+  },
+  startMatchGreenText: {
+    color: '#003B1F',
+    fontWeight: '800',
   },
   shareHint: {
     color: '#C9F0D6',
@@ -848,6 +872,20 @@ const styles = StyleSheet.create({
   secondaryAction: {
     color: '#F4C430',
     fontWeight: '700',
+  },
+  quitActionButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#FF6B6B',
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quitActionText: {
+    color: '#FF6B6B',
+    fontWeight: '700',
+    fontSize: 13,
   },
   loadingMatches: {
     alignItems: 'center',
