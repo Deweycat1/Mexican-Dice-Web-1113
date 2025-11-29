@@ -75,6 +75,7 @@ export default function OnlineLobbyScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [friendCode, setFriendCode] = useState('');
+  const [myUsername, setMyUsername] = useState<string | null>(null);
   const [creatingMatch, setCreatingMatch] = useState(false);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
   const [games, setGames] = useState<LobbyGame[]>([]);
@@ -83,18 +84,29 @@ export default function OnlineLobbyScreen() {
   useEffect(() => {
     let isMounted = true;
     (async () => {
-      try {
-        await ensureUserProfile();
-        const user = await getCurrentUser();
-        if (isMounted) {
-          setUserId(user?.id ?? null);
+    try {
+      await ensureUserProfile();
+      const user = await getCurrentUser();
+      if (isMounted) {
+        setUserId(user?.id ?? null);
+      }
+
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        if (!error && isMounted) {
+          setMyUsername(data?.username ?? null);
         }
-      } catch (err) {
-        console.error('[OnlineLobby] Failed to load user', err);
-        Alert.alert('Unable to load account', 'Please try again.');
-      } finally {
-        if (isMounted) {
-          setLoadingUser(false);
+      }
+    } catch (err) {
+      console.error('[OnlineLobby] Failed to load user', err);
+      Alert.alert('Unable to load account', 'Please try again.');
+    } finally {
+      if (isMounted) {
+        setLoadingUser(false);
         }
       }
     })();
@@ -429,14 +441,20 @@ export default function OnlineLobbyScreen() {
             <Text style={styles.bannerText}>{friendlyHint}</Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Start a new match</Text>
-            <Text style={styles.cardSubtitle}>
-              Invite a friend using their color-animal code (for example: "Blue Llama").
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Friend’s color-animal code (optional)"
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Start a new match</Text>
+        <Text style={styles.cardSubtitle}>
+          Invite a friend using their color-animal code (for example: "Blue Llama").
+        </Text>
+        {myUsername && (
+          <Text style={styles.yourCode}>
+            Your Username:{' '}
+            <Text style={styles.yourCodeValue}>{myUsername}</Text>
+          </Text>
+        )}
+        <TextInput
+          style={styles.input}
+          placeholder="Friend’s color-animal code (optional)"
               placeholderTextColor="#9FBBA6"
               value={friendCode}
               onChangeText={setFriendCode}
@@ -539,6 +557,15 @@ const styles = StyleSheet.create({
     color: '#C9F0D6',
     fontSize: 13,
     marginTop: 6,
+  },
+  yourCode: {
+    color: '#C9F0D6',
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  yourCodeValue: {
+    color: '#E0B50C',
+    fontWeight: '800',
   },
   section: {
     marginBottom: 24,
