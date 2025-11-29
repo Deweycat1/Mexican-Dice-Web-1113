@@ -7,7 +7,6 @@ import {
   Animated,
   Image,
   Modal,
-  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -892,32 +891,8 @@ export default function OnlineGameV2Screen() {
   }, [game, myRole, opponentRole, isMyTurn, lastClaim, isRevealAnimating, roundState, appendHistory, handleUpdate, hostName, guestName, userId]);
 
   const handleQuitGame = useCallback(() => {
-    console.log('[OnlineGameV2] Leave Game pressed');
-
-    // On web, Alert is effectively a no-op, so fall back to window.confirm
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      const confirmed = window.confirm('Are you sure you want to leave the game?');
-      if (confirmed) {
-        router.replace('/online');
-      }
-      return;
-    }
-
-    // Native iOS/Android: use Alert.alert as before
-    Alert.alert(
-      'Leave Game',
-      'Are you sure you want to leave the game?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Leave Game',
-          style: 'destructive',
-          onPress: () => router.replace('/online'),
-        },
-      ],
-      { cancelable: true }
-    );
+    console.log('[OnlineGameV2] Leave Game pressed (no confirm)');
+    router.push('/online' as const);
   }, [router]);
 
   const handleRematchPress = useCallback(async () => {
