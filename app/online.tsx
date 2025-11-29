@@ -348,6 +348,8 @@ export default function OnlineLobbyScreen() {
                   .select('id, status, host_score, guest_score')
                   .single();
 
+                console.log('[OnlineLobby] Resign Supabase response', { data, error });
+
                 if (error) {
                   console.error('[OnlineLobby] Resign Supabase error', error);
                   throw error;
@@ -355,12 +357,14 @@ export default function OnlineLobbyScreen() {
 
                 console.log('[OnlineLobby] Resign success', data);
                 await loadGames();
+                console.log(`[OnlineLobby] Resign completed for game ${game.id}`);
               } catch (err: any) {
                 console.error('[OnlineLobby] Resign failed', err);
-                Alert.alert(
-                  'Unable to resign',
-                  err?.message ?? 'Please check the console for details and try again.'
-                );
+                const errorMessage =
+                  typeof err?.message === 'string'
+                    ? `Unable to resign: ${err.message}`
+                    : 'Please check the console for details and try again.';
+                Alert.alert('Unable to resign', errorMessage);
               }
             },
           },
@@ -499,7 +503,12 @@ export default function OnlineLobbyScreen() {
           />
           <View style={styles.cardLinks}>
             {canResign && (
-              <TouchableOpacity onPress={() => handleResign(game)}>
+              <TouchableOpacity
+                onPress={() => {
+                  console.log(`[OnlineLobby] Resign tapped for game ${game.id}`);
+                  handleResign(game);
+                }}
+              >
                 <Text style={styles.secondaryAction}>Resign</Text>
               </TouchableOpacity>
             )}
