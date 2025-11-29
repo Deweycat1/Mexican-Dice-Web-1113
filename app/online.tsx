@@ -12,8 +12,10 @@ import {
 } from 'react-native';
 
 import FeltBackground from '../src/components/FeltBackground';
+import { ScoreDie } from '../src/components/ScoreDie';
 import StyledButton from '../src/components/StyledButton';
 import { ensureUserProfile, getCurrentUser } from '../src/lib/auth';
+import { splitClaim } from '../src/engine/mexican';
 import { supabase } from '../src/lib/supabase';
 
 const STARTING_SCORE = 5;
@@ -58,6 +60,9 @@ const friendlyHint =
   'Play at your own pace: start a match with a friend and come back to it anytime.';
 
 const makeId = () => Math.random().toString(36).slice(2, 10);
+
+const SCORE_DIE_BASE_SIZE = 38;
+const CURRENT_CLAIM_DIE_SCALE = 0.8;
 
 const normalizeColorAnimal = (value: string) => {
   if (!value) return '';
@@ -445,6 +450,17 @@ export default function OnlineLobbyScreen() {
 
     const isCompleted = game.status === 'finished';
 
+    const roundState = (game.round_state ?? null) as { lastClaimRoll?: number | null } | null;
+    const lastClaimValue =
+      roundState && typeof roundState.lastClaimRoll === 'number' ? roundState.lastClaimRoll : null;
+    const lastClaimDice = typeof lastClaimValue === 'number' ? splitClaim(lastClaimValue) : null;
+    const claimDicePoints = lastClaimDice
+      ? lastClaimDice.map((pip) => Math.max(0, Math.min(5, 6 - pip)))
+      : null;
+
+    const showCurrentClaim =
+      !isCompleted && Array.isArray(claimDicePoints) && claimDicePoints.length === 2;
+
     // Derive outcome for completed games
     let outcomeLabel: string | null = null;
     if (isCompleted) {
@@ -509,7 +525,28 @@ export default function OnlineLobbyScreen() {
       <View key={game.id} style={styles.gameCard}>
         <View style={styles.gameCardHeader}>
           <Text style={styles.gameOpponent}>{opponentName}</Text>
-          <Text style={styles.gameStatus}>{statusLabel}</Text>
+          <View style={styles.currentClaimContainer}>
+            {showCurrentClaim && claimDicePoints ? (
+              <>
+                <Text style={styles.currentClaimLabel}>Current claim</Text>
+                <View style={styles.currentClaimDiceRow}>
+                  <ScoreDie
+                    points={claimDicePoints[0]}
+                    size={SCORE_DIE_BASE_SIZE}
+                    style={styles.currentClaimDie}
+                  />
+                  <View style={{ width: 6 }} />
+                  <ScoreDie
+                    points={claimDicePoints[1]}
+                    size={SCORE_DIE_BASE_SIZE}
+                    style={styles.currentClaimDie}
+                  />
+                </View>
+              </>
+            ) : (
+              <Text style={styles.gameStatus}>{statusLabel}</Text>
+            )}
+          </View>
         </View>
         <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
         <View style={styles.cardActions}>
@@ -723,6 +760,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 4,
+  },
+  currentClaimContainer: {
+    alignItems: 'flex-end',
+  },
+  currentClaimLabel: {
+    color: '#9FBBA6',
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  currentClaimDiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  currentClaimDie: {
+    transform: [{ scale: CURRENT_CLAIM_DIE_SCALE }],
   },
   gameOpponent: {
     color: '#fff',
