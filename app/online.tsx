@@ -3,20 +3,20 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Platform,
 } from 'react-native';
 
 import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
 import StyledButton from '../src/components/StyledButton';
-import { ensureUserProfile, getCurrentUser } from '../src/lib/auth';
 import { splitClaim } from '../src/engine/mexican';
+import { ensureUserProfile, getCurrentUser } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';
 
 const STARTING_SCORE = 5;
@@ -397,6 +397,14 @@ export default function OnlineLobbyScreen() {
 
   const handleDeleteWaiting = useCallback(
     (game: LobbyGame) => {
+      console.log('[OnlineLobby] Delete requested', {
+        gameId: game.id,
+        status: game.status,
+        host_id: game.host_id,
+        guest_id: game.guest_id,
+        userId,
+      });
+
       Alert.alert(
         'Delete this match?',
         'Remove this waiting match? You can always create another one.',
@@ -407,11 +415,27 @@ export default function OnlineLobbyScreen() {
             style: 'destructive',
             onPress: async () => {
               try {
-                const { error } = await supabase
+                console.log('[OnlineLobby] Delete confirmed', {
+                  gameId: game.id,
+                  userId,
+                });
+
+                const { data, error } = await supabase
                   .from('games_v2')
                   .update({ status: 'cancelled' })
-                  .eq('id', game.id);
-                if (error) throw error;
+                  .eq('id', game.id)
+                  .eq('host_id', userId as string)
+                  .select('id, status')
+                  .single();
+
+                if (error) {
+                  console.error('[OnlineLobby] Delete Supabase error', error);
+                  Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
+                  return;
+                }
+
+                console.log('[OnlineLobby] Delete success', data);
+
                 await loadGames();
               } catch (err: any) {
                 console.error('[OnlineLobby] Delete match failed', err);
@@ -422,7 +446,7 @@ export default function OnlineLobbyScreen() {
         ]
       );
     },
-    [loadGames]
+    [loadGames, userId]
   );
 
   const sections = useMemo(() => {
@@ -435,7 +459,9 @@ export default function OnlineLobbyScreen() {
       };
     }
 
-    const challenges = games.filter((game) => {
+    const visibleGames = games.filter((g) => g.status !== 'cancelled');
+
+    const challenges = visibleGames.filter((game) => {
       if (!game.guest_id || game.guest_id !== userId) return false;
       if (game.status !== 'in_progress') return false;
       if (game.current_player_id !== game.host_id) return false;
@@ -444,20 +470,22 @@ export default function OnlineLobbyScreen() {
       return hostScore === STARTING_SCORE && guestScore === STARTING_SCORE;
     });
 
-    const yourTurn = games.filter(
+    const yourTurn = visibleGames.filter(
       (game) =>
         (game.status === 'in_progress' && game.current_player_id === userId) ||
         (game.status === 'waiting' && game.host_id === userId && !game.guest_id)
     );
 
-    const theirTurn = games.filter((game) => {
+    const theirTurn = visibleGames.filter((game) => {
       const isInProgress = game.status === 'in_progress';
       const someoneToMove = !!game.current_player_id;
       const notYou = game.current_player_id !== userId;
       return isInProgress && someoneToMove && notYou;
     });
 
-    const completed = games.filter((game) => game.status === 'finished').slice(0, 5);
+    const completed = visibleGames
+      .filter((game) => game.status === 'finished')
+      .slice(0, 5);
 
     return { challenges, yourTurn, theirTurn, completed };
   }, [games, userId]);
