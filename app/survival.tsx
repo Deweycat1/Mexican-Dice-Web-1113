@@ -1510,7 +1510,7 @@ const styles = StyleSheet.create({
   },
   menuBtn: {
     borderWidth: 2,
-    borderColor: '#063a25',
+    borderColor: '#e0b50c',
   },
   btnWide: { flex: 1 },
   rollHelper: {

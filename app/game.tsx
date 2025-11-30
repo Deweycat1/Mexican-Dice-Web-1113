@@ -11,6 +11,8 @@ import {
     StyleSheet,
     Text,
     View,
+    Alert,
+    Platform,
 } from 'react-native';
 
 import BluffModal from '../src/components/BluffModal';
@@ -568,6 +570,38 @@ export default function Game() {
     setClaimPickerOpen(false);
   }
 
+  const startFreshGame = useCallback(() => {
+    newGame();
+    setHasRolledThisGame(false);
+    setScoreDiceAnimKey((k) => k + 1);
+    const openingLine = pickRandomRivalLine();
+    setTimeout(() => showDialog('rival', openingLine), 300);
+  }, [newGame, setHasRolledThisGame, setScoreDiceAnimKey, showDialog]);
+
+  const handleNewGamePress = useCallback(() => {
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      const confirmed = window.confirm('Start a new game? Your current round will be lost.');
+      if (confirmed) {
+        startFreshGame();
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Start a new game?',
+      'Your current round will be lost.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, start over',
+          style: 'destructive',
+          onPress: () => startFreshGame(),
+        },
+      ]
+    );
+  }, [startFreshGame]);
+
   const handleCpuRevealComplete = useCallback(() => {
     setIsRevealAnimating(false);
     if (pendingCpuBluffResolution) {
@@ -874,14 +908,7 @@ export default function Game() {
                 <StyledButton
                   label="New Game"
                   variant="ghost"
-                  onPress={() => {
-                    newGame();
-                    setHasRolledThisGame(false);
-                    setScoreDiceAnimKey((k) => k + 1);
-                    // Show new opening taunt in dialog banner
-                    const openingLine = pickRandomRivalLine();
-                    setTimeout(() => showDialog('rival', openingLine), 300);
-                  }}
+                  onPress={handleNewGamePress}
                   style={[styles.btn, styles.newGameBtn]}
                 />
                 <StyledButton
