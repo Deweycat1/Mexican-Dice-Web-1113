@@ -423,32 +423,35 @@ export default function OnlineLobbyScreen() {
                   userId,
                 });
 
-                const { data, error } = await supabase
-                  .from('games_v2')
-                  .update({ status: 'cancelled' })
-                  .eq('id', game.id)
-                  .eq('host_id', userId)
-                  .select('id, status')
-                  .single();
+              const { data, error } = await supabase
+                .from('games_v2')
+                .update({ status: 'cancelled' })
+                .eq('id', game.id)
+                .eq('host_id', userId)
+                .select('id, status')
+                .single();
 
-                if (error) {
-                  console.error('[OnlineLobby] Delete Supabase error', error);
-                  Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
-                  return;
-                }
-
-                console.log('[OnlineLobby] Delete success', data);
-
-                // Refresh matches so the cancelled game disappears from the lobby
-                await loadGames();
-              } catch (err: any) {
-                console.error('[OnlineLobby] Delete match failed', err);
-                Alert.alert('Unable to delete match', err?.message ?? 'Please try again.');
+              if (error) {
+                console.error('[OnlineLobby] Delete Supabase error', error);
+                Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
+                return;
               }
-            },
+
+              console.log('[OnlineLobby] Delete success', data);
+
+              // Optimistically drop the cancelled game locally before reloading
+              setGames((prev) => prev.filter((g) => g.id !== game.id));
+
+              // Refresh matches so the cancelled game disappears from the lobby
+              await loadGames();
+            } catch (err: any) {
+              console.error('[OnlineLobby] Delete match failed', err);
+              Alert.alert('Unable to delete match', err?.message ?? 'Please try again.');
+            }
           },
-        ]
-      );
+        },
+      ]
+    );
     },
     [loadGames, userId]
   );
