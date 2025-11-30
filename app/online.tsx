@@ -429,11 +429,25 @@ export default function OnlineLobbyScreen() {
           // Optimistic UI removal so the tile disappears instantly
           setGames((prev) => prev.filter((g) => g.id !== game.id));
 
-          const { error } = await supabase
+          let query = supabase
             .from('games_v2')
             .update({ status: 'cancelled' })
-            .eq('id', game.id)
-            .eq('host_id', userId);
+            .eq('id', game.id);
+
+          if (game.host_id === userId) {
+            query = query.eq('host_id', userId);
+          } else if (game.guest_id === userId) {
+            query = query.eq('guest_id', userId);
+          } else {
+            console.warn('[OnlineLobby] Delete requested without ownership match, aborting.', {
+              gameId: game.id,
+              userId,
+            });
+            await loadGames();
+            return;
+          }
+
+          const { error } = await query;
 
           if (error) {
             console.error('[OnlineLobby] Delete Supabase error', error);
