@@ -598,8 +598,8 @@ export default function OnlineLobbyScreen() {
           )}
           <View style={styles.cardLinks}>
             {canResign && (
-              <TouchableOpacity onPress={() => handleResign(game)} style={styles.quitActionButton}>
-                <Text style={styles.quitActionText}>Quit Game</Text>
+              <TouchableOpacity onPress={() => handleResign(game)} style={styles.quitGameButton}>
+                <Text style={styles.quitGameButtonText}>Quit Game</Text>
               </TouchableOpacity>
             )}
             {canDelete && (
@@ -873,19 +873,20 @@ const styles = StyleSheet.create({
     color: '#F4C430',
     fontWeight: '700',
   },
-  quitActionButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#FF6B6B',
-    borderRadius: 999,
+  quitGameButton: {
+    height: 44,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#C0392B',
     justifyContent: 'center',
     alignItems: 'center',
+    minWidth: 110,
   },
-  quitActionText: {
-    color: '#FF6B6B',
+  quitGameButtonText: {
+    color: '#C0392B',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 14,
   },
   loadingMatches: {
     alignItems: 'center',
