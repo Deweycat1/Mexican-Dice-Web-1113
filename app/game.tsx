@@ -26,7 +26,7 @@ import StyledButton from '../src/components/StyledButton';
 import ThinkingIndicator from '../src/components/ThinkingIndicator';
 import RulesContent from '../src/components/RulesContent';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
-import { buildClaimOptions } from '../src/lib/claimOptions';
+import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { useGameStore } from '../src/state/useGameStore';
 
@@ -272,7 +272,10 @@ export default function Game() {
     return 'WOMP WOMP';
   }, [rivalBluffBannerType]);
 
-  const claimOptions = useMemo(() => buildClaimOptions(lastClaim, lastPlayerRoll), [lastClaim, lastPlayerRoll]);
+  const claimOptions = useMemo(
+    () => getQuickPlayClaimOptions(lastClaim, lastPlayerRoll),
+    [lastClaim, lastPlayerRoll]
+  );
 
   useEffect(() => {
     setClaimPickerOpen(false);

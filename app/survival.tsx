@@ -23,7 +23,7 @@ import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay
 import StreakEndPopup, { getRandomPun } from '../src/components/StreakEndPopup';
 import StyledButton from '../src/components/StyledButton';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
-import { buildClaimOptions } from '../src/lib/claimOptions';
+import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { useGameStore } from '../src/state/useGameStore';
 
 function formatClaim(value: number | null | undefined): string {
@@ -717,7 +717,10 @@ export default function Survival() {
     return 'WOMP WOMP';
   }, [rivalBluffBannerType]);
 
-  const claimOptions = useMemo(() => buildClaimOptions(lastClaim, lastPlayerRoll), [lastClaim, lastPlayerRoll]);
+  const claimOptions = useMemo(
+    () => getSurvivalClaimOptions(lastClaim, lastPlayerRoll),
+    [lastClaim, lastPlayerRoll]
+  );
 
   useEffect(() => setClaimPickerOpen(false), [turn]);
 

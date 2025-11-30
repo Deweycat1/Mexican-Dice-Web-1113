@@ -35,7 +35,7 @@ import {
 } from '../../../src/engine/mexican';
 import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
 import { getCurrentUser } from '../../../src/lib/auth';
-import { buildClaimOptions } from '../../../src/lib/claimOptions';
+import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
 
 const formatClaim = (value: number | null | undefined) => {
@@ -607,7 +607,7 @@ export default function OnlineGameV2Screen() {
 
   const claimOptions = useMemo(() => {
     const baseline = claimToCheck ?? null;
-    return buildClaimOptions(baseline, myRoll);
+    return getOnlineClaimOptions(baseline, myRoll);
   }, [claimToCheck, myRoll]);
 
   const handleUpdate = useCallback(

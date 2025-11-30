@@ -1,33 +1,36 @@
 import {
-    compareClaims,
-    enumerateClaims,
-    isMexican,
-    meetsOrBeats,
+  compareClaims,
+  enumerateClaims,
+  isAlwaysClaimable,
+  isMexican,
+  meetsOrBeats,
 } from '../engine/mexican';
 
-export function buildClaimOptions(previousClaim: number | null, playerRoll?: number | null): number[] {
+/**
+ * Returns the list of legal next claims for the bluff picker. A value is legal when it
+ * either:
+ *   • Meets or beats the previous claim using standard Mexican Dice ranking, or
+ *   • Is one of the “always claimable” specials (21/31/41). We still hide 41 in the picker
+ *     because it is “show only”, but it is treated as legal for lockdown checks.
+ *
+ * When the previous claim was Mexican (21) we enter lockdown mode where only 21/31 are allowed.
+ */
+export function buildClaimOptions(previousClaim: number | null, _playerRoll?: number | null): number[] {
   // Get all claims, but exclude 41 (Social) - it must be shown, never claimed
   const all = enumerateClaims().filter((v) => v !== 41);
 
-  // Ensure special claims (21, 31) are present in results
-  const includeSpecial = (list: number[]) => {
-    const withSpecial = [...list];
-    if (!withSpecial.includes(21)) withSpecial.push(21);
-    if (!withSpecial.includes(31)) withSpecial.push(31);
-    return withSpecial;
+  const isValidNextClaim = (candidate: number) => {
+    if (previousClaim == null) {
+      return true;
+    }
+    if (isMexican(previousClaim)) {
+      return isAlwaysClaimable(candidate);
+    }
+    if (isAlwaysClaimable(candidate)) {
+      return true;
+    }
+    return meetsOrBeats(candidate, previousClaim);
   };
 
-  // If no previous claim, everything (except 41) is available
-  if (previousClaim == null) {
-    return Array.from(all).sort((a, b) => compareClaims(a, b));
-  }
-
-  // If previous was Mexican, lockdown: only 21/31 are claimable (41 excluded from UI)
-  if (isMexican(previousClaim)) {
-    return includeSpecial([]).sort((a, b) => compareClaims(a, b));
-  }
-
-  // Offer any claim that meets or beats the previous (plus always-claimable specials)
-  const opts = all.filter((v) => meetsOrBeats(v, previousClaim));
-  return includeSpecial(opts).sort((a, b) => compareClaims(a, b));
+  return all.filter(isValidNextClaim).sort((a, b) => compareClaims(a, b));
 }
