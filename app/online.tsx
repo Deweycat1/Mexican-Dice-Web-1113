@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -60,8 +59,6 @@ type LobbyGame = {
 
 const friendlyHint =
   'Play at your own pace: start a match with a friend and come back to it anytime.';
-
-const makeId = () => Math.random().toString(36).slice(2, 10);
 
 const MAX_USERNAME_LENGTH = 40;
 
@@ -224,22 +221,6 @@ export default function OnlineLobbyScreen() {
     }, [loadGames])
   );
 
-  const buildRoundState = useCallback((roundState: any, text: string) => {
-    const base =
-      roundState && typeof roundState === 'object'
-        ? { ...INITIAL_ROUND_STATE, ...roundState }
-        : { ...INITIAL_ROUND_STATE };
-    const history = Array.isArray(base.history) ? [...base.history] : [];
-    history.push({
-      id: makeId(),
-      type: 'event',
-      text,
-      timestamp: new Date().toISOString(),
-    });
-    base.history = history.slice(-12);
-    return base;
-  }, []);
-
   const handleCreateMatch = useCallback(async () => {
     if (!userId) {
       Alert.alert('Account missing', 'Please wait for your account to load.');
@@ -333,71 +314,6 @@ export default function OnlineLobbyScreen() {
       setCreatingMatch(false);
     }
   }, [friendCode, getActiveGameCount, loadGames, router, userId]);
-
-  const handleResign = useCallback(
-    (game: LobbyGame) => {
-      if (!userId) return;
-
-      console.log('[OnlineLobby] Resign pressed', {
-        gameId: game.id,
-        userId,
-        host_id: game.host_id,
-        guest_id: game.guest_id,
-        status: game.status,
-        current_player_id: game.current_player_id,
-      });
-
-      const run = async () => {
-        try {
-          const isHost = game.host_id === userId;
-          const resignText = isHost ? 'Host resigned the match.' : 'Guest resigned the match.';
-
-          const nextRound = buildRoundState(game.round_state, resignText);
-
-          const payload: Record<string, any> = {
-            status: 'finished',
-            current_player_id: null,
-            round_state: nextRound,
-          };
-          payload[isHost ? 'host_score' : 'guest_score'] = 0;
-
-          const { data, error } = await supabase
-            .from('games_v2')
-            .update(payload)
-            .eq('id', game.id)
-            .select('id, status, host_score, guest_score')
-            .single();
-
-          if (error) {
-            console.error('[OnlineLobby] Resign Supabase error', error);
-            Alert.alert('Unable to resign', error.message ?? 'Please try again.');
-            return;
-          }
-
-          console.log('[OnlineLobby] Resign success', data);
-          await loadGames();
-        } catch (err: any) {
-          console.error('[OnlineLobby] Resign failed', err);
-          Alert.alert('Unable to resign', err?.message ?? 'Please try again.');
-        }
-      };
-
-      if (Platform.OS === 'web') {
-        // eslint-disable-next-line no-alert
-        const confirmed = window.confirm('Are you sure you want to forfeit the game?');
-        if (confirmed) {
-          run();
-        }
-        return;
-      }
-
-      Alert.alert('Quit game?', 'Are you sure you want to forfeit the game?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Yes, forfeit', style: 'destructive', onPress: () => run() },
-      ]);
-    },
-    [buildRoundState, loadGames, userId]
-  );
 
   const handleDeleteWaiting = useCallback(
     (game: LobbyGame) => {
@@ -597,12 +513,9 @@ export default function OnlineLobbyScreen() {
       statusLabel = 'Paused';
     }
 
-    const canResign =
-      game.status === 'in_progress' &&
-      !!game.guest_id &&
-      (game.host_id === userId || game.guest_id === userId);
     const canDelete =
       (game.status === 'waiting' && !game.guest_id && game.host_id === userId) ||
+      (game.status === 'in_progress' && (game.host_id === userId || game.guest_id === userId)) ||
       (game.status === 'finished' && (game.host_id === userId || game.guest_id === userId));
 
     const cardContent = (
@@ -633,27 +546,20 @@ export default function OnlineLobbyScreen() {
           </View>
         </View>
         <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
-        <View style={styles.cardActions}>
-          {isCompleted ? (
-            <View style={styles.completedOutcomeContainer}>
-              <Text style={styles.completedOutcomeText}>{outcomeLabel ?? 'Game over'}</Text>
-            </View>
-          ) : (
-            <StyledButton
-              label="Open Match"
-              variant="outline"
-              onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
-              style={styles.openMatchButton}
-            />
-          )}
-          <View style={styles.cardLinks}>
-            {canResign && (
-              <TouchableOpacity onPress={() => handleResign(game)} style={styles.quitGameButton}>
-                <Text style={styles.quitGameButtonText}>Quit Game</Text>
-              </TouchableOpacity>
+          <View style={styles.cardActions}>
+            {isCompleted ? (
+              <View style={styles.completedOutcomeContainer}>
+                <Text style={styles.completedOutcomeText}>{outcomeLabel ?? 'Game over'}</Text>
+              </View>
+            ) : (
+              <StyledButton
+                label="Open Match"
+                variant="outline"
+                onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
+                style={styles.openMatchButton}
+              />
             )}
           </View>
-        </View>
       </View>
     );
 
@@ -933,14 +839,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-  cardLinks: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  secondaryAction: {
-    color: '#F4C430',
-    fontWeight: '700',
-  },
   swipeDeleteContainer: {
     width: 64,
     justifyContent: 'center',
@@ -958,21 +856,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '800',
-  },
-  quitGameButton: {
-    height: 44,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#C0392B',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 110,
-  },
-  quitGameButtonText: {
-    color: '#C0392B',
-    fontWeight: '700',
-    fontSize: 14,
   },
   loadingMatches: {
     alignItems: 'center',
