@@ -11,11 +11,14 @@ export default function RootLayout() {
   // Track the first web visit per browser to capture city geo data
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const KEY = 'mexican_dice_location_tracked_v1';
+    const KEY = 'mexican_dice_location_tracked_v2';
     try {
       if (window.localStorage.getItem(KEY)) return;
       fetch('/api/secret-stats/cities-played', { method: 'POST' })
-        .then(() => {
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`cities-played responded ${response.status}`);
+          }
           window.localStorage.setItem(KEY, 'true');
         })
         .catch((err) => {
