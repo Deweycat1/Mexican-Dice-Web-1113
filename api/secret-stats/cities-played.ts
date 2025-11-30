@@ -1,12 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseServer } from '../../src/lib/supabaseServer';
-
-type CityVisit = {
-  city: string;
-  region: string | null;
-  country: string;
-  visit_count: number;
-};
+import { kv } from '@vercel/kv';
 
 type CitiesResponse = {
   cities: Array<{
@@ -18,6 +11,17 @@ type CitiesResponse = {
   totalCities: number;
   totalVisits: number;
 };
+
+type StoredCityVisit = {
+  city: string;
+  region: string | null;
+  country: string;
+  visitCount: number;
+  firstSeen: string;
+  lastSeen: string;
+};
+
+const CITY_VISITS_HASH_KEY = 'cityVisits:v1';
 
 const normalize = (value: string | undefined | null): string | null => {
   if (!value) return null;
@@ -41,50 +45,36 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ ok: false, reason: 'no-geo' });
   }
 
+  const storageKey = `${city.toLowerCase()}__${country.toLowerCase()}`;
+  const now = new Date().toISOString();
+
   try {
-    const { data: existing, error: selectError } = await supabaseServer
-      .from('city_visits')
-      .select('id, visit_count')
-      .eq('city', city)
-      .eq('country', country)
-      .maybeSingle();
-
-    if (selectError) {
-      console.error('[cities-played POST] select error', selectError);
-      return res.status(500).json({ ok: false, message: selectError.message });
+    const existing = await kv.hget<string>(CITY_VISITS_HASH_KEY, storageKey);
+    let parsed: StoredCityVisit | null = null;
+    if (existing) {
+      try {
+        parsed = JSON.parse(existing) as StoredCityVisit;
+      } catch (parseError) {
+        console.warn('[cities-played POST] failed to parse stored city visit, resetting entry', parseError);
+      }
     }
 
-    if (!existing) {
-      const { error: insertError } = await supabaseServer
-        .from('city_visits')
-        .insert({
-          city,
-          region,
-          country,
-          visit_count: 1,
-        });
-
-      if (insertError) {
-        console.error('[cities-played POST] insert error', insertError);
-        return res.status(500).json({ ok: false, message: insertError.message });
-      }
+    if (!parsed) {
+      parsed = {
+        city,
+        region,
+        country,
+        visitCount: 1,
+        firstSeen: now,
+        lastSeen: now,
+      };
     } else {
-      const nextCount = (existing.visit_count ?? 0) + 1;
-      const { error: updateError } = await supabaseServer
-        .from('city_visits')
-        .update({
-          region,
-          visit_count: nextCount,
-          last_seen: new Date().toISOString(),
-        })
-        .eq('id', existing.id);
-
-      if (updateError) {
-        console.error('[cities-played POST] update error', updateError);
-        return res.status(500).json({ ok: false, message: updateError.message });
-      }
+      parsed.visitCount += 1;
+      parsed.region = region ?? parsed.region;
+      parsed.lastSeen = now;
     }
 
+    await kv.hset(CITY_VISITS_HASH_KEY, { [storageKey]: JSON.stringify(parsed) });
     return res.status(200).json({ ok: true, city, country });
   } catch (error) {
     console.error('[cities-played POST] unexpected error', error);
@@ -94,22 +84,18 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
 
 async function handleGet(res: VercelResponse) {
   try {
-    const { data, error } = await supabaseServer
-      .from('city_visits')
-      .select('city, region, country, visit_count')
-      .order('visit_count', { ascending: false });
-
-    if (error) {
-      console.error('[cities-played GET] error fetching cities', error);
-      return res.status(500).json({ error: 'Failed to load city stats' });
-    }
-
-    const cities = (data ?? []).map((entry: CityVisit) => ({
-      city: entry.city,
-      region: entry.region ?? null,
-      country: entry.country,
-      visitCount: entry.visit_count ?? 0,
-    }));
+    const stored = await kv.hgetall<string>(CITY_VISITS_HASH_KEY);
+    const cities: StoredCityVisit[] = Object.values(stored ?? {})
+      .map((value) => {
+        try {
+          return JSON.parse(value) as StoredCityVisit;
+        } catch (err) {
+          console.warn('[cities-played GET] failed to parse stored value', err);
+          return null;
+        }
+      })
+      .filter((city): city is StoredCityVisit => city !== null)
+      .sort((a, b) => b.visitCount - a.visitCount);
 
     const totalVisits = cities.reduce((sum, city) => sum + city.visitCount, 0);
 
