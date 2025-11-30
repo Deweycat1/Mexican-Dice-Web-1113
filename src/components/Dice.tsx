@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import Animated, {
     Easing,
@@ -124,7 +124,15 @@ export default function Dice({
   const pipRadius = size * 0.07;
   const overlayLabel = displayMode === 'question' ? '?' : overlayText ?? '';
   const showOverlay = displayMode !== 'values';
-  
+  const faceGradientId = useMemo(
+    () => `dice-face-${Math.random().toString(36).slice(2, 9)}`,
+    []
+  );
+  const highlightGradientId = useMemo(
+    () => `dice-highlight-${Math.random().toString(36).slice(2, 9)}`,
+    []
+  );
+
   // Scale border radius based on size: smaller dice = more square
   const borderRadius = size <= 40 ? size * 0.2 : 20;
   const svgRx = size <= 40 ? size * 0.2 : 18;
@@ -133,25 +141,32 @@ export default function Dice({
     <Animated.View style={[styles.wrap, { width: size, height: size, borderRadius }, animatedStyle]}>
       <Svg width={size} height={size}>
         <Defs>
-          <LinearGradient id="face" x1="0" y1="0" x2="1" y2="1">
+          <LinearGradient id={faceGradientId} x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0%" stopColor="#E21D25" />
             <Stop offset="60%" stopColor={VEGAS_RED} />
             <Stop offset="100%" stopColor={EDGE} />
           </LinearGradient>
-          <LinearGradient id="highlight" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={highlightGradientId} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0%" stopColor="#ffffff" stopOpacity={0.35} />
             <Stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
           </LinearGradient>
         </Defs>
 
-        <Rect x={2} y={2} width={size - 4} height={size - 4} rx={svgRx} fill="url(#face)" />
+        <Rect
+          x={2}
+          y={2}
+          width={size - 4}
+          height={size - 4}
+          rx={svgRx}
+          fill={`url(#${faceGradientId})`}
+        />
         <Rect
           x={size * 0.08}
           y={size * 0.08}
           width={size * 0.42}
           height={size * 0.25}
           rx={size <= 40 ? size * 0.15 : 12}
-          fill="url(#highlight)"
+          fill={`url(#${highlightGradientId})`}
         />
 
         {pipLayout?.map(({ x, y }, index) => (

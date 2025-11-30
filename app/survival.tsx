@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
-    Dimensions,
     Image,
     Modal,
     Pressable,
@@ -19,7 +18,6 @@ import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
 import FireworksOverlay from '../src/components/FireworksOverlay';
-import ParticleBurst from '../src/components/ParticleBurst';
 import RulesContent from '../src/components/RulesContent';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StreakEndPopup, { getRandomPun } from '../src/components/StreakEndPopup';
@@ -55,10 +53,6 @@ export default function Survival() {
   const params = useLocalSearchParams();
   
   console.log('SURVIVAL: screen rendering');
-  // Calculate particle burst center position (50% - 50px)
-  const screenWidth = Dimensions.get('window').width;
-  const particleBurstCenterX = (screenWidth / 2) - 50;
-  
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [showFireworks, setShowFireworks] = useState(false);
@@ -99,8 +93,10 @@ export default function Survival() {
   // Selected loss message for the current run (stable per-loss)
   const [lossPun, setLossPun] = useState<string | null>(null);
 
-  // Particle burst state
-  const [showParticleBurst, setShowParticleBurst] = useState(false);
+  // Micro +1 overlay state
+  const [plusOneVisible, setPlusOneVisible] = useState(false);
+  const plusOneFlashTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const plusOneFlashTickRef = useRef(0);
 
   // Animation refs for micro animations
   const streakScaleAnim = useRef(new Animated.Value(1)).current;
@@ -117,6 +113,29 @@ export default function Survival() {
   const electricJoltAnim = useRef(new Animated.Value(0)).current;
   const electricJoltOpacityAnim = useRef(new Animated.Value(0)).current;
   const vortexPulseAnim = useRef(new Animated.Value(0)).current;
+
+  const startPlusOneFlash = useCallback(() => {
+    if (plusOneFlashTimerRef.current) {
+      clearInterval(plusOneFlashTimerRef.current);
+      plusOneFlashTimerRef.current = null;
+    }
+
+    plusOneFlashTickRef.current = 0;
+    setPlusOneVisible(true);
+
+    plusOneFlashTimerRef.current = setInterval(() => {
+      plusOneFlashTickRef.current += 1;
+      setPlusOneVisible((prev) => !prev);
+
+      if (plusOneFlashTickRef.current >= PLUS_ONE_FLASHES * 2 - 1) {
+        if (plusOneFlashTimerRef.current) {
+          clearInterval(plusOneFlashTimerRef.current);
+          plusOneFlashTimerRef.current = null;
+        }
+        setPlusOneVisible(false);
+      }
+    }, PLUS_ONE_FLASH_INTERVAL);
+  }, []);
 
   const {
     // survival controls
@@ -264,6 +283,15 @@ export default function Survival() {
     };
   }, [periodMs, currentStreak, isSurvivalOver]);
 
+  useEffect(() => {
+    return () => {
+      if (plusOneFlashTimerRef.current) {
+        clearInterval(plusOneFlashTimerRef.current);
+        plusOneFlashTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // Reset milestone flags when streak resets or survival restarts
   const prevStreakForReset = useRef(currentStreak);
   useEffect(() => {
@@ -311,9 +339,8 @@ export default function Survival() {
         }),
       ]).start();
 
-      // 2. Particle burst (750-850ms)
-      setShowParticleBurst(true);
-      setTimeout(() => setShowParticleBurst(false), 800);
+      // 2. Plus-one flash (same cadence as previous emoji burst)
+      startPlusOneFlash();
 
       // 3. Dice micro-jiggle (450-500ms)
       diceJiggleAnim.setValue(0);
@@ -331,7 +358,7 @@ export default function Survival() {
       ]).start();
     }
     prevStreakForMicroAnim.current = currentStreak;
-  }, [currentStreak, streakScaleAnim, diceJiggleAnim]);
+  }, [currentStreak, streakScaleAnim, diceJiggleAnim, startPlusOneFlash]);
 
   // 5-streak milestone
   useEffect(() => {
@@ -1160,16 +1187,11 @@ export default function Survival() {
         pun={lossPun}
       />
       
-      {/* Particle Burst */}
-      <ParticleBurst
-        visible={showParticleBurst}
-        particleCount={5}
-        emojis={['🎲', '🔥', '🌶️', '💥', '✨']}
-        distance={25}
-        duration={800}
-        centerX={particleBurstCenterX}
-        centerY="42%"
-      />
+      {plusOneVisible && (
+        <View style={styles.plusOneOverlay} pointerEvents="none">
+          <Text style={styles.plusOneText}>+1</Text>
+        </View>
+      )}
 
       {/* Screen effects overlays */}
       {/* Dim overlay for new leader */}
@@ -1274,6 +1296,9 @@ export default function Survival() {
 }
 
 const BAR_BG = '#115E38';
+const PLUS_ONE_FLASHES = 5;
+const PLUS_ONE_TOTAL_DURATION = 800; // matches previous emoji burst timing
+const PLUS_ONE_FLASH_INTERVAL = PLUS_ONE_TOTAL_DURATION / (PLUS_ONE_FLASHES * 2);
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0B3A26' },
@@ -1425,6 +1450,23 @@ const styles = StyleSheet.create({
   iconCpu: {
     color: '#6BFF89',
     fontWeight: '700',
+  },
+  plusOneOverlay: {
+    position: 'absolute',
+    top: '40%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2000,
+  },
+  plusOneText: {
+    fontSize: 64,
+    fontWeight: '900',
+    color: '#E0B50C',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   gotEmBannerContainer: {
     position: 'absolute',
