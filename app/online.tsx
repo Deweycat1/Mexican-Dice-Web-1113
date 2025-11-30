@@ -164,7 +164,10 @@ export default function OnlineLobbyScreen() {
       setGames([]);
     } else {
       const rows = (data ?? []) as LobbyGame[];
-      setGames(rows);
+
+      // Filter out cancelled games immediately so the UI never shows them
+      const visibleRows = rows.filter((g) => g.status !== 'cancelled');
+      setGames(visibleRows);
 
       console.log(
         '[OnlineLobby] Loaded games for',
@@ -423,30 +426,28 @@ export default function OnlineLobbyScreen() {
                   userId,
                 });
 
-              const { data, error } = await supabase
-                .from('games_v2')
-                .update({ status: 'cancelled' })
-                .eq('id', game.id)
-                .eq('host_id', userId)
-                .select('id, status')
-                .single();
+                // Optimistic UI removal so the tile disappears instantly
+                setGames((prev) => prev.filter((g) => g.id !== game.id));
 
-              if (error) {
-                console.error('[OnlineLobby] Delete Supabase error', error);
-                Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
-                return;
-              }
+                const { error } = await supabase
+                  .from('games_v2')
+                  .update({ status: 'cancelled' })
+                  .eq('id', game.id)
+                  .eq('host_id', userId);
 
-              console.log('[OnlineLobby] Delete success', data);
+                if (error) {
+                  console.error('[OnlineLobby] Delete Supabase error', error);
+                  Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
+                  return;
+                }
 
-              // Optimistically drop the cancelled game locally before reloading
-              setGames((prev) => prev.filter((g) => g.id !== game.id));
+                console.log('[OnlineLobby] Delete success', { id: game.id });
 
-              // Refresh matches so the cancelled game disappears from the lobby
-              await loadGames();
-            } catch (err: any) {
-              console.error('[OnlineLobby] Delete match failed', err);
-              Alert.alert('Unable to delete match', err?.message ?? 'Please try again.');
+                // Refresh matches so the cancelled game disappears from the lobby
+                await loadGames();
+              } catch (err: any) {
+                console.error('[OnlineLobby] Delete match failed', err);
+                Alert.alert('Unable to delete match', err?.message ?? 'Please try again.');
             }
           },
         },
@@ -466,9 +467,9 @@ export default function OnlineLobbyScreen() {
       };
     }
 
-    const visibleGames = games.filter((g) => g.status !== 'cancelled');
+    const activeGames = games.filter((g) => g.status !== 'cancelled');
 
-    const challenges = visibleGames.filter((game) => {
+    const challenges = activeGames.filter((game) => {
       if (!game.guest_id || game.guest_id !== userId) return false;
       if (game.status !== 'in_progress') return false;
       if (game.current_player_id !== game.host_id) return false;
@@ -477,20 +478,20 @@ export default function OnlineLobbyScreen() {
       return hostScore === STARTING_SCORE && guestScore === STARTING_SCORE;
     });
 
-    const yourTurn = visibleGames.filter(
+    const yourTurn = activeGames.filter(
       (game) =>
         (game.status === 'in_progress' && game.current_player_id === userId) ||
         (game.status === 'waiting' && game.host_id === userId && !game.guest_id)
     );
 
-    const theirTurn = visibleGames.filter((game) => {
+    const theirTurn = activeGames.filter((game) => {
       const isInProgress = game.status === 'in_progress';
       const someoneToMove = !!game.current_player_id;
       const notYou = game.current_player_id !== userId;
       return isInProgress && someoneToMove && notYou;
     });
 
-    const completed = visibleGames
+    const completed = activeGames
       .filter((game) => game.status === 'finished')
       .slice(0, 5);
 
@@ -590,11 +591,63 @@ export default function OnlineLobbyScreen() {
     const canDelete =
       game.status === 'waiting' && !game.guest_id && game.host_id === userId;
 
-    return (
-      <Swipeable
-        key={game.id}
-        renderRightActions={() =>
-          canDelete ? (
+    const cardContent = (
+      <View style={styles.gameCard}>
+        <View style={styles.gameCardHeader}>
+          <Text style={styles.gameOpponent}>{opponentName}</Text>
+          <View style={styles.currentClaimContainer}>
+            {showCurrentClaim && claimDicePoints ? (
+              <>
+                <Text style={styles.currentClaimLabel}>Current claim</Text>
+                <View style={styles.currentClaimDiceRow}>
+                  <ScoreDie
+                    points={claimDicePoints[0]}
+                    size={SCORE_DIE_BASE_SIZE}
+                    style={styles.currentClaimDie}
+                  />
+                  <View style={{ width: 6 }} />
+                  <ScoreDie
+                    points={claimDicePoints[1]}
+                    size={SCORE_DIE_BASE_SIZE}
+                    style={styles.currentClaimDie}
+                  />
+                </View>
+              </>
+            ) : (
+              <Text style={styles.gameStatus}>{statusLabel}</Text>
+            )}
+          </View>
+        </View>
+        <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
+        <View style={styles.cardActions}>
+          {isCompleted ? (
+            <View style={styles.completedOutcomeContainer}>
+              <Text style={styles.completedOutcomeText}>{outcomeLabel ?? 'Game over'}</Text>
+            </View>
+          ) : (
+            <StyledButton
+              label="Open Match"
+              variant="outline"
+              onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
+              style={styles.openMatchButton}
+            />
+          )}
+          <View style={styles.cardLinks}>
+            {canResign && (
+              <TouchableOpacity onPress={() => handleResign(game)} style={styles.quitGameButton}>
+                <Text style={styles.quitGameButtonText}>Quit Game</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+
+    if (canDelete) {
+      return (
+        <Swipeable
+          key={game.id}
+          renderRightActions={() => (
             <View style={styles.swipeDeleteContainer}>
               <TouchableOpacity
                 style={styles.swipeDeleteButton}
@@ -603,61 +656,15 @@ export default function OnlineLobbyScreen() {
                 <Text style={styles.swipeDeleteText}>✕</Text>
               </TouchableOpacity>
             </View>
-          ) : null
-        }
-        overshootRight={false}
-      >
-        <View style={styles.gameCard}>
-          <View style={styles.gameCardHeader}>
-            <Text style={styles.gameOpponent}>{opponentName}</Text>
-            <View style={styles.currentClaimContainer}>
-              {showCurrentClaim && claimDicePoints ? (
-                <>
-                  <Text style={styles.currentClaimLabel}>Current claim</Text>
-                  <View style={styles.currentClaimDiceRow}>
-                    <ScoreDie
-                      points={claimDicePoints[0]}
-                      size={SCORE_DIE_BASE_SIZE}
-                      style={styles.currentClaimDie}
-                    />
-                    <View style={{ width: 6 }} />
-                    <ScoreDie
-                      points={claimDicePoints[1]}
-                      size={SCORE_DIE_BASE_SIZE}
-                      style={styles.currentClaimDie}
-                    />
-                  </View>
-                </>
-              ) : (
-                <Text style={styles.gameStatus}>{statusLabel}</Text>
-              )}
-            </View>
-          </View>
-          <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
-          <View style={styles.cardActions}>
-            {isCompleted ? (
-              <View style={styles.completedOutcomeContainer}>
-                <Text style={styles.completedOutcomeText}>{outcomeLabel ?? 'Game over'}</Text>
-              </View>
-            ) : (
-              <StyledButton
-                label="Open Match"
-                variant="outline"
-                onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
-                style={styles.openMatchButton}
-              />
-            )}
-            <View style={styles.cardLinks}>
-              {canResign && (
-                <TouchableOpacity onPress={() => handleResign(game)} style={styles.quitGameButton}>
-                  <Text style={styles.quitGameButtonText}>Quit Game</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      </Swipeable>
-    );
+          )}
+          overshootRight={false}
+        >
+          {cardContent}
+        </Swipeable>
+      );
+    }
+
+    return <React.Fragment key={game.id}>{cardContent}</React.Fragment>;
   };
 
   const renderSection = (title: string, data: LobbyGame[], emptyText: string) => (
