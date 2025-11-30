@@ -421,7 +421,7 @@ export default function OnlineLobbyScreen() {
 
       const runDelete = async () => {
         try {
-          console.log('[OnlineLobby] Delete confirmed, running delete', {
+          console.log('[OnlineLobby] Running delete', {
             gameId: game.id,
             userId,
           });
@@ -451,29 +451,7 @@ export default function OnlineLobbyScreen() {
         }
       };
 
-      if (Platform.OS === 'web') {
-        // eslint-disable-next-line no-alert
-        const confirmed = window.confirm('Delete this match? You can always create another one.');
-        if (confirmed) {
-          runDelete();
-        }
-        return;
-      }
-
-      Alert.alert(
-        'Delete this match?',
-        'Remove this waiting match? You can always create another one.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              runDelete();
-            },
-          },
-        ]
-      );
+      runDelete();
     },
     [loadGames, userId]
   );
@@ -610,7 +588,8 @@ export default function OnlineLobbyScreen() {
       !!game.guest_id &&
       (game.host_id === userId || game.guest_id === userId);
     const canDelete =
-      game.status === 'waiting' && !game.guest_id && game.host_id === userId;
+      (game.status === 'waiting' && !game.guest_id && game.host_id === userId) ||
+      (game.status === 'finished' && (game.host_id === userId || game.guest_id === userId));
 
     const cardContent = (
       <View style={styles.gameCard}>
