@@ -55,36 +55,37 @@ type StreakTalliesProps = {
 const StreakTallies: React.FC<StreakTalliesProps> = ({ streak }) => {
   if (!streak || streak <= 0) return null;
 
-  if (streak <= 10) {
-    console.log('[StreakTallies] render', { streak });
-  }
-
   const groups = Math.floor(streak / 5);
   const remainder = streak % 5;
-
-  const elements: React.ReactNode[] = [];
+  const rows: React.ReactNode[] = [];
 
   for (let i = 0; i < groups; i += 1) {
-    elements.push(
-      <View key={`group-${i}`} style={styles.tallyGroup}>
-        <View style={styles.tallyStroke} />
-        <View style={styles.tallyStroke} />
-        <View style={styles.tallyStroke} />
-        <View style={styles.tallyStroke} />
-        <View style={styles.tallyDiagonal} />
+    rows.push(
+      <View key={`group-${i}`} style={styles.tallyRow}>
+        <View style={styles.tallyGroup}>
+          <View style={styles.tallyStroke} />
+          <View style={styles.tallyStroke} />
+          <View style={styles.tallyStroke} />
+          <View style={styles.tallyStroke} />
+          <View style={styles.tallyDiagonal} />
+        </View>
       </View>
     );
   }
 
-  for (let i = 0; i < remainder; i += 1) {
-    elements.push(
-      <View key={`single-${groups + i}`} style={styles.tallyStroke} />
+  if (remainder > 0) {
+    rows.push(
+      <View key="remainder" style={styles.tallyRow}>
+        {[...Array(remainder)].map((_, index) => (
+          <View key={`single-${index}`} style={styles.tallyStroke} />
+        ))}
+      </View>
     );
   }
 
   return (
     <View pointerEvents="none" style={styles.tallyContainer}>
-      {elements}
+      {rows}
     </View>
   );
 };
@@ -986,6 +987,8 @@ export default function Survival() {
               )}
             </View>
 
+            <StreakTallies streak={currentStreak} />
+
             {/* HISTORY BOX */}
             <Pressable
               onPress={() => setHistoryModalOpen(true)}
@@ -1029,7 +1032,6 @@ export default function Survival() {
                 },
               ]}
             >
-              <StreakTallies streak={currentStreak} />
               <View style={styles.diceRow}>
             {showCpuThinking ? (
               <>
@@ -1405,43 +1407,43 @@ const styles = StyleSheet.create({
     minHeight: 260,
     marginTop: -134,
     marginBottom: 20,
-    position: 'relative',
   },
   diceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1,
   },
   tallyContainer: {
-    position: 'absolute',
-    top: 12,
-    left: 10,
+    alignSelf: 'flex-start',
+    marginLeft: 16,
+    marginTop: 6,
+  },
+  tallyRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    zIndex: 0,
+    marginBottom: 4,
   },
   tallyGroup: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginRight: 6,
     position: 'relative',
   },
   tallyStroke: {
     width: 3,
-    height: 28,
+    height: 26,
     marginHorizontal: 1,
-    backgroundColor: '#182015',
-    opacity: 0.8,
-    borderRadius: 1,
+    backgroundColor: '#2ECC71',
+    opacity: 0.9,
+    borderRadius: 1.5,
   },
   tallyDiagonal: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: -2,
+    right: -2,
+    top: 6,
     height: 3,
-    backgroundColor: '#182015',
-    opacity: 0.9,
+    backgroundColor: '#2ECC71',
+    borderRadius: 1.5,
     transform: [{ rotateZ: '-55deg' }],
   },
   controls: {
