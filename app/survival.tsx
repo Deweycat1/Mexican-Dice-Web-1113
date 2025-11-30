@@ -671,6 +671,7 @@ export default function Survival() {
 
   const isGameOver = gameOver !== null;
   const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock || isSurvivalOver;
+  const streakEnded = isSurvivalOver;
   const showCpuThinking = turn !== 'player' && !isGameOver;
   const hasRolled = turn === 'player' && lastPlayerRoll !== null;
   const rolledValue = hasRolled ? lastPlayerRoll : null;
@@ -820,6 +821,22 @@ export default function Survival() {
     playerRoll();
     setTimeout(() => setRollingAnim(false), 400);
   }
+
+  const handlePrimaryAction = useCallback(() => {
+    if (streakEnded) {
+      setLossPun(null);
+      restartSurvival();
+      return;
+    }
+
+    handleRollOrClaim();
+  }, [streakEnded, setLossPun, restartSurvival, handleRollOrClaim]);
+
+  const primaryLabel = streakEnded
+    ? 'New Game'
+    : hasRolled && !mustBluff
+      ? 'Claim Roll'
+      : 'Roll';
 
   function handleCallBluff() {
     if (controlsDisabled) {
@@ -1085,11 +1102,18 @@ export default function Survival() {
             <View style={styles.controls}>
               <View style={styles.actionRow}>
                 <StyledButton
-                  label={hasRolled && !mustBluff ? 'Claim Roll' : 'Roll'}
+                  label={primaryLabel}
                   variant="success"
-                  onPress={handleRollOrClaim}
-                  style={[styles.btn, styles.menuActionButtonSuccess]}
-                  disabled={controlsDisabled || isRevealAnimating || (hasRolled && !rolledCanClaim)}
+                  onPress={handlePrimaryAction}
+                  style={[
+                    styles.btn,
+                    streakEnded ? styles.survivalPrimaryNewGame : styles.menuActionButtonSuccess,
+                  ]}
+                  disabled={
+                    streakEnded
+                      ? false
+                      : controlsDisabled || isRevealAnimating || (hasRolled && !rolledCanClaim)
+                  }
                 />
                 <StyledButton
                   label="Call Bluff"
@@ -1111,12 +1135,6 @@ export default function Survival() {
               </View>
 
               <View style={styles.bottomRow}>
-                <StyledButton
-                  label="New Game"
-                  variant="ghost"
-                  onPress={() => { setLossPun(null); restartSurvival(); }}
-                  style={[styles.btn, styles.newGameBtn]}
-                />
                 <StyledButton
                   label="Menu"
                   variant="ghost"
@@ -1479,6 +1497,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#1E8E4E',
+  },
+  survivalPrimaryNewGame: {
+    backgroundColor: '#E0B50C',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#A87F00',
   },
   newGameBtn: {
     borderWidth: 2,
