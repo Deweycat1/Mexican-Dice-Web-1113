@@ -1114,14 +1114,14 @@ export default function OnlineGameV2Screen() {
                         }
                   }
                   disabled={isRevealAnimating || (canRoll ? !canRoll : !canClaim)}
-                  style={styles.btn}
+                  style={[styles.btn, styles.menuActionButtonSuccess]}
                 />
                 <StyledButton
                   label="Call Bluff"
                   variant="primary"
                   onPress={handleCallBluff}
                   disabled={!canCallBluff || myRoll !== null || isRevealAnimating}
-                  style={[styles.btn, styles.dangerButton]}
+                  style={[styles.btn, styles.menuActionButton]}
                 />
               </View>
               <View style={styles.bottomRow}>
@@ -1475,6 +1475,18 @@ const styles = StyleSheet.create({
   btnWide: {
     flex: 1,
   },
+  menuActionButton: {
+    backgroundColor: '#C21807',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#8B0000',
+  },
+  menuActionButtonSuccess: {
+    backgroundColor: '#2ECC71',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1E8E4E',
+  },
   goldOutlineButton: {
     borderWidth: 2,
     borderColor: '#E0B50C',
@@ -1502,9 +1514,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#E6FFE6',
     textAlign: 'center',
-  },
-  dangerButton: {
-    backgroundColor: '#6C1115',
   },
   finishedBox: {
     marginTop: 24,
