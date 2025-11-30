@@ -765,10 +765,6 @@ export default function OnlineGameV2Screen() {
         nextRound.lastAction = 'normal';
         nextRound.lastClaimer = null;
         nextRound.lastClaimHadWink = false;
-        if (socialDice) {
-          startSocialReveal(socialDice);
-          socialRevealNonceRef.current = nextSocialNonce;
-        }
       }
 
       const payload: Record<string, any> = {
