@@ -55,6 +55,10 @@ type StreakTalliesProps = {
 const StreakTallies: React.FC<StreakTalliesProps> = ({ streak }) => {
   if (!streak || streak <= 0) return null;
 
+  if (streak <= 10) {
+    console.log('[StreakTallies] render', { streak });
+  }
+
   const groups = Math.floor(streak / 5);
   const remainder = streak % 5;
 
@@ -1401,11 +1405,13 @@ const styles = StyleSheet.create({
     minHeight: 260,
     marginTop: -134,
     marginBottom: 20,
+    position: 'relative',
   },
   diceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
   tallyContainer: {
     position: 'absolute',
@@ -1413,7 +1419,7 @@ const styles = StyleSheet.create({
     left: 10,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    zIndex: 10,
+    zIndex: 0,
   },
   tallyGroup: {
     flexDirection: 'row',
@@ -1422,20 +1428,20 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tallyStroke: {
-    width: 2,
-    height: 24,
+    width: 3,
+    height: 28,
     marginHorizontal: 1,
-    backgroundColor: '#10130D',
-    opacity: 0.75,
+    backgroundColor: '#182015',
+    opacity: 0.8,
     borderRadius: 1,
   },
   tallyDiagonal: {
     position: 'absolute',
     left: 0,
     right: 0,
-    height: 2,
-    backgroundColor: '#10130D',
-    opacity: 0.85,
+    height: 3,
+    backgroundColor: '#182015',
+    opacity: 0.9,
     transform: [{ rotateZ: '-55deg' }],
   },
   controls: {
