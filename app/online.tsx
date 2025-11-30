@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 
 import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
@@ -397,12 +398,14 @@ export default function OnlineLobbyScreen() {
 
   const handleDeleteWaiting = useCallback(
     (game: LobbyGame) => {
+      if (!userId) return;
+
       console.log('[OnlineLobby] Delete requested', {
         gameId: game.id,
-        status: game.status,
+        userId,
         host_id: game.host_id,
         guest_id: game.guest_id,
-        userId,
+        status: game.status,
       });
 
       Alert.alert(
@@ -424,7 +427,7 @@ export default function OnlineLobbyScreen() {
                   .from('games_v2')
                   .update({ status: 'cancelled' })
                   .eq('id', game.id)
-                  .eq('host_id', userId as string)
+                  .eq('host_id', userId)
                   .select('id, status')
                   .single();
 
@@ -436,6 +439,7 @@ export default function OnlineLobbyScreen() {
 
                 console.log('[OnlineLobby] Delete success', data);
 
+                // Refresh matches so the cancelled game disappears from the lobby
                 await loadGames();
               } catch (err: any) {
                 console.error('[OnlineLobby] Delete match failed', err);
@@ -584,60 +588,72 @@ export default function OnlineLobbyScreen() {
       game.status === 'waiting' && !game.guest_id && game.host_id === userId;
 
     return (
-      <View key={game.id} style={styles.gameCard}>
-        <View style={styles.gameCardHeader}>
-          <Text style={styles.gameOpponent}>{opponentName}</Text>
-          <View style={styles.currentClaimContainer}>
-            {showCurrentClaim && claimDicePoints ? (
-              <>
-                <Text style={styles.currentClaimLabel}>Current claim</Text>
-                <View style={styles.currentClaimDiceRow}>
-                  <ScoreDie
-                    points={claimDicePoints[0]}
-                    size={SCORE_DIE_BASE_SIZE}
-                    style={styles.currentClaimDie}
-                  />
-                  <View style={{ width: 6 }} />
-                  <ScoreDie
-                    points={claimDicePoints[1]}
-                    size={SCORE_DIE_BASE_SIZE}
-                    style={styles.currentClaimDie}
-                  />
-                </View>
-              </>
-            ) : (
-              <Text style={styles.gameStatus}>{statusLabel}</Text>
-            )}
-          </View>
-        </View>
-        <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
-        <View style={styles.cardActions}>
-          {isCompleted ? (
-            <View style={styles.completedOutcomeContainer}>
-              <Text style={styles.completedOutcomeText}>{outcomeLabel ?? 'Game over'}</Text>
+      <Swipeable
+        key={game.id}
+        renderRightActions={() =>
+          canDelete ? (
+            <View style={styles.swipeDeleteContainer}>
+              <TouchableOpacity
+                style={styles.swipeDeleteButton}
+                onPress={() => handleDeleteWaiting(game)}
+              >
+                <Text style={styles.swipeDeleteText}>✕</Text>
+              </TouchableOpacity>
             </View>
-          ) : (
-            <StyledButton
-              label="Open Match"
-              variant="outline"
-              onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
-              style={styles.openMatchButton}
-            />
-          )}
-          <View style={styles.cardLinks}>
-            {canResign && (
-              <TouchableOpacity onPress={() => handleResign(game)} style={styles.quitGameButton}>
-                <Text style={styles.quitGameButtonText}>Quit Game</Text>
-              </TouchableOpacity>
+          ) : null
+        }
+        overshootRight={false}
+      >
+        <View style={styles.gameCard}>
+          <View style={styles.gameCardHeader}>
+            <Text style={styles.gameOpponent}>{opponentName}</Text>
+            <View style={styles.currentClaimContainer}>
+              {showCurrentClaim && claimDicePoints ? (
+                <>
+                  <Text style={styles.currentClaimLabel}>Current claim</Text>
+                  <View style={styles.currentClaimDiceRow}>
+                    <ScoreDie
+                      points={claimDicePoints[0]}
+                      size={SCORE_DIE_BASE_SIZE}
+                      style={styles.currentClaimDie}
+                    />
+                    <View style={{ width: 6 }} />
+                    <ScoreDie
+                      points={claimDicePoints[1]}
+                      size={SCORE_DIE_BASE_SIZE}
+                      style={styles.currentClaimDie}
+                    />
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.gameStatus}>{statusLabel}</Text>
+              )}
+            </View>
+          </View>
+          <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
+          <View style={styles.cardActions}>
+            {isCompleted ? (
+              <View style={styles.completedOutcomeContainer}>
+                <Text style={styles.completedOutcomeText}>{outcomeLabel ?? 'Game over'}</Text>
+              </View>
+            ) : (
+              <StyledButton
+                label="Open Match"
+                variant="outline"
+                onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
+                style={styles.openMatchButton}
+              />
             )}
-            {canDelete && (
-              <TouchableOpacity onPress={() => handleDeleteWaiting(game)}>
-                <Text style={styles.secondaryAction}>Delete</Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.cardLinks}>
+              {canResign && (
+                <TouchableOpacity onPress={() => handleResign(game)} style={styles.quitGameButton}>
+                  <Text style={styles.quitGameButtonText}>Quit Game</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
-      </View>
+      </Swipeable>
     );
   };
 
@@ -900,6 +916,24 @@ const styles = StyleSheet.create({
   secondaryAction: {
     color: '#F4C430',
     fontWeight: '700',
+  },
+  swipeDeleteContainer: {
+    width: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  swipeDeleteButton: {
+    width: 56,
+    height: '70%',
+    backgroundColor: '#8B0000',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  swipeDeleteText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
   },
   quitGameButton: {
     height: 44,
