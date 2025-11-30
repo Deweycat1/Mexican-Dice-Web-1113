@@ -401,7 +401,15 @@ export default function OnlineLobbyScreen() {
 
   const handleDeleteWaiting = useCallback(
     (game: LobbyGame) => {
-      if (!userId) return;
+      if (!userId) {
+        console.warn('[OnlineLobby] Delete requested without userId, ignoring.', {
+          gameId: game.id,
+          host_id: game.host_id,
+          guest_id: game.guest_id,
+          status: game.status,
+        });
+        return;
+      }
 
       console.log('[OnlineLobby] Delete requested', {
         gameId: game.id,
@@ -411,6 +419,47 @@ export default function OnlineLobbyScreen() {
         status: game.status,
       });
 
+      const runDelete = async () => {
+        try {
+          console.log('[OnlineLobby] Delete confirmed, running delete', {
+            gameId: game.id,
+            userId,
+          });
+
+          // Optimistic UI removal so the tile disappears instantly
+          setGames((prev) => prev.filter((g) => g.id !== game.id));
+
+          const { error } = await supabase
+            .from('games_v2')
+            .update({ status: 'cancelled' })
+            .eq('id', game.id)
+            .eq('host_id', userId);
+
+          if (error) {
+            console.error('[OnlineLobby] Delete Supabase error', error);
+            Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
+            return;
+          }
+
+          console.log('[OnlineLobby] Delete success', { id: game.id });
+
+          // Refresh matches so any other stale rows are cleaned up
+          await loadGames();
+        } catch (err: any) {
+          console.error('[OnlineLobby] Delete match failed', err);
+          Alert.alert('Unable to delete match', err?.message ?? 'Please try again.');
+        }
+      };
+
+      if (Platform.OS === 'web') {
+        // eslint-disable-next-line no-alert
+        const confirmed = window.confirm('Delete this match? You can always create another one.');
+        if (confirmed) {
+          runDelete();
+        }
+        return;
+      }
+
       Alert.alert(
         'Delete this match?',
         'Remove this waiting match? You can always create another one.',
@@ -419,40 +468,12 @@ export default function OnlineLobbyScreen() {
           {
             text: 'Delete',
             style: 'destructive',
-            onPress: async () => {
-              try {
-                console.log('[OnlineLobby] Delete confirmed', {
-                  gameId: game.id,
-                  userId,
-                });
-
-                // Optimistic UI removal so the tile disappears instantly
-                setGames((prev) => prev.filter((g) => g.id !== game.id));
-
-                const { error } = await supabase
-                  .from('games_v2')
-                  .update({ status: 'cancelled' })
-                  .eq('id', game.id)
-                  .eq('host_id', userId);
-
-                if (error) {
-                  console.error('[OnlineLobby] Delete Supabase error', error);
-                  Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
-                  return;
-                }
-
-                console.log('[OnlineLobby] Delete success', { id: game.id });
-
-                // Refresh matches so the cancelled game disappears from the lobby
-                await loadGames();
-              } catch (err: any) {
-                console.error('[OnlineLobby] Delete match failed', err);
-                Alert.alert('Unable to delete match', err?.message ?? 'Please try again.');
-            }
+            onPress: () => {
+              runDelete();
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
     },
     [loadGames, userId]
   );
