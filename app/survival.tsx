@@ -48,6 +48,43 @@ function facesFromRoll(value: number | null | undefined): readonly [number | nul
 
 
 
+type StreakTalliesProps = {
+  streak: number;
+};
+
+const StreakTallies: React.FC<StreakTalliesProps> = ({ streak }) => {
+  if (!streak || streak <= 0) return null;
+
+  const groups = Math.floor(streak / 5);
+  const remainder = streak % 5;
+
+  const elements: React.ReactNode[] = [];
+
+  for (let i = 0; i < groups; i += 1) {
+    elements.push(
+      <View key={`group-${i}`} style={styles.tallyGroup}>
+        <View style={styles.tallyStroke} />
+        <View style={styles.tallyStroke} />
+        <View style={styles.tallyStroke} />
+        <View style={styles.tallyStroke} />
+        <View style={styles.tallyDiagonal} />
+      </View>
+    );
+  }
+
+  for (let i = 0; i < remainder; i += 1) {
+    elements.push(
+      <View key={`single-${groups + i}`} style={styles.tallyStroke} />
+    );
+  }
+
+  return (
+    <View pointerEvents="none" style={styles.tallyContainer}>
+      {elements}
+    </View>
+  );
+};
+
 export default function Survival() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -988,6 +1025,7 @@ export default function Survival() {
                 },
               ]}
             >
+              <StreakTallies streak={currentStreak} />
               <View style={styles.diceRow}>
             {showCpuThinking ? (
               <>
@@ -1368,6 +1406,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tallyContainer: {
+    position: 'absolute',
+    top: 12,
+    left: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    zIndex: 10,
+  },
+  tallyGroup: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginRight: 6,
+    position: 'relative',
+  },
+  tallyStroke: {
+    width: 2,
+    height: 24,
+    marginHorizontal: 1,
+    backgroundColor: '#10130D',
+    opacity: 0.75,
+    borderRadius: 1,
+  },
+  tallyDiagonal: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#10130D',
+    opacity: 0.85,
+    transform: [{ rotateZ: '-55deg' }],
   },
   controls: {
     backgroundColor: BAR_BG,

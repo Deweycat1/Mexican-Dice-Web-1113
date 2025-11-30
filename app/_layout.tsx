@@ -8,27 +8,6 @@ import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 export default function RootLayout() {
-  // Track the first web visit per browser to capture city geo data
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const KEY = 'mexican_dice_location_tracked_v2';
-    try {
-      if (window.localStorage.getItem(KEY)) return;
-      fetch('/api/secret-stats/cities-played', { method: 'POST' })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`cities-played responded ${response.status}`);
-          }
-          window.localStorage.setItem(KEY, 'true');
-        })
-        .catch((err) => {
-          console.warn('track-location failed', err);
-        });
-    } catch (error) {
-      console.warn('track-location init error', error);
-    }
-  }, []);
-
   // Ensure web root/background fills viewport and uses the canonical dark green
   useEffect(() => {
     if (Platform.OS !== 'web') return;

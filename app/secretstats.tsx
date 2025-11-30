@@ -2,19 +2,12 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
     Text,
     View,
 } from 'react-native';
-
-interface CitiesPlayedData {
-  cities: { city: string; region: string | null; country: string; visitCount: number }[];
-  totalCities: number;
-  totalVisits: number;
-}
 
 interface SurvivalBestData {
   streak: number;
@@ -75,10 +68,6 @@ interface MetaStats {
 }
 
 export default function SecretStatsScreen() {
-  const [citiesPlayed, setCitiesPlayed] = useState<CitiesPlayedData | null>(null);
-  const [isCitiesModalVisible, setIsCitiesModalVisible] = useState<boolean>(false);
-  const [isCitiesLoading, setIsCitiesLoading] = useState<boolean>(false);
-  const [citiesError, setCitiesError] = useState<string | null>(null);
   const router = useRouter();
   
   // Win/Survival stats
@@ -104,30 +93,6 @@ export default function SecretStatsScreen() {
   const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const resolveBaseUrl = () => (typeof window !== 'undefined' ? window.location.origin : '');
-
-  const fetchCitiesStats = async (baseUrl: string): Promise<CitiesPlayedData | null> => {
-    try {
-      const response = await fetch(`${baseUrl}/api/secret-stats/cities-played`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch cities stats (${response.status})`);
-      }
-
-      const data: CitiesPlayedData = await response.json();
-      const normalized = {
-        ...data,
-        cities: [...(data.cities || [])],
-      };
-      setCitiesPlayed(normalized);
-      return normalized;
-    } catch (error) {
-      console.error('Error fetching cities stats:', error);
-      return null;
-    }
-  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -171,11 +136,6 @@ export default function SecretStatsScreen() {
             headers: { 'Content-Type': 'application/json' },
           }),
         ]);
-
-        // Fetch city stats separately (non-blocking)
-        fetchCitiesStats(baseUrl).catch(() => {
-          /* non-blocking */
-        });
 
         if (!survivalBestRes.ok) throw new Error('Failed to fetch survival best');
         if (!quickPlayBestRes.ok) throw new Error('Failed to fetch quick play best');
@@ -325,24 +285,6 @@ export default function SecretStatsScreen() {
     }
   };
 
-  const handleOpenCitiesModal = async () => {
-    setCitiesError(null);
-    setIsCitiesModalVisible(true);
-    setIsCitiesLoading(true);
-
-    const data = await fetchCitiesStats(resolveBaseUrl());
-    if (!data) {
-      setCitiesError('Unable to load city stats right now.');
-    }
-
-    setIsCitiesLoading(false);
-  };
-
-  const handleCloseCitiesModal = () => {
-    setIsCitiesModalVisible(false);
-    setCitiesError(null);
-  };
-
   if (isLoading) {
     return (
       <View style={styles.container}>
@@ -391,23 +333,6 @@ export default function SecretStatsScreen() {
       <Text style={styles.subtitle}>🔒 Hidden Analytics</Text>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <Pressable
-          onPress={handleOpenCitiesModal}
-          style={({ pressed }: { pressed: boolean }) => [
-            styles.card,
-            styles.cardPressable,
-            pressed && styles.cardPressed,
-          ]}
-        >
-          <Text style={styles.cardTitle}>🌍 Cities Visiting Mexican Dice</Text>
-          {citiesPlayed ? (
-            <Text style={styles.bigNumber}>{citiesPlayed.totalCities}</Text>
-          ) : (
-            <ActivityIndicator size="small" color="#0FA958" />
-          )}
-          <Text style={styles.cardSubtitle}>Tap to view per-city visit counts</Text>
-        </Pressable>
-
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🎮 Quick Play - Total Games</Text>
           <Text style={styles.bigNumber}>{totalGames.toLocaleString()}</Text>
@@ -656,50 +581,6 @@ export default function SecretStatsScreen() {
         </View>
       </ScrollView>
 
-      <Modal
-        visible={isCitiesModalVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={handleCloseCitiesModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cities Where the Game Has Been Played</Text>
-            {isCitiesLoading && (
-              <View style={styles.modalSpinner}>
-                <ActivityIndicator size="small" color="#0FA958" />
-              </View>
-            )}
-            {citiesError && <Text style={styles.modalErrorText}>{citiesError}</Text>}
-            {!citiesError && citiesPlayed && citiesPlayed.cities.length === 0 && !isCitiesLoading && (
-              <Text style={styles.noDataText}>No city data recorded yet.</Text>
-            )}
-            {!citiesError && citiesPlayed && citiesPlayed.cities.length > 0 && (
-              <ScrollView style={styles.modalList}>
-                {citiesPlayed.cities.map(({ city, region, country, visitCount }) => (
-                  <View key={`${city}-${country}`} style={styles.modalRow}>
-                    <Text style={styles.modalCity}>
-                      {[city, region, country].filter((part) => part && part.length).join(', ')}
-                    </Text>
-                    <Text style={styles.modalCount}>
-                      {visitCount.toLocaleString()} visit{visitCount === 1 ? '' : 's'}
-                    </Text>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-            <Pressable
-              onPress={handleCloseCitiesModal}
-              style={({ pressed }: { pressed: boolean }) => [
-                styles.modalCloseButton,
-                pressed && styles.cardPressed,
-              ]}
-            >
-              <Text style={styles.modalCloseText}>Close</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -929,70 +810,5 @@ const styles = StyleSheet.create({
   },
   resetMessageError: {
     color: '#FF3B30',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  modalContent: {
-    backgroundColor: '#115E38',
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 500,
-    maxHeight: '80%',
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#E6FFE6',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  modalList: {
-    marginTop: 8,
-  },
-  modalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(230, 255, 230, 0.1)',
-  },
-  modalCity: {
-    color: '#E6FFE6',
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 12,
-  },
-  modalCount: {
-    color: '#0FA958',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  modalCloseButton: {
-    marginTop: 16,
-    backgroundColor: '#0FA958',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  modalCloseText: {
-    color: '#0B3A26',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  modalErrorText: {
-    color: '#FF3B30',
-    textAlign: 'center',
-    marginVertical: 12,
-  },
-  modalSpinner: {
-    alignItems: 'center',
-    marginBottom: 12,
   },
 });
