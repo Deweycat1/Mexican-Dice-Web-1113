@@ -184,10 +184,20 @@ export default function Game() {
     lastBluffCaller,
     lastBluffDefenderTruth,
     bluffResultNonce,
+    mode,
+    stopSurvival,
   } = useGameStore();
 
   const narration = (buildBanner?.() || message || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
+
+  // Guarantee we are in Quick Play (normal) mode so claim/event history
+  // continues to record even if the user came from Survival mode.
+  useEffect(() => {
+    if (mode === 'survival') {
+      stopSurvival();
+    }
+  }, [mode, stopSurvival]);
 
   // Helper component to render claim with inline logo for Mexican
   const renderClaim = (value: number | null | undefined) => {
