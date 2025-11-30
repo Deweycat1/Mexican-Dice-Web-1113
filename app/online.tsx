@@ -718,7 +718,7 @@ export default function OnlineLobbyScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Start a new match</Text>
         <Text style={styles.cardSubtitle}>
-          Invite a friend using their color-animal code (for example: "Blue Llama").
+          Invite a friend using their color-animal code (for example: "Blue-Panda").
         </Text>
         {myUsername && (
           <Text style={styles.yourCode}>
