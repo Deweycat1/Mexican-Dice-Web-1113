@@ -22,6 +22,7 @@ import RulesContent from '../src/components/RulesContent';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StreakEndPopup, { getRandomPun } from '../src/components/StreakEndPopup';
 import StyledButton from '../src/components/StyledButton';
+import ThinkingIndicator from '../src/components/ThinkingIndicator';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { useGameStore } from '../src/state/useGameStore';
@@ -1054,20 +1055,11 @@ export default function Survival() {
               <View style={styles.diceRow}>
             {showCpuThinking ? (
               <>
-                <Dice
-                      value={turn === 'player' ? playerHi : cpuHi}
-                      rolling={rolling}
-                      displayMode={diceDisplayMode}
-                      overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
-                    />
-                    <View style={{ width: 24 }} />
-                    <Dice
-                      value={turn === 'player' ? playerLo : cpuLo}
-                      rolling={rolling}
-                      displayMode={diceDisplayMode}
-                      overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
-                    />
-                  </>
+                {/* NOTE: Rival thinking visuals kept in sync with app/game.tsx */}
+                <ThinkingIndicator size={100} position="left" />
+                <View style={{ width: 24 }} />
+                <ThinkingIndicator size={100} position="right" />
+              </>
             ) : showSocialReveal ? (
               <AnimatedDiceReveal
                 hidden={socialRevealHidden}
