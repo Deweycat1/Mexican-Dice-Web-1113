@@ -17,7 +17,6 @@ import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
-import FireworksOverlay from '../src/components/FireworksOverlay';
 import RulesContent from '../src/components/RulesContent';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StreakEndPopup, { getRandomPun } from '../src/components/StreakEndPopup';
@@ -54,17 +53,95 @@ type StreakMeterProps = {
   globalBest: number;
 };
 
+const COLOR_GREEN = '#2ECC71';
+const COLOR_GOLD = '#E0B50C';
+const COLOR_RED = '#C21807';
+
 const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) => {
-  const targetToBeat = Math.max(globalBest + 1, 1);
+  const targetToBeat = Math.max((globalBest ?? 0) + 1, 1);
   if (targetToBeat <= 1 && currentStreak <= 0) return null;
 
-  const progress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
+  const clampedProgress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
+  const hasRecord = globalBest > 0;
+  const progressToRecord = hasRecord
+    ? Math.max(0, Math.min(currentStreak / globalBest, 1))
+    : 0;
+  const isBeyondRecord = hasRecord && currentStreak > globalBest;
+
+  const rainbowAnim = useRef(new Animated.Value(0)).current;
+  const rainbowLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const rainbowActiveRef = useRef(false);
+
+  useEffect(() => {
+    if (isBeyondRecord) {
+      if (!rainbowActiveRef.current) {
+        rainbowActiveRef.current = true;
+        rainbowAnim.setValue(0);
+        const loop = Animated.loop(
+          Animated.timing(rainbowAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: false,
+          })
+        );
+        rainbowLoopRef.current = loop;
+        loop.start();
+      }
+    } else if (rainbowActiveRef.current) {
+      rainbowLoopRef.current?.stop();
+      rainbowLoopRef.current = null;
+      rainbowActiveRef.current = false;
+      rainbowAnim.setValue(0);
+    }
+
+    return () => {
+      rainbowLoopRef.current?.stop();
+      rainbowLoopRef.current = null;
+      rainbowActiveRef.current = false;
+    };
+  }, [isBeyondRecord, rainbowAnim]);
+
+  const lerpHex = (a: string, b: string, t: number) => {
+    const ar = hexToRgb(a);
+    const br = hexToRgb(b);
+    const res = [
+      Math.round(lerp(ar[0], br[0], t)),
+      Math.round(lerp(ar[1], br[1], t)),
+      Math.round(lerp(ar[2], br[2], t)),
+    ];
+    return rgbToHex(res[0], res[1], res[2]);
+  };
+
+  let baseColor = COLOR_GREEN;
+  if (hasRecord) {
+    if (progressToRecord <= 0.5) {
+      const t = progressToRecord / 0.5;
+      baseColor = lerpHex(COLOR_GREEN, COLOR_GOLD, t);
+    } else {
+      const t = (progressToRecord - 0.5) / 0.5;
+      baseColor = lerpHex(COLOR_GOLD, COLOR_RED, t);
+    }
+  }
+
+  const rainbowColor = rainbowAnim.interpolate({
+    inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1],
+    outputRange: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF', '#FF0000'],
+  });
+
+  const fillColorStyle = isBeyondRecord
+    ? { backgroundColor: rainbowColor }
+    : { backgroundColor: baseColor };
 
   return (
     <View style={styles.streakMeterContainer} pointerEvents="none">
       <View style={styles.streakMeterOuter}>
-        <View style={[styles.streakMeterInner, { flex: progress }]} />
-        <View style={{ flex: 1 - progress }} />
+        <Animated.View
+          style={[
+            styles.streakMeterFill,
+            fillColorStyle,
+            { width: `${clampedProgress * 100}%` },
+          ]}
+        />
       </View>
       <View style={styles.streakMeterLabels}>
         <Text style={styles.streakMeterLabelText}>Streak: {currentStreak}</Text>
@@ -78,7 +155,6 @@ export default function Survival() {
   const router = useRouter();
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
-  const [showFireworks, setShowFireworks] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [cpuDiceRevealed, setCpuDiceRevealed] = useState(false);
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
@@ -179,7 +255,6 @@ export default function Survival() {
     survivalClaims,
     gameOver,
     mustBluff,
-    mexicanFlashNonce,
     cpuSocialDice,
     cpuSocialRevealNonce,
     socialBannerNonce,
@@ -721,11 +796,6 @@ export default function Survival() {
     ]).start();
   }, [survivalClaims, fadeAnim]);
 
-  useEffect(() => {
-    if (!mexicanFlashNonce) return;
-    setShowFireworks(true);
-  }, [mexicanFlashNonce]);
-
   const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp' | 'social') => {
     setRivalBluffBannerType(type);
     setRivalBluffBannerVisible(true);
@@ -1212,8 +1282,6 @@ export default function Survival() {
 
         </SafeAreaView>
       </FeltBackground>
-      <FireworksOverlay visible={showFireworks} onDone={() => setShowFireworks(false)} />
-      
       {/* Celebration Overlay */}
       <StreakCelebrationOverlay
         visible={celebrationVisible}
@@ -1412,14 +1480,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   streakMeterContainer: {
-    alignSelf: 'stretch',
-    paddingHorizontal: 16,
-    marginTop: 6,
+    alignSelf: 'flex-start',
+    marginLeft: 16,
+    marginTop: 8,
     marginBottom: 4,
+    width: '70%',
   },
   streakMeterOuter: {
-    flexDirection: 'row',
-    alignItems: 'center',
     height: 16,
     borderRadius: 6,
     borderWidth: 2,
@@ -1427,9 +1494,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.15)',
   },
-  streakMeterInner: {
+  streakMeterFill: {
     height: '100%',
-    backgroundColor: '#2ECC71',
+    borderRadius: 999,
   },
   streakMeterLabels: {
     marginTop: 2,

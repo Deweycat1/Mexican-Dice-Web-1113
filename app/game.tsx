@@ -19,7 +19,6 @@ import BluffModal from '../src/components/BluffModal';
 import DialogBanner from '../src/components/DialogBanner';
 import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
-import FireworksOverlay from '../src/components/FireworksOverlay';
 import { ScoreDie } from '../src/components/ScoreDie';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import StyledButton from '../src/components/StyledButton';
@@ -117,7 +116,6 @@ export default function Game() {
   const router = useRouter();
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
-  const [showFireworks, setShowFireworks] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [cpuDiceRevealed, setCpuDiceRevealed] = useState(false);
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
@@ -177,7 +175,6 @@ export default function Game() {
     claims,
     gameOver,
     mustBluff,
-    mexicanFlashNonce,
     cpuSocialDice,
     cpuSocialRevealNonce,
     socialBannerNonce,
@@ -299,11 +296,6 @@ export default function Game() {
       Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
     ]).start();
   }, [claims, fadeAnim]);
-
-  useEffect(() => {
-    if (!mexicanFlashNonce) return;
-    setShowFireworks(true);
-  }, [mexicanFlashNonce]);
 
   // Track previous scores to detect losses
   const prevPlayerScore = useRef(playerScore);
@@ -1022,7 +1014,6 @@ export default function Game() {
 
         </SafeAreaView>
       </FeltBackground>
-      <FireworksOverlay visible={showFireworks} onDone={() => setShowFireworks(false)} />
     </View>
   );
 }
