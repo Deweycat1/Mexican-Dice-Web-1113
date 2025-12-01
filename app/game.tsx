@@ -191,13 +191,13 @@ export default function Game() {
   const narration = (buildBanner?.() || message || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
 
-  // Guarantee we are in Quick Play (normal) mode so claim/event history
-  // continues to record even if the user came from Survival mode.
+  // Ensure we leave Survival mode whenever the Quick Play screen mounts so claims/event
+  // history stay in the normal bucket.
   useEffect(() => {
-    if (mode === 'survival') {
-      stopSurvival();
-    }
-  }, [mode, stopSurvival]);
+    stopSurvival();
+    // stopSurvival reference from Zustand is stable; run once on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Helper component to render claim with inline logo for Mexican
   const renderClaim = (value: number | null | undefined) => {

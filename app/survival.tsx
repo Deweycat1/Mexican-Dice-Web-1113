@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
@@ -55,20 +55,17 @@ type StreakTalliesProps = {
 const StreakTallies: React.FC<StreakTalliesProps> = ({ streak }) => {
   if (!streak || streak <= 0) return null;
 
-  const groups = Math.floor(streak / 5);
+  const fullRows = Math.floor(streak / 5);
   const remainder = streak % 5;
   const rows: React.ReactNode[] = [];
 
-  for (let i = 0; i < groups; i += 1) {
+  for (let i = 0; i < fullRows; i += 1) {
     rows.push(
       <View key={`group-${i}`} style={styles.tallyRow}>
-        <View style={styles.tallyGroup}>
-          <View style={styles.tallyStroke} />
-          <View style={styles.tallyStroke} />
-          <View style={styles.tallyStroke} />
-          <View style={styles.tallyStroke} />
-          <View style={styles.tallyDiagonal} />
-        </View>
+        {[0, 1, 2, 3].map((mark) => (
+          <View key={`group-${i}-${mark}`} style={styles.tallyStroke} />
+        ))}
+        <View style={styles.tallyDiagonal} />
       </View>
     );
   }
@@ -76,7 +73,7 @@ const StreakTallies: React.FC<StreakTalliesProps> = ({ streak }) => {
   if (remainder > 0) {
     rows.push(
       <View key="remainder" style={styles.tallyRow}>
-        {[...Array(remainder)].map((_, index) => (
+        {Array.from({ length: remainder }).map((_, index) => (
           <View key={`single-${index}`} style={styles.tallyStroke} />
         ))}
       </View>
@@ -92,9 +89,6 @@ const StreakTallies: React.FC<StreakTalliesProps> = ({ streak }) => {
 
 export default function Survival() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  
-  console.log('SURVIVAL: screen rendering');
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [showFireworks, setShowFireworks] = useState(false);
@@ -334,16 +328,8 @@ export default function Survival() {
     };
   }, []);
 
-  // Reset milestone flags when streak resets or survival restarts
-  const prevStreakForReset = useRef(currentStreak);
+  // Reset milestone flags whenever a fresh run starts (streak resets to 0)
   useEffect(() => {
-    // Detect streak end (went from positive to 0)
-    if (prevStreakForReset.current > 0 && currentStreak === 0) {
-      // Choose ONE loss phrase now and show the popup. Keep phrase stable until next run.
-      setLossPun(getRandomPun());
-      setStreakEndPopupVisible(true);
-    }
-    
     if (currentStreak === 0) {
       setHasShown5(false);
       setHasShown10(false);
@@ -355,9 +341,17 @@ export default function Survival() {
       setHasShown40(false);
       setHasShownNewLeader(false);
     }
-    
-    prevStreakForReset.current = currentStreak;
   }, [currentStreak]);
+
+  // Show the streak end popup once per loss when Survival declares the run over
+  const prevSurvivalOverRef = useRef(isSurvivalOver);
+  useEffect(() => {
+    if (!prevSurvivalOverRef.current && isSurvivalOver) {
+      setLossPun(getRandomPun());
+      setStreakEndPopupVisible(true);
+    }
+    prevSurvivalOverRef.current = isSurvivalOver;
+  }, [isSurvivalOver]);
 
   // Micro +1 streak animation (fires on every streak increment)
   const prevStreakForMicroAnim = useRef(currentStreak);
@@ -828,12 +822,13 @@ export default function Survival() {
   const handlePrimaryAction = useCallback(() => {
     if (streakEnded) {
       setLossPun(null);
+      setStreakEndPopupVisible(false);
       restartSurvival();
       return;
     }
 
     handleRollOrClaim();
-  }, [streakEnded, setLossPun, restartSurvival, handleRollOrClaim]);
+  }, [streakEnded, setLossPun, setStreakEndPopupVisible, restartSurvival, handleRollOrClaim]);
 
   const primaryLabel = streakEnded
     ? 'New Game'
@@ -915,17 +910,21 @@ export default function Survival() {
 
   // Debug: lifecycle + initialization trace
   const initialStateLoggedRef = useRef(false);
-  useEffect(() => {
-    console.log('SURVIVAL: screen mounted');
-    console.log('SURVIVAL: route params', params);
-    console.log('SURVIVAL: calling startSurvival()');
-    startSurvival();
-    setLossPun(null);
-    return () => {
-      console.log('SURVIVAL: screen unmounted -> stopSurvival()');
-      stopSurvival();
-    };
-  }, [startSurvival, stopSurvival]);
+  useFocusEffect(
+    useCallback(() => {
+      if (__DEV__) {
+        console.log('SURVIVAL: screen focused');
+      }
+      startSurvival();
+      setLossPun(null);
+      return () => {
+        if (__DEV__) {
+          console.log('SURVIVAL: screen blurred -> stopSurvival()');
+        }
+        stopSurvival();
+      };
+    }, [startSurvival, stopSurvival])
+  );
 
   useEffect(() => {
     if (initialStateLoggedRef.current) return;
@@ -1436,18 +1435,16 @@ const styles = StyleSheet.create({
   },
   tallyContainer: {
     alignSelf: 'flex-start',
-    marginLeft: 16,
-    marginTop: 6,
+    marginLeft: 20,
+    marginTop: 8,
   },
   tallyRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     marginBottom: 4,
-  },
-  tallyGroup: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
     position: 'relative',
+    paddingRight: 6,
+    minHeight: 26,
   },
   tallyStroke: {
     width: 3,
@@ -1459,13 +1456,14 @@ const styles = StyleSheet.create({
   },
   tallyDiagonal: {
     position: 'absolute',
-    left: -2,
-    right: -2,
+    left: -3,
+    right: -3,
     top: 6,
     height: 3,
     backgroundColor: '#2ECC71',
     borderRadius: 1.5,
     transform: [{ rotateZ: '-55deg' }],
+    pointerEvents: 'none',
   },
   controls: {
     backgroundColor: BAR_BG,

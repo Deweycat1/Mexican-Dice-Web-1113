@@ -464,12 +464,12 @@ export const useGameStore = create<Store>((set, get) => {
       const s = get();
       if (s.mode === 'survival' && !s.isSurvivalOver) {
         if (who === 'player' && amount > 0) {
-          // player lost -> run over: persist best+reset current
+          // player lost -> mark run over but keep the last streak value visible until restart
           const prevStreak = s.currentStreak || 0;
           const newBest = Math.max(s.bestStreak || 0, prevStreak);
           void saveBestStreak(newBest);
-          set({ bestStreak: newBest, currentStreak: 0, isSurvivalOver: true });
-          // record streak end event
+          set({ bestStreak: newBest, isSurvivalOver: true });
+          // record streak end event using the final streak value
           pushSurvivalEvent(`💀 Streak ended at ${prevStreak}`);
           // Submit the streak to global best
           void submitGlobalBest(prevStreak);
@@ -573,7 +573,7 @@ export const useGameStore = create<Store>((set, get) => {
 
   const stopSurvival = () => {
     // exit survival mode and restore normal play
-    set({ mode: 'normal', isSurvivalOver: false });
+    set({ mode: 'normal', isSurvivalOver: false, currentStreak: 0 });
   };
 
   const fetchGlobalBest = async () => {
