@@ -49,41 +49,27 @@ function facesFromRoll(value: number | null | undefined): readonly [number | nul
 
 
 
-type StreakTalliesProps = {
-  streak: number;
+type StreakMeterProps = {
+  currentStreak: number;
+  globalBest: number;
 };
 
-const StreakTallies: React.FC<StreakTalliesProps> = ({ streak }) => {
-  if (!streak || streak <= 0) return null;
+const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) => {
+  const targetToBeat = Math.max(globalBest + 1, 1);
+  if (targetToBeat <= 1 && currentStreak <= 0) return null;
 
-  const fullRows = Math.floor(streak / 5);
-  const remainder = streak % 5;
-  const rows: React.ReactNode[] = [];
-
-  for (let i = 0; i < fullRows; i += 1) {
-    rows.push(
-      <View key={`group-${i}`} style={styles.tallyRow}>
-        {[0, 1, 2, 3].map((mark) => (
-          <View key={`group-${i}-${mark}`} style={styles.tallyStroke} />
-        ))}
-        <View style={styles.tallyDiagonal} />
-      </View>
-    );
-  }
-
-  if (remainder > 0) {
-    rows.push(
-      <View key="remainder" style={styles.tallyRow}>
-        {Array.from({ length: remainder }).map((_, index) => (
-          <View key={`single-${index}`} style={styles.tallyStroke} />
-        ))}
-      </View>
-    );
-  }
+  const progress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
 
   return (
-    <View pointerEvents="none" style={styles.tallyContainer}>
-      {rows}
+    <View style={styles.streakMeterContainer} pointerEvents="none">
+      <View style={styles.streakMeterOuter}>
+        <View style={[styles.streakMeterInner, { flex: progress }]} />
+        <View style={{ flex: 1 - progress }} />
+      </View>
+      <View style={styles.streakMeterLabels}>
+        <Text style={styles.streakMeterLabelText}>Streak: {currentStreak}</Text>
+        <Text style={styles.streakMeterLabelText}>Break record at: {targetToBeat}</Text>
+      </View>
     </View>
   );
 };
@@ -1007,7 +993,7 @@ export default function Survival() {
               )}
             </View>
 
-            <StreakTallies streak={currentStreak} />
+            <StreakMeter currentStreak={currentStreak} globalBest={globalBest} />
 
             {/* HISTORY BOX */}
             <Pressable
@@ -1425,37 +1411,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tallyContainer: {
-    alignSelf: 'flex-start',
-    marginLeft: 20,
-    marginTop: 8,
-  },
-  tallyRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
+  streakMeterContainer: {
+    alignSelf: 'stretch',
+    paddingHorizontal: 16,
+    marginTop: 6,
     marginBottom: 4,
-    position: 'relative',
-    paddingRight: 6,
-    minHeight: 26,
   },
-  tallyStroke: {
-    width: 3,
-    height: 26,
-    marginHorizontal: 1,
-    backgroundColor: '#2ECC71',
-    opacity: 0.9,
-    borderRadius: 1.5,
+  streakMeterOuter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 16,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#000000',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.15)',
   },
-  tallyDiagonal: {
-    position: 'absolute',
-    left: -3,
-    right: -3,
-    top: 6,
-    height: 3,
+  streakMeterInner: {
+    height: '100%',
     backgroundColor: '#2ECC71',
-    borderRadius: 1.5,
-    transform: [{ rotateZ: '-55deg' }],
-    pointerEvents: 'none',
+  },
+  streakMeterLabels: {
+    marginTop: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  streakMeterLabelText: {
+    color: '#C9F0D6',
+    fontSize: 11,
   },
   controls: {
     backgroundColor: BAR_BG,
