@@ -59,7 +59,9 @@ const COLOR_RED = '#C21807';
 
 const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) => {
   const targetToBeat = Math.max((globalBest ?? 0) + 1, 1);
-  if (targetToBeat <= 1 && currentStreak <= 0) return null;
+  const rainbowAnim = useRef(new Animated.Value(0)).current;
+  const rainbowLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const rainbowActiveRef = useRef(false);
 
   const clampedProgress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
   const hasRecord = globalBest > 0;
@@ -67,10 +69,7 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) 
     ? Math.max(0, Math.min(currentStreak / globalBest, 1))
     : 0;
   const isBeyondRecord = hasRecord && currentStreak > globalBest;
-
-  const rainbowAnim = useRef(new Animated.Value(0)).current;
-  const rainbowLoopRef = useRef<Animated.CompositeAnimation | null>(null);
-  const rainbowActiveRef = useRef(false);
+  const shouldHide = targetToBeat <= 1 && currentStreak <= 0;
 
   useEffect(() => {
     if (isBeyondRecord) {
@@ -111,6 +110,10 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) 
     ];
     return rgbToHex(res[0], res[1], res[2]);
   };
+
+  if (shouldHide) {
+    return null;
+  }
 
   let baseColor = COLOR_GREEN;
   if (hasRecord) {
