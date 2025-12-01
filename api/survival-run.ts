@@ -4,6 +4,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 // Keys
 const SURVIVAL_DEVICES_SET = 'survival:devices';
 const SURVIVAL_OVER10_SET = 'survival:over10';
+const SURVIVAL_STREAK_TOTAL_KEY = 'survival:streak:total';
+const SURVIVAL_STREAK_COUNT_KEY = 'survival:streak:count';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -45,6 +47,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         await kv.srem(SURVIVAL_OVER10_SET, deviceId);
       }
+
+      // Track aggregate streak stats for averages
+      await Promise.all([
+        kv.incrby(SURVIVAL_STREAK_TOTAL_KEY, streak),
+        kv.incrby(SURVIVAL_STREAK_COUNT_KEY, 1),
+      ]);
 
       return res.status(200).json({ deviceId, streak, updated });
     }

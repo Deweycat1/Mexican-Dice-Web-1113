@@ -26,6 +26,11 @@ interface RandomStatsData {
   totalRolls: number;
 }
 
+interface SurvivalAverageData {
+  averageSurvivalStreak: number;
+  sampleSize: number;
+}
+
 interface RollStat {
   roll: string;
   label: string;
@@ -57,6 +62,7 @@ export default function StatsScreen() {
   
   // Random Stats (formerly Player Tendencies)
   const [randomStats, setRandomStats] = useState<RandomStatsData | null>(null);
+  const [survivalAverage, setSurvivalAverage] = useState<SurvivalAverageData | null>(null);
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);  useEffect(() => {
@@ -68,7 +74,7 @@ export default function StatsScreen() {
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
         
         // Fetch all APIs in parallel
-        const [rollsRes, claimsRes, randomStatsRes] = await Promise.all([
+        const [rollsRes, claimsRes, randomStatsRes, survivalAverageRes] = await Promise.all([
           fetch(`${baseUrl}/api/roll-stats`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
@@ -78,6 +84,10 @@ export default function StatsScreen() {
             headers: { 'Content-Type': 'application/json' },
           }),
           fetch(`${baseUrl}/api/random-stats`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          }),
+          fetch(`${baseUrl}/api/survival-average-streak`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
           }),
@@ -93,6 +103,12 @@ export default function StatsScreen() {
         if (randomStatsRes.ok) {
           const randomStatsData: RandomStatsData = await randomStatsRes.json();
           setRandomStats(randomStatsData);
+        }
+        if (survivalAverageRes.ok) {
+          const survivalAverageData: SurvivalAverageData = await survivalAverageRes.json();
+          setSurvivalAverage(survivalAverageData);
+        } else {
+          setSurvivalAverage(null);
         }
 
         // Process roll statistics
@@ -372,10 +388,24 @@ export default function StatsScreen() {
         <Text style={styles.subtitle}>Little mysteries hiding in your dice rolls</Text>
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {survivalAverage && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>🏔️ Average Survival Mode Streak</Text>
+              <Text style={styles.bigNumber}>
+                {survivalAverage.averageSurvivalStreak.toFixed(2)}
+              </Text>
+              <Text style={styles.tendencyDescription}>
+                Based on {survivalAverage.sampleSize.toLocaleString()} completed runs
+              </Text>
+            </View>
+          )}
+
           {randomStats === null ? (
             <View style={styles.card}>
               <Text style={styles.noDataText}>
-                Play a few games to unlock your Random Stats!
+                {survivalAverage
+                  ? 'Play Survival to unlock player tendency stats!'
+                  : 'Play a few games to unlock your Random Stats!'}
               </Text>
             </View>
           ) : (
