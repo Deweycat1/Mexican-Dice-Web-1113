@@ -46,6 +46,17 @@ function facesFromRoll(value: number | null | undefined): readonly [number | nul
   return [hi, lo] as const;
 }
 
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+function hexToRgb(hex: string) {
+  const h = hex.replace('#', '');
+  const bigint = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+  return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255] as const;
+}
+function rgbToHex(r: number, g: number, b: number) {
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
 
 
 type StreakMeterProps = {
@@ -64,29 +75,30 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) 
   const rainbowActiveRef = useRef(false);
 
   const clampedProgress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
-  const hasRecord = globalBest > 0;
+  const hasRecord = typeof globalBest === 'number' && globalBest > 0;
+  const safeRecord = hasRecord ? Math.max(globalBest, 1) : 1;
   const progressToRecord = hasRecord
-    ? Math.max(0, Math.min(currentStreak / globalBest, 1))
+    ? Math.max(0, Math.min(currentStreak / safeRecord, 1))
     : 0;
   const isBeyondRecord = hasRecord && currentStreak > globalBest;
   const shouldHide = targetToBeat <= 1 && currentStreak <= 0;
 
   useEffect(() => {
-    if (isBeyondRecord) {
-      if (!rainbowActiveRef.current) {
-        rainbowActiveRef.current = true;
-        rainbowAnim.setValue(0);
-        const loop = Animated.loop(
-          Animated.timing(rainbowAnim, {
-            toValue: 1,
-            duration: 1200,
-            useNativeDriver: false,
-          })
-        );
-        rainbowLoopRef.current = loop;
-        loop.start();
-      }
-    } else if (rainbowActiveRef.current) {
+    if (isBeyondRecord && !rainbowActiveRef.current) {
+      rainbowActiveRef.current = true;
+      rainbowAnim.setValue(0);
+      const loop = Animated.loop(
+        Animated.timing(rainbowAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: false,
+        })
+      );
+      rainbowLoopRef.current = loop;
+      loop.start();
+    }
+
+    if (!isBeyondRecord && rainbowActiveRef.current) {
       rainbowLoopRef.current?.stop();
       rainbowLoopRef.current = null;
       rainbowActiveRef.current = false;
@@ -276,15 +288,6 @@ export default function Survival() {
 
   // pulsing animation for the caption/title to add adrenaline
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  // helpers
-  const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-  const hexToRgb = (hex: string) => {
-    const h = hex.replace('#', '');
-    const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
-    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-  };
-  const rgbToHex = (r: number, g: number, b: number) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
 
   // compute dynamic parameters from streak
   const normalized = clamp(currentStreak / 20, 0, 1); // 0..1 over first 20 streaks
