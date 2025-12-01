@@ -62,55 +62,60 @@ function rgbToHex(r: number, g: number, b: number) {
 type StreakMeterProps = {
   currentStreak: number;
   globalBest: number;
+  isSurvivalOver: boolean;
 };
 
 const COLOR_GREEN = '#2ECC71';
 const COLOR_GOLD = '#E0B50C';
 const COLOR_RED = '#C21807';
 
-const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) => {
-  const targetToBeat = Math.max((globalBest ?? 0) + 1, 1);
+const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, isSurvivalOver }) => {
+  const safeGlobalBest = typeof globalBest === 'number' ? globalBest : 0;
+  const recordTarget = Math.max(safeGlobalBest, 1);
+  const targetToBeat = Math.max(safeGlobalBest + 1, 1);
+  const clampedProgress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
+  const progressRatio = Math.max(0, Math.min(currentStreak / recordTarget, 1));
+  const hasBrokenRecord = currentStreak > safeGlobalBest && currentStreak > 0 && !isSurvivalOver;
   const rainbowAnim = useRef(new Animated.Value(0)).current;
   const rainbowLoopRef = useRef<Animated.CompositeAnimation | null>(null);
   const rainbowActiveRef = useRef(false);
 
-  const clampedProgress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
-  const hasRecord = typeof globalBest === 'number' && globalBest > 0;
-  const safeRecord = hasRecord ? Math.max(globalBest, 1) : 1;
-  const progressToRecord = hasRecord
-    ? Math.max(0, Math.min(currentStreak / safeRecord, 1))
-    : 0;
-  const isBeyondRecord = hasRecord && currentStreak > globalBest;
+  const hasRecord = safeGlobalBest > 0;
   const shouldHide = targetToBeat <= 1 && currentStreak <= 0;
 
   useEffect(() => {
-    if (isBeyondRecord && !rainbowActiveRef.current) {
-      rainbowActiveRef.current = true;
-      rainbowAnim.setValue(0);
-      const loop = Animated.loop(
-        Animated.timing(rainbowAnim, {
-          toValue: 1,
-          duration: 1200,
-          useNativeDriver: false,
-        })
-      );
-      rainbowLoopRef.current = loop;
-      loop.start();
+    if (!hasBrokenRecord) {
+      if (rainbowActiveRef.current) {
+        rainbowLoopRef.current?.stop();
+        rainbowLoopRef.current = null;
+        rainbowActiveRef.current = false;
+        rainbowAnim.setValue(0);
+      }
+      return;
     }
 
-    if (!isBeyondRecord && rainbowActiveRef.current) {
-      rainbowLoopRef.current?.stop();
-      rainbowLoopRef.current = null;
-      rainbowActiveRef.current = false;
-      rainbowAnim.setValue(0);
+    if (rainbowActiveRef.current) {
+      return;
     }
+
+    rainbowActiveRef.current = true;
+    rainbowAnim.setValue(0);
+    const loop = Animated.loop(
+      Animated.timing(rainbowAnim, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: false,
+      })
+    );
+    rainbowLoopRef.current = loop;
+    loop.start();
 
     return () => {
       rainbowLoopRef.current?.stop();
       rainbowLoopRef.current = null;
       rainbowActiveRef.current = false;
     };
-  }, [isBeyondRecord, rainbowAnim]);
+  }, [hasBrokenRecord, rainbowAnim]);
 
   const lerpHex = (a: string, b: string, t: number) => {
     const ar = hexToRgb(a);
@@ -129,11 +134,11 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) 
 
   let baseColor = COLOR_GREEN;
   if (hasRecord) {
-    if (progressToRecord <= 0.5) {
-      const t = progressToRecord / 0.5;
+    if (progressRatio <= 0.5) {
+      const t = progressRatio / 0.5;
       baseColor = lerpHex(COLOR_GREEN, COLOR_GOLD, t);
     } else {
-      const t = (progressToRecord - 0.5) / 0.5;
+      const t = (progressRatio - 0.5) / 0.5;
       baseColor = lerpHex(COLOR_GOLD, COLOR_RED, t);
     }
   }
@@ -143,7 +148,7 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest }) 
     outputRange: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF', '#FF0000'],
   });
 
-  const fillColorStyle = isBeyondRecord
+  const fillColorStyle = hasBrokenRecord
     ? { backgroundColor: rainbowColor }
     : { backgroundColor: baseColor };
 
@@ -1055,7 +1060,7 @@ export default function Survival() {
                 />
                 <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Mode</Animated.Text>
               </View>
-              <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Streak: {currentStreak} | Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
+              <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
               {claimText ? (
                 <Text style={styles.subtle}>{claimText}</Text>
               ) : (
@@ -1069,7 +1074,11 @@ export default function Survival() {
               )}
             </View>
 
-            <StreakMeter currentStreak={currentStreak} globalBest={globalBest} />
+            <StreakMeter
+              currentStreak={currentStreak}
+              globalBest={globalBest}
+              isSurvivalOver={isSurvivalOver}
+            />
 
             {/* HISTORY BOX */}
             <Pressable
@@ -1486,13 +1495,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   streakMeterContainer: {
-    alignSelf: 'flex-start',
-    marginLeft: 16,
+    alignSelf: 'center',
+    width: '70%',
     marginTop: 8,
     marginBottom: 4,
-    width: '70%',
   },
   streakMeterOuter: {
+    width: '100%',
     height: 16,
     borderRadius: 6,
     borderWidth: 2,
