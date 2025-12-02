@@ -478,9 +478,10 @@ export const useGameStore = create<Store>((set, get) => {
         } else if (who === 'cpu') {
           // cpu lost -> player survived the round
           // increment streak and update/persist bestStreak if we've reached a new high
+          const streakIncrement = amount === 2 ? 2 : 1;
           set((prev) => {
             const prevStreak = prev.currentStreak || 0;
-            const newStreak = prevStreak + 1;
+            const newStreak = prevStreak + streakIncrement;
             const prevBest = prev.bestStreak || 0;
             const newBest = Math.max(prevBest, newStreak);
             // persist new best if it changed

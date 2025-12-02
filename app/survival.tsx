@@ -206,8 +206,9 @@ export default function Survival() {
   const [celebrationTitle, setCelebrationTitle] = useState('');
   const [celebrationMode, setCelebrationMode] = useState<'5' | '10' | '15' | '20' | '25' | '30' | '35' | '40' | 'newLeader'>('5');
 
-  // Micro +1 overlay state
+  // Micro + streak overlay state
   const [plusOneVisible, setPlusOneVisible] = useState(false);
+  const [plusOneAmount, setPlusOneAmount] = useState(1);
   const plusOneFlashTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const plusOneFlashTickRef = useRef(0);
 
@@ -227,13 +228,14 @@ export default function Survival() {
   const electricJoltOpacityAnim = useRef(new Animated.Value(0)).current;
   const vortexPulseAnim = useRef(new Animated.Value(0)).current;
 
-  const startPlusOneFlash = useCallback(() => {
+  const startPlusOneFlash = useCallback((increment: number) => {
     if (plusOneFlashTimerRef.current) {
       clearInterval(plusOneFlashTimerRef.current);
       plusOneFlashTimerRef.current = null;
     }
 
     plusOneFlashTickRef.current = 0;
+    setPlusOneAmount(increment);
     setPlusOneVisible(true);
 
     plusOneFlashTimerRef.current = setInterval(() => {
@@ -413,7 +415,8 @@ export default function Survival() {
   // Micro +1 streak animation (fires on every streak increment)
   const prevStreakForMicroAnim = useRef(currentStreak);
   useEffect(() => {
-    if (currentStreak > prevStreakForMicroAnim.current && currentStreak > 0) {
+    const streakDelta = currentStreak - prevStreakForMicroAnim.current;
+    if (streakDelta > 0 && currentStreak > 0) {
       // Trigger micro animations
       
       // 1. Streak label pop + glow (550-650ms total)
@@ -433,7 +436,7 @@ export default function Survival() {
       ]).start();
 
       // 2. Plus-one flash (same cadence as previous emoji burst)
-      startPlusOneFlash();
+      startPlusOneFlash(streakDelta);
 
       // 3. Dice micro-jiggle (450-500ms)
       diceJiggleAnim.setValue(0);
@@ -1291,7 +1294,7 @@ export default function Survival() {
       
       {plusOneVisible && (
         <View style={styles.plusOneOverlay} pointerEvents="none">
-          <Text style={styles.plusOneText}>+1</Text>
+          <Text style={styles.plusOneText}>+{plusOneAmount}</Text>
         </View>
       )}
 
