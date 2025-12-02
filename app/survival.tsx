@@ -1047,12 +1047,15 @@ export default function Survival() {
               ) : (
                 <Text style={styles.subtle}>No active claim yet.</Text>
               )}
-              <Text style={styles.status} numberOfLines={2}>
-                {narration || 'Ready to roll.'}
-              </Text>
-              {showCpuThinking && (
-                <Text style={styles.subtleSmall}>The Rival thinking…</Text>
-              )}
+              <View style={styles.narrationContainer}>
+                <Text
+                  style={styles.status}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {narration || 'Ready to roll.'}
+                </Text>
+              </View>
             </View>
 
             <StreakMeter
@@ -1444,16 +1447,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: 'center',
   },
-  subtleSmall: {
-    color: '#C9F0D6',
-    opacity: 0.8,
-    textAlign: 'center',
-    fontSize: 13,
-  },
   status: {
     color: '#fff',
     opacity: 0.95,
     textAlign: 'center',
+  },
+  narrationContainer: {
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: 2,
+    marginBottom: 4,
   },
   diceArea: {
     flexGrow: 1,
