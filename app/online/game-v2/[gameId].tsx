@@ -1056,8 +1056,6 @@ export default function OnlineGameV2Screen() {
               </Animated.View>
             </Pressable>
 
-            <View style={styles.diceSpacer} />
-
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
                 {showSocialReveal ? (
@@ -1430,16 +1428,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginVertical: 2,
   },
-  diceSpacer: {
-    height: 15,
-  },
   diceArea: {
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 260,
-    marginTop: -94,
-    marginBottom: 0,
+    marginTop: -134,
+    marginBottom: 20,
   },
   diceRow: {
     flexDirection: 'row',
@@ -1451,7 +1446,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -65,
+    marginTop: -150,
+    position: 'relative',
+    zIndex: 10,
   },
   actionRow: {
     flexDirection: 'row',
