@@ -17,7 +17,7 @@ import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
-import RulesContent from '../src/components/RulesContent';
+import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
 import ThinkingIndicator from '../src/components/ThinkingIndicator';
@@ -1276,7 +1276,7 @@ export default function Survival() {
                   </Pressable>
                 </View>
                 <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
-                  <RulesContent />
+                  <SurvivalRulesContent />
                 </ScrollView>
               </View>
             </View>
