@@ -1278,7 +1278,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 18,
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
   centered: {
     flex: 1,
@@ -1449,6 +1449,7 @@ const styles = StyleSheet.create({
     marginTop: -150,
     position: 'relative',
     zIndex: 10,
+    marginBottom: -10,
   },
   actionRow: {
     flexDirection: 'row',
