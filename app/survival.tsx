@@ -772,8 +772,8 @@ export default function Survival() {
   }, [rivalBluffBannerType]);
 
   const claimOptions = useMemo(
-    () => getSurvivalClaimOptions(lastClaim, lastPlayerRoll),
-    [lastClaim, lastPlayerRoll]
+    () => getSurvivalClaimOptions(lastClaimValue, lastPlayerRoll),
+    [lastClaimValue, lastPlayerRoll]
   );
 
   useEffect(() => setClaimPickerOpen(false), [turn]);

@@ -270,8 +270,8 @@ export default function Game() {
   }, [rivalBluffBannerType]);
 
   const claimOptions = useMemo(
-    () => getQuickPlayClaimOptions(lastClaim, lastPlayerRoll),
-    [lastClaim, lastPlayerRoll]
+    () => getQuickPlayClaimOptions(lastClaimValue, lastPlayerRoll),
+    [lastClaimValue, lastPlayerRoll]
   );
 
   useEffect(() => {
