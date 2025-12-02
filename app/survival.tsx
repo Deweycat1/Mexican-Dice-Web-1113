@@ -19,7 +19,6 @@ import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
 import RulesContent from '../src/components/RulesContent';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
-import StreakEndPopup, { getRandomPun } from '../src/components/StreakEndPopup';
 import StyledButton from '../src/components/StyledButton';
 import ThinkingIndicator from '../src/components/ThinkingIndicator';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
@@ -206,11 +205,6 @@ export default function Survival() {
   const [celebrationVisible, setCelebrationVisible] = useState(false);
   const [celebrationTitle, setCelebrationTitle] = useState('');
   const [celebrationMode, setCelebrationMode] = useState<'5' | '10' | '15' | '20' | '25' | '30' | '35' | '40' | 'newLeader'>('5');
-
-  // Streak end popup state
-  const [streakEndPopupVisible, setStreakEndPopupVisible] = useState(false);
-  // Selected loss message for the current run (stable per-loss)
-  const [lossPun, setLossPun] = useState<string | null>(null);
 
   // Micro +1 overlay state
   const [plusOneVisible, setPlusOneVisible] = useState(false);
@@ -415,16 +409,6 @@ export default function Survival() {
       setHasShownNewLeader(false);
     }
   }, [currentStreak]);
-
-  // Show the streak end popup once per loss when Survival declares the run over
-  const prevSurvivalOverRef = useRef(isSurvivalOver);
-  useEffect(() => {
-    if (!prevSurvivalOverRef.current && isSurvivalOver) {
-      setLossPun(getRandomPun());
-      setStreakEndPopupVisible(true);
-    }
-    prevSurvivalOverRef.current = isSurvivalOver;
-  }, [isSurvivalOver]);
 
   // Micro +1 streak animation (fires on every streak increment)
   const prevStreakForMicroAnim = useRef(currentStreak);
@@ -889,14 +873,12 @@ export default function Survival() {
 
   const handlePrimaryAction = useCallback(() => {
     if (streakEnded) {
-      setLossPun(null);
-      setStreakEndPopupVisible(false);
       restartSurvival();
       return;
     }
 
     handleRollOrClaim();
-  }, [streakEnded, setLossPun, setStreakEndPopupVisible, restartSurvival, handleRollOrClaim]);
+  }, [streakEnded, restartSurvival, handleRollOrClaim]);
 
   const primaryLabel = streakEnded
     ? 'New Game'
@@ -984,7 +966,6 @@ export default function Survival() {
         console.log('SURVIVAL: screen focused');
       }
       startSurvival();
-      setLossPun(null);
       return () => {
         if (__DEV__) {
           console.log('SURVIVAL: screen blurred -> stopSurvival()');
@@ -1303,13 +1284,6 @@ export default function Survival() {
         title={celebrationTitle}
         mode={celebrationMode}
         onHide={() => setCelebrationVisible(false)}
-      />
-      
-      {/* Streak End Popup (Ominous) */}
-      <StreakEndPopup
-        visible={streakEndPopupVisible}
-        onHide={() => setStreakEndPopupVisible(false)}
-        pun={lossPun}
       />
       
       {plusOneVisible && (
