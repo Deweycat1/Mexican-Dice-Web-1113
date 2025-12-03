@@ -24,6 +24,7 @@ import RulesContent from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
 import ThinkingIndicator from '../../../src/components/ThinkingIndicator';
+import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import {
   claimMatchesRoll,
   isChallengeClaim,
@@ -258,6 +259,7 @@ export default function OnlineGameV2Screen() {
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
   const [winkArmed, setWinkArmed] = useState(false);
   const [isRequestingRematch, setIsRequestingRematch] = useState(false);
+  const prevStatusRef = useRef<GameStatus | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -447,6 +449,15 @@ export default function OnlineGameV2Screen() {
   const opponentScore = myRole === 'host' ? game?.guest_score ?? 0 : game?.host_score ?? 0;
   const claimToCheck = resolveActiveChallenge(roundState.baselineClaim, lastClaim);
   const [dieHi, dieLo] = facesFromRoll(myRoll);
+
+  useEffect(() => {
+    if (!game || !myRole) return;
+    const prev = prevStatusRef.current;
+    if (prev !== 'finished' && game.status === 'finished') {
+      void updatePersonalStatsOnGamePlayed();
+    }
+    prevStatusRef.current = game.status;
+  }, [game?.status, myRole]);
   const claimSummary = useMemo(() => {
     const winkSuffix = roundState.lastClaimHadWink ? ' 😉' : '';
     return `Current claim: ${formatClaim(lastClaim)}${winkSuffix}     Your roll: ${formatRoll(myRoll)}`;

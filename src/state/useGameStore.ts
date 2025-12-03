@@ -21,6 +21,7 @@ import {
     resolveBluff
 } from '../engine/mexican';
 import { formatCallBluffMessage } from '../utils/narration';
+import { updatePersonalStatsOnGamePlayed } from '../stats/personalStats';
 
 export type Turn = 'player' | 'cpu';
 export type LastAction = 'normal' | 'reverseVsMexican';
@@ -386,6 +387,9 @@ export const useGameStore = create<Store>((set, get) => {
     const updatedCpu = clampFloor(state.cpuScore - (who === 'cpu' ? amount : 0));
     const loserScore = who === 'player' ? updatedPlayer : updatedCpu;
     const finished = loserScore <= 0;
+    if (finished) {
+      void updatePersonalStatsOnGamePlayed();
+    }
     const finalMessage = finished
       ? who === 'player'
         ? 'You hit 0 points. The Rival wins.'
@@ -475,6 +479,7 @@ export const useGameStore = create<Store>((set, get) => {
           void submitGlobalBest(prevStreak);
           // Record survival run to average calculation
           void recordSurvivalRun(prevStreak);
+          void updatePersonalStatsOnGamePlayed();
         } else if (who === 'cpu') {
           // cpu lost -> player survived the round
           // increment streak and update/persist bestStreak if we've reached a new high

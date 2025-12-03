@@ -19,6 +19,9 @@ export default function HomeScreen() {
       <Link href="/online" style={styles.button}>
         <Text style={styles.buttonText}>Online Multiplayer</Text>
       </Link>
+      <Link href="/your-stats" style={styles.buttonStats}>
+        <Text style={styles.buttonText}>Your Stats</Text>
+      </Link>
       <Link href="/stats" style={styles.buttonStats}>
         <Text style={styles.buttonText}>Stats</Text>
       </Link>
