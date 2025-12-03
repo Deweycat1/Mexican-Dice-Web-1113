@@ -9,24 +9,24 @@ export default function HomeScreen() {
       <Image source={MexicanDiceLogo} style={styles.logo} />
       <Text style={styles.subtitle}>Ready to roll?</Text>
 
-      <Link href="/game" style={styles.button}>
+      <Link href="/game" style={styles.buttonRules}>
         <Text style={styles.buttonText}>Quick Play</Text>
       </Link>
 
-      <Link href="/survival" style={styles.button}>
+      <Link href="/survival" style={styles.buttonStats}>
         <Text style={styles.buttonText}>Survival Mode</Text>
       </Link>
       <Link href="/online" style={styles.button}>
         <Text style={styles.buttonText}>Online Multiplayer</Text>
       </Link>
+      <Link href="/stats" style={styles.buttonRules}>
+        <Text style={styles.buttonText}>Global Stats</Text>
+      </Link>
       <Link href="/your-stats" style={styles.buttonStats}>
         <Text style={styles.buttonText}>Your Stats</Text>
       </Link>
-      <Link href="/stats" style={styles.buttonStats}>
-        <Text style={styles.buttonText}>Stats</Text>
-      </Link>
 
-      <Link href="/rules" style={styles.buttonRules}>
+      <Link href="/rules" style={styles.button}>
         <Text style={styles.buttonText}>Rules</Text>
       </Link>
     </View>
