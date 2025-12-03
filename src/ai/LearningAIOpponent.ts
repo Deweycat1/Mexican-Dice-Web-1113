@@ -375,12 +375,10 @@ export class LearningAIDiceOpponent {
       let pThreshold = 0.50; // Default: call if we think they bluff >50%
       
       if (category === 'mexican') {
-        // Mexican (21) - True odds are 1/36 (2.78%), so be VERY suspicious
-        // Target: ~95% call rate with initial 20% bluff belief (BetaTracker 1,4)
-        // With pBluff = 20%, threshold of 5% means almost always call (20% > 5%)
-        pThreshold = 0.05 - suspicionBoost;
-        // Floor at 3% to ensure very high call rate
-        pThreshold = Math.max(pThreshold, 0.03);
+        // Mexican (21) - still suspicious but we now only call when we believe
+        // there's roughly a 35%+ chance of bluffing (≈65% call rate target)
+        pThreshold = 0.35 - suspicionBoost;
+        pThreshold = Math.max(pThreshold, 0.25);
       } else if (category === 'double') {
         // Doubles are VERY hard to beat (1/36 each, need specific double or Mexican)
         // Be aggressive on ALL doubles since they're inherently suspicious

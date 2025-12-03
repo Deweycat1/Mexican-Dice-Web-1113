@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { Link, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -53,12 +53,17 @@ export default function YourStatsScreen() {
             {!stats ? (
               <ActivityIndicator color="#E0B50C" />
             ) : (
-              <View style={styles.card}>
-                <StatRow label="Total Number of Games Played" value={stats.totalGamesPlayed} />
-                <StatRow label="Current Daily Streak" value={formatDays(stats.currentDailyStreak)} />
-                <StatRow label="Longest Daily Streak" value={formatDays(stats.longestDailyStreak)} />
-                <StatRow label="Total Days Played" value={stats.totalDaysPlayed} />
-              </View>
+              <>
+                <View style={styles.card}>
+                  <StatRow label="Total Number of Games Played" value={stats.totalGamesPlayed} />
+                  <StatRow label="Current Daily Streak" value={formatDays(stats.currentDailyStreak)} />
+                  <StatRow label="Longest Daily Streak" value={formatDays(stats.longestDailyStreak)} />
+                  <StatRow label="Total Days Played" value={stats.totalDaysPlayed} />
+                </View>
+                <Link href="/" style={styles.mainMenuButton}>
+                  <Text style={styles.buttonText}>Main Menu</Text>
+                </Link>
+              </>
             )}
           </View>
         </SafeAreaView>
@@ -95,6 +100,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     gap: 16,
+  },
+  mainMenuButton: {
+    marginTop: 24,
+    backgroundColor: '#C21807',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    // @ts-ignore
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
+    borderWidth: 2,
+    borderColor: '#8B0000',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   row: {
     flexDirection: 'column',
