@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Return aggregated behavior stats
       const rivalTruths = await kv.get<number>('stats:rival:truths') ?? 0;
       const rivalBluffs = await kv.get<number>('stats:rival:bluffs') ?? 0;
-      const rivalBluffSuccess = await kv.get<number>('stats:rival:bluffSuccess') ?? 0;
+      const rivalBluffSuccessStored = await kv.get<number>('stats:rival:bluffSuccess') ?? 0;
 
       const playerTotal = await kv.get<number>('stats:bluffCalls:player:total') ?? 0;
       const playerCorrect = await kv.get<number>('stats:bluffCalls:player:correct') ?? 0;
@@ -73,6 +73,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Calculate rates safely
       const totalRivalClaims = rivalTruths + rivalBluffs;
       const truthRate = totalRivalClaims > 0 ? rivalTruths / totalRivalClaims : 0;
+      const failedBluffsFromCalls = Math.min(playerCorrect, rivalBluffs);
+      const rivalBluffSuccess =
+        rivalBluffs > 0
+          ? Math.max(rivalBluffSuccessStored, rivalBluffs - failedBluffsFromCalls)
+          : rivalBluffSuccessStored;
       const bluffSuccessRate = rivalBluffs > 0 ? rivalBluffSuccess / rivalBluffs : 0;
       
       const playerAccuracy = playerTotal > 0 ? playerCorrect / playerTotal : 0;
