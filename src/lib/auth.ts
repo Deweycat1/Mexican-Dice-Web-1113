@@ -13,6 +13,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { getOrCreateUserDisplayName, setUserDisplayName } from '../identity/userDisplayName';
 
 const AUTH_SESSION_KEY = 'mexican-dice-auth-session';
 
@@ -211,27 +212,7 @@ export async function ensureUserProfile(): Promise<UserProfile> {
       if (isOldFormat) {
         console.log('🔄 Old username format detected, upgrading:', existingProfile.username);
         // Generate new Color-Animal username and update
-        const colors = [
-          'Red','Blue','Green','Gold','Silver','Purple','Orange','Pink','Teal','Crimson',
-          'Azure','Jade','Amber','Violet','Turquoise','Charcoal','Rose','Cerulean','Indigo',
-          'Cobalt','Lemon','Mint','Coral','Bronze','Ruby','Sapphire','Emerald','Magenta','Peach',
-          'Olive','Navy','Lavender','Sandstone','Apricot','Smoke','Copper','Honey','Rust',
-          'Frost','Ink','Sunset','Lagoon'
-        ];
-        
-        const animals = [
-          'Panda','Tiger','Eagle','Wolf','Fox','Bear','Hawk','Lion','Jaguar','Falcon','Cobra',
-          'Dragon','Phoenix','Panther','Raven','Shark','Lynx','Otter','Moose','Gator','Badger',
-          'Coyote','Sloth','Turtle','Raccoon','Bison','Viper','Squid','Wolverine','Hyena','Ram',
-          'Mustang','Kraken','Griffin','Stingray','Seal','Ocelot','Caribou','Meerkat','Pelican',
-          'Orca','Condor','Hippo','Chameleon','Mongoose','Hedgehog','Alpaca','Llama','Buffalo',
-          'Ferret','Beetle','Toad','Crow','Goose','Termite','Lobster','Shrimp','Pufferfish',
-          'Narwhal','Koala','Gazelle','Porcupine','Platypus','Warthog','Manta','Hammerhead'
-        ];
-        
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
-        const newUsername = `${randomColor}-${randomAnimal}`;
+        const newUsername = await getOrCreateUserDisplayName();
         
         console.log('✨ Upgrading to:', newUsername);
         
@@ -252,6 +233,7 @@ export async function ensureUserProfile(): Promise<UserProfile> {
         }
         
         console.log('✅ Username upgraded successfully');
+        await setUserDisplayName(newUsername);
         return {
           id: existingProfile.id,
           username: newUsername,
@@ -261,6 +243,7 @@ export async function ensureUserProfile(): Promise<UserProfile> {
       
       // Already has Color-Animal format or custom name
       console.log('✅ User profile found:', existingProfile.username);
+      await setUserDisplayName(existingProfile.username);
       return {
         id: existingProfile.id,
         username: existingProfile.username,
@@ -271,28 +254,7 @@ export async function ensureUserProfile(): Promise<UserProfile> {
     // Step 3: No profile exists - generate a friendly username
     console.log('📝 No profile found, creating new profile...');
     
-    // Generate Color-Animal username (e.g., "Red-Panda", "Blue-Hawk")
-    const colors = [
-      'Red','Blue','Green','Gold','Silver','Purple','Orange','Pink','Teal','Crimson',
-      'Azure','Jade','Amber','Violet','Turquoise','Charcoal','Rose','Cerulean','Indigo',
-      'Cobalt','Lemon','Mint','Coral','Bronze','Ruby','Sapphire','Emerald','Magenta','Peach',
-      'Olive','Navy','Lavender','Sandstone','Apricot','Smoke','Copper','Honey','Rust',
-      'Frost','Ink','Sunset','Lagoon'
-    ];
-    
-    const animals = [
-      'Panda','Tiger','Eagle','Wolf','Fox','Bear','Hawk','Lion','Jaguar','Falcon','Cobra',
-      'Dragon','Phoenix','Panther','Raven','Shark','Lynx','Otter','Moose','Gator','Badger',
-      'Coyote','Sloth','Turtle','Raccoon','Bison','Viper','Squid','Wolverine','Hyena','Ram',
-      'Mustang','Kraken','Griffin','Stingray','Seal','Ocelot','Caribou','Meerkat','Pelican',
-      'Orca','Condor','Hippo','Chameleon','Mongoose','Hedgehog','Alpaca','Llama','Buffalo',
-      'Ferret','Beetle','Toad','Crow','Goose','Termite','Lobster','Shrimp','Pufferfish',
-      'Narwhal','Koala','Gazelle','Porcupine','Platypus','Warthog','Manta','Hammerhead'
-    ];
-    
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
-    const generatedUsername = `${randomColor}-${randomAnimal}`;
+    const generatedUsername = await getOrCreateUserDisplayName();
     
     console.log('🎲 Generated username:', generatedUsername);
     
@@ -316,6 +278,7 @@ export async function ensureUserProfile(): Promise<UserProfile> {
     }
     
     console.log('✅ User profile created:', newProfile.username);
+    await setUserDisplayName(newProfile.username);
     
     return {
       id: newProfile.id,

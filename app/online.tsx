@@ -18,6 +18,7 @@ import StyledButton from '../src/components/StyledButton';
 import { splitClaim } from '../src/engine/mexican';
 import { ensureUserProfile, getCurrentUser } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';
+import { getOrCreateUserDisplayName } from '../src/identity/userDisplayName';
 
 const STARTING_SCORE = 5;
 const MAX_ACTIVE_GAMES = 5;
@@ -102,29 +103,33 @@ export default function OnlineLobbyScreen() {
   useEffect(() => {
     let isMounted = true;
     (async () => {
-    try {
-      await ensureUserProfile();
-      const user = await getCurrentUser();
-      if (isMounted) {
-        setUserId(user?.id ?? null);
-      }
-
-      if (user?.id) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('username')
-          .eq('id', user.id)
-          .single();
-        if (!error && isMounted) {
-          setMyUsername(data?.username ?? null);
+      try {
+        const storedName = await getOrCreateUserDisplayName();
+        if (isMounted) {
+          setMyUsername((prev) => prev ?? storedName);
         }
-      }
-    } catch (err) {
-      console.error('[OnlineLobby] Failed to load user', err);
-      Alert.alert('Unable to load account', 'Please try again.');
-    } finally {
-      if (isMounted) {
-        setLoadingUser(false);
+        await ensureUserProfile();
+        const user = await getCurrentUser();
+        if (isMounted) {
+          setUserId(user?.id ?? null);
+        }
+
+        if (user?.id) {
+          const { data, error } = await supabase
+            .from('users')
+            .select('username')
+            .eq('id', user.id)
+            .single();
+          if (!error && isMounted) {
+            setMyUsername(data?.username ?? null);
+          }
+        }
+      } catch (err) {
+        console.error('[OnlineLobby] Failed to load user', err);
+        Alert.alert('Unable to load account', 'Please try again.');
+      } finally {
+        if (isMounted) {
+          setLoadingUser(false);
         }
       }
     })();
