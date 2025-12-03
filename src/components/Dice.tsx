@@ -23,6 +23,7 @@ const VEGAS_RED = '#B80F15';
 const EDGE = '#70090C';
 const PIP = '#fcfafaff';
 const BASE_RED = '#C81D25';
+const THINKING_RIVAL = require('../../assets/images/thinkingrival.png');
 
 const pipsFor: Record<number, { x: number; y: number }[]> = {
   1: [{ x: 0.5, y: 0.5 }],
@@ -180,10 +181,10 @@ export default function Dice({
           <View pointerEvents="none" style={styles.overlay}>
             {thinkingOverlay === 'rival' ? (
               <Image
-                source={require('../../assets/images/Rival.png')}
+                source={THINKING_RIVAL}
                 style={{
-                  width: size * 0.65,
-                  height: size * 0.65,
+                  width: size * 0.975,
+                  height: size * 0.975,
                   resizeMode: 'contain',
                 }}
               />
