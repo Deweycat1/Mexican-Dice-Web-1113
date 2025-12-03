@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
     Easing,
     useAnimatedStyle,
@@ -16,6 +16,7 @@ type DiceProps = {
   rolling?: boolean;
   displayMode?: 'prompt' | 'question' | 'values';
   overlayText?: string;
+  thinkingOverlay?: 'rival' | 'thought';
 };
 
 const VEGAS_RED = '#B80F15';
@@ -63,6 +64,7 @@ export default function Dice({
   rolling,
   displayMode = 'values',
   overlayText,
+  thinkingOverlay,
 }: DiceProps) {
   const rotate = useSharedValue(0);
   const tilt = useSharedValue(0);
@@ -123,7 +125,7 @@ export default function Dice({
 
   const pipRadius = size * 0.07;
   const overlayLabel = displayMode === 'question' ? '?' : overlayText ?? '';
-  const showOverlay = displayMode !== 'values';
+  const showOverlay = thinkingOverlay != null || displayMode !== 'values';
   const faceGradientId = useMemo(
     () => `dice-face-${Math.random().toString(36).slice(2, 9)}`,
     []
@@ -173,18 +175,43 @@ export default function Dice({
           <Circle key={index} cx={x * size} cy={y * size} r={pipRadius} fill={PIP} />
         ))}
       </Svg>
-      {showOverlay && (
-        <Animated.View pointerEvents="none" style={[styles.overlay, pulseStyle]}>
-          <Text
-            style={[
-              styles.overlayText,
-              displayMode === 'question' ? styles.questionText : styles.promptText,
-            ]}
-          >
-            {overlayLabel}
-          </Text>
-        </Animated.View>
-      )}
+      {showOverlay &&
+        (thinkingOverlay ? (
+          <View pointerEvents="none" style={styles.overlay}>
+            {thinkingOverlay === 'rival' ? (
+              <Image
+                source={require('../../assets/images/Rival.png')}
+                style={{
+                  width: size * 0.65,
+                  height: size * 0.65,
+                  resizeMode: 'contain',
+                }}
+              />
+            ) : (
+              <Text
+                style={[
+                  styles.overlayThought,
+                  {
+                    fontSize: size * 0.6,
+                  },
+                ]}
+              >
+                💭
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Animated.View pointerEvents="none" style={[styles.overlay, pulseStyle]}>
+            <Text
+              style={[
+                styles.overlayText,
+                displayMode === 'question' ? styles.questionText : styles.promptText,
+              ]}
+            >
+              {overlayLabel}
+            </Text>
+          </Animated.View>
+        ))}
     </Animated.View>
   );
 }
@@ -211,5 +238,9 @@ const styles = StyleSheet.create({
   },
   promptText: {
     fontSize: 28,
+  },
+  overlayThought: {
+    textAlign: 'center',
+    lineHeight: undefined,
   },
 });

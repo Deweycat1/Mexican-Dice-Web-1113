@@ -20,7 +20,6 @@ import FeltBackground from '../src/components/FeltBackground';
 import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
-import ThinkingIndicator from '../src/components/ThinkingIndicator';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { useGameStore } from '../src/state/useGameStore';
@@ -1113,10 +1112,9 @@ export default function Survival() {
               <View style={styles.diceRow}>
             {showCpuThinking ? (
               <>
-                {/* NOTE: Rival thinking visuals kept in sync with app/game.tsx */}
-                <ThinkingIndicator size={100} position="left" />
+                <Dice value={null} size={100} thinkingOverlay="rival" />
                 <View style={{ width: 24 }} />
-                <ThinkingIndicator size={100} position="right" />
+                <Dice value={null} size={100} thinkingOverlay="thought" />
               </>
             ) : showSocialReveal ? (
               <AnimatedDiceReveal

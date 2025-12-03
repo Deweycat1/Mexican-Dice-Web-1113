@@ -23,7 +23,6 @@ import FeltBackground from '../../../src/components/FeltBackground';
 import RulesContent from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
-import ThinkingIndicator from '../../../src/components/ThinkingIndicator';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import {
   claimMatchesRoll,
@@ -1069,41 +1068,41 @@ export default function OnlineGameV2Screen() {
 
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
-                {showSocialReveal ? (
-                  <AnimatedDiceReveal
-                    hidden={socialRevealHidden}
-                    diceValues={socialDiceValues}
-                    onRevealComplete={handleSocialRevealComplete}
-                  />
-                ) : isRevealingBluff && revealDiceValues ? (
-                  <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={100} />
-                ) : isMyTurn ? (
-                  <>
-                    <Dice
-                      value={dieHi}
-                      rolling={isMyTurn && rolling && myRoll == null}
-                      displayMode={diceDisplayMode}
-                      overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
-                      size={100}
-                    />
-                    <View style={{ width: 24 }} />
-                    <Dice
-                      value={dieLo}
-                      rolling={isMyTurn && rolling && myRoll == null}
-                      displayMode={diceDisplayMode}
-                      overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
-                      size={100}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <ThinkingIndicator size={100} position="left" />
-                    <View style={{ width: 24 }} />
-                    <ThinkingIndicator size={100} position="right" />
-                  </>
-                )}
-              </View>
-            </View>
+            {showSocialReveal ? (
+              <AnimatedDiceReveal
+                hidden={socialRevealHidden}
+                diceValues={socialDiceValues}
+                onRevealComplete={handleSocialRevealComplete}
+              />
+            ) : isRevealingBluff && revealDiceValues ? (
+              <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={100} />
+            ) : isMyTurn ? (
+              <>
+                <Dice
+                  value={dieHi}
+                  rolling={isMyTurn && rolling && myRoll == null}
+                  displayMode={diceDisplayMode}
+                  overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                  size={100}
+                />
+                <View style={{ width: 24 }} />
+                <Dice
+                  value={dieLo}
+                  rolling={isMyTurn && rolling && myRoll == null}
+                  displayMode={diceDisplayMode}
+                  overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                  size={100}
+                />
+              </>
+            ) : (
+              <>
+                <Dice value={null} size={100} thinkingOverlay="rival" />
+                <View style={{ width: 24 }} />
+                <Dice value={null} size={100} thinkingOverlay="thought" />
+              </>
+            )}
+          </View>
+        </View>
 
             <View style={styles.controls}>
               <View style={styles.actionRow}>

@@ -22,7 +22,6 @@ import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import StyledButton from '../src/components/StyledButton';
-import ThinkingIndicator from '../src/components/ThinkingIndicator';
 import RulesContent from '../src/components/RulesContent';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
@@ -845,9 +844,9 @@ export default function Game() {
               <View style={styles.diceRow}>
             {showCpuThinking ? (
               <>
-                <ThinkingIndicator size={100} position="left" />
+                <Dice value={null} size={100} thinkingOverlay="rival" />
                 <View style={{ width: 24 }} />
-                <ThinkingIndicator size={100} position="right" />
+                <Dice value={null} size={100} thinkingOverlay="thought" />
               </>
             ) : showSocialReveal ? (
               <AnimatedDiceReveal
