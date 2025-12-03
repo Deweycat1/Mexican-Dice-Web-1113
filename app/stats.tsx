@@ -388,18 +388,6 @@ export default function StatsScreen() {
         <Text style={styles.subtitle}>Little mysteries hiding in your dice rolls</Text>
 
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          {survivalAverage && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>🏔️ Average Survival Mode Streak</Text>
-              <Text style={styles.bigNumber}>
-                {survivalAverage.averageSurvivalStreak.toFixed(2)}
-              </Text>
-              <Text style={styles.tendencyDescription}>
-                Based on {survivalAverage.sampleSize.toLocaleString()} completed runs
-              </Text>
-            </View>
-          )}
-
           {randomStats === null ? (
             <View style={styles.card}>
               <Text style={styles.noDataText}>

@@ -24,7 +24,8 @@ interface QuickPlayBestData {
 }
 
 interface SurvivalAverageData {
-  average: number;
+  averageSurvivalStreak: number;
+  sampleSize: number;
 }
 
 interface WinStatsData {
@@ -75,6 +76,7 @@ export default function SecretStatsScreen() {
   const [survivalOver10, setSurvivalOver10] = useState<{ totalSurvivalUsers: number; survivalOver10Users: number; survivalOver10Rate: number } | null>(null);
   const [quickPlayBest, setQuickPlayBest] = useState<QuickPlayBestData | null>(null);
   const [averageStreak, setAverageStreak] = useState<number | null>(null);
+  const [survivalAverage, setSurvivalAverage] = useState<SurvivalAverageData | null>(null);
   const [playerWins, setPlayerWins] = useState<number>(0);
   const [cpuWins, setCpuWins] = useState<number>(0);
   
@@ -110,6 +112,7 @@ export default function SecretStatsScreen() {
           behaviorRes,
           metaRes,
           survivalOver10Res,
+          survivalAverageRes,
         ] = await Promise.all([
           fetch(`${baseUrl}/api/survival-best`, {
             method: 'GET',
@@ -135,6 +138,10 @@ export default function SecretStatsScreen() {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
           }),
+          fetch(`${baseUrl}/api/survival-average-streak`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          }),
         ]);
 
         if (!survivalBestRes.ok) throw new Error('Failed to fetch survival best');
@@ -143,8 +150,15 @@ export default function SecretStatsScreen() {
 
         const survivalBestData: SurvivalBestData = await survivalBestRes.json();
         const quickPlayBestData: QuickPlayBestData = await quickPlayBestRes.json();
-        // `survival-average` endpoint was removed; average is not fetched here
         const winsData: WinStatsData = await winsRes.json();
+        if (survivalAverageRes.ok) {
+          try {
+            const survivalAverageData: SurvivalAverageData = await survivalAverageRes.json();
+            setSurvivalAverage(survivalAverageData);
+          } catch {
+            console.log('Survival average stats not available yet');
+          }
+        }
         
         // Parse behavior and meta stats (with error handling)
         try {
@@ -428,6 +442,16 @@ export default function SecretStatsScreen() {
           </View>
         </View>
 
+        {survivalAverage && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🏔️ Average Survival Mode Streak</Text>
+            <Text style={styles.bigNumber}>{survivalAverage.averageSurvivalStreak.toFixed(2)}</Text>
+            <Text style={styles.cardSubtext}>
+              Based on {survivalAverage.sampleSize.toLocaleString()} completed runs
+            </Text>
+          </View>
+        )}
+
         {/* Bluff Call Accuracy */}
         {behaviorStats?.bluffCalls && (
           <View style={styles.card}>
@@ -654,6 +678,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0FA958',
     textAlign: 'center',
+  },
+  cardSubtext: {
+    marginTop: 6,
+    textAlign: 'center',
+    color: '#C9F0D6',
+    fontSize: 14,
   },
   statsTable: {
     marginTop: 8,
