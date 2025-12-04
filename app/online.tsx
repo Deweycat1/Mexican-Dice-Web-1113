@@ -16,7 +16,6 @@ import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
 import StyledButton from '../src/components/StyledButton';
 import { splitClaim } from '../src/engine/mexican';
-import { getOrCreateUserDisplayName } from '../src/identity/userDisplayName';
 import { ensureUserProfile, getCurrentUser } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';
 
@@ -103,33 +102,29 @@ export default function OnlineLobbyScreen() {
   useEffect(() => {
     let isMounted = true;
     (async () => {
-      try {
-        const storedName = await getOrCreateUserDisplayName();
-        if (isMounted) {
-          setMyUsername((prev) => prev ?? storedName);
-        }
-        await ensureUserProfile();
-        const user = await getCurrentUser();
-        if (isMounted) {
-          setUserId(user?.id ?? null);
-        }
+    try {
+      await ensureUserProfile();
+      const user = await getCurrentUser();
+      if (isMounted) {
+        setUserId(user?.id ?? null);
+      }
 
-        if (user?.id) {
-          const { data, error } = await supabase
-            .from('users')
-            .select('username')
-            .eq('id', user.id)
-            .single();
-          if (!error && isMounted) {
-            setMyUsername(data?.username ?? null);
-          }
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        if (!error && isMounted) {
+          setMyUsername(data?.username ?? null);
         }
-      } catch (err) {
-        console.error('[OnlineLobby] Failed to load user', err);
-        Alert.alert('Unable to load account', 'Please try again.');
-      } finally {
-        if (isMounted) {
-          setLoadingUser(false);
+      }
+    } catch (err) {
+      console.error('[OnlineLobby] Failed to load user', err);
+      Alert.alert('Unable to load account', 'Please try again.');
+    } finally {
+      if (isMounted) {
+        setLoadingUser(false);
         }
       }
     })();
