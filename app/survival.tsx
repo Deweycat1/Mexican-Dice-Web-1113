@@ -13,6 +13,7 @@ import {
     View,
 } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
@@ -72,7 +73,6 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, is
   const recordTarget = Math.max(safeGlobalBest, 1);
   const targetToBeat = Math.max(safeGlobalBest + 1, 1);
   const clampedProgress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
-  const progressRatio = Math.max(0, Math.min(currentStreak / recordTarget, 1));
   const hasBrokenRecord = currentStreak > safeGlobalBest && currentStreak > 0 && !isSurvivalOver;
   const rainbowAnim = useRef(new Animated.Value(0)).current;
   const rainbowLoopRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -115,30 +115,8 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, is
     };
   }, [hasBrokenRecord, rainbowAnim]);
 
-  const lerpHex = (a: string, b: string, t: number) => {
-    const ar = hexToRgb(a);
-    const br = hexToRgb(b);
-    const res = [
-      Math.round(lerp(ar[0], br[0], t)),
-      Math.round(lerp(ar[1], br[1], t)),
-      Math.round(lerp(ar[2], br[2], t)),
-    ];
-    return rgbToHex(res[0], res[1], res[2]);
-  };
-
   if (shouldHide) {
     return null;
-  }
-
-  let baseColor = COLOR_GREEN;
-  if (hasRecord) {
-    if (progressRatio <= 0.5) {
-      const t = progressRatio / 0.5;
-      baseColor = lerpHex(COLOR_GREEN, COLOR_GOLD, t);
-    } else {
-      const t = (progressRatio - 0.5) / 0.5;
-      baseColor = lerpHex(COLOR_GOLD, COLOR_RED, t);
-    }
   }
 
   const rainbowColor = rainbowAnim.interpolate({
@@ -146,20 +124,31 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, is
     outputRange: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF', '#FF0000'],
   });
 
-  const fillColorStyle = hasBrokenRecord
-    ? { backgroundColor: rainbowColor }
-    : { backgroundColor: baseColor };
-
   return (
     <View style={styles.streakMeterContainer} pointerEvents="none">
       <View style={styles.streakMeterOuter}>
-        <Animated.View
-          style={[
-            styles.streakMeterFill,
-            fillColorStyle,
-            { width: `${clampedProgress * 100}%` },
-          ]}
-        />
+        {hasBrokenRecord ? (
+          <Animated.View
+            style={[
+              styles.streakMeterFill,
+              { width: `${clampedProgress * 100}%`, backgroundColor: rainbowColor },
+            ]}
+          />
+        ) : (
+          <Animated.View
+            style={[
+              styles.streakMeterFill,
+              { width: `${clampedProgress * 100}%` },
+            ]}
+          >
+            <LinearGradient
+              colors={[COLOR_GREEN, COLOR_GOLD, COLOR_RED]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.streakGradient}
+            />
+          </Animated.View>
+        )}
       </View>
       <View style={styles.streakMeterLabels}>
         <Text style={styles.streakMeterLabelText}>Streak: {currentStreak}</Text>
@@ -1499,6 +1488,13 @@ const styles = StyleSheet.create({
   streakMeterLabelText: {
     color: '#C9F0D6',
     fontSize: 11,
+  },
+  streakGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   controls: {
     backgroundColor: BAR_BG,
