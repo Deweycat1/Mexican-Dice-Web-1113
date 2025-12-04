@@ -1154,7 +1154,7 @@ const styles = StyleSheet.create({
   },
   claimHeaderContainer: {
     alignItems: 'center',
-    paddingTop: 10,
+    paddingTop: 30,
     marginBottom: 8,
   },
   claimHeaderLine: {
