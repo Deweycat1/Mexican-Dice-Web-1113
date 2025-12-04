@@ -285,6 +285,9 @@ export class LearningAIDiceOpponent {
       noPreviousClaim ||
       this.compareClaimsFn!(truthClaim, currentClaim!) > 0 ||
       truthReverses;
+    const truthBeatsOrEquals =
+      currentClaim != null && this.compareClaimsFn!(truthClaim, currentClaim) >= 0;
+    const isHighClaim = currentClaim != null && currentClaim >= 62;
     const truthIsOpeningDouble = noPreviousClaim && isDouble(truthClaim);
 
     if (truthLegal && (forcesTruth || truthBeats || truthIsOpeningDouble)) {
@@ -438,6 +441,16 @@ export class LearningAIDiceOpponent {
         this.lastContext = { opponentId, action: 'CALL', context: callContext };
         return { type: 'call_bluff' };
       }
+    }
+
+    const shouldAvoidJuicedBluffOnHighClaim =
+      isHighClaim && truthBeatsOrEquals && truthful == null;
+
+    if (shouldAvoidJuicedBluffOnHighClaim) {
+      // For high claims we already match or beat, avoid tiny, ultra-risky juice-bluffs.
+      // Default to calling instead of raising with a bluff.
+      this.lastContext = { opponentId, action: 'CALL', context: callContext };
+      return { type: 'call_bluff' };
     }
 
     // When bluffing, go bold - pick a pressure claim that jumps higher
