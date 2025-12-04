@@ -28,17 +28,25 @@ import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING } from '../src/theme/dice';
 
-function formatClaim(value: number | null | undefined): string {
+function formatClaimDetailed(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  const hi = Math.floor(value / 10);
-  const lo = value % 10;
+  if (value === 21) return '21 (Mexican)';
+  if (value === 31) return '31 (Reverse)';
+  if (value === 41) return '41 (Social)';
+  const [hi, lo] = splitClaim(value);
   return `${hi}${lo}`;
 }
-function formatRoll(value: number | null | undefined): string {
+function formatClaimSimple(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
   const [hi, lo] = splitClaim(value);
   return `${hi}${lo}`;
 }
+function formatRollDetailed(value: number | null | undefined): string {
+  if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
+  const [hi, lo] = splitClaim(value);
+  return `${hi}${lo}`;
+}
+const formatRollSimple = formatRollDetailed;
 function facesFromRoll(value: number | null | undefined): readonly [number | null, number | null] {
   if (typeof value !== 'number' || Number.isNaN(value)) return [null, null] as const;
   const [hi, lo] = splitClaim(value);
@@ -737,7 +745,7 @@ export default function Survival() {
 
   // Helper component to render claim with inline logo for Mexican
   const renderClaim = (value: number | null | undefined) => {
-    const text = formatClaim(value);
+    const text = formatClaimDetailed(value);
     if (value === 21) {
       return (
         <>
@@ -751,10 +759,11 @@ export default function Survival() {
   const claimText = useMemo(() => {
     const hasClaim = lastClaimValue != null || lastPlayerRoll != null;
     if (!hasClaim) return null;
-    const rollPart = formatRoll(lastPlayerRoll);
+    const rollPart = formatRollSimple(lastPlayerRoll);
+    const claimPart = formatClaimSimple(lastClaimValue);
     return (
       <>
-        Current claim: {renderClaim(lastClaimValue)} Your roll: {rollPart}
+        Current claim: {claimPart} Your roll: {rollPart}
       </>
     );
   }, [lastClaimValue, lastPlayerRoll]);
