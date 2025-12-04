@@ -40,7 +40,6 @@ export default function HomeScreen() {
         <View style={styles.container}>
           <View style={styles.menuSection}>
             <Image source={MexicanDiceLogo} style={styles.logo} />
-            <Text style={styles.subtitle}>Ready to roll?</Text>
 
             <Link href="/game" style={styles.buttonRules}>
               <Text style={styles.buttonText}>Quick Play</Text>
@@ -68,18 +67,18 @@ export default function HomeScreen() {
                 value={hapticsEnabled}
                 onValueChange={handleToggleHaptics}
                 disabled={!hasHydrated}
-                thumbColor={hapticsEnabled ? '#0FA958' : '#666'}
-                trackColor={{ false: '#555', true: '#1FAD6F' }}
+                thumbColor={hapticsEnabled ? '#ffffff' : '#FFCDD2'}
+                trackColor={{ false: '#B00020', true: '#13C36B' }}
               />
             </View>
-            <View style={[styles.prefRow, styles.prefRowLast]}> 
+            <View style={styles.prefRow}> 
               <Text style={styles.prefLabel}>Sound</Text>
               <Switch
                 value={soundEnabled}
                 onValueChange={handleToggleSound}
                 disabled={!hasHydrated}
-                thumbColor={soundEnabled ? '#0FA958' : '#666'}
-                trackColor={{ false: '#555', true: '#1FAD6F' }}
+                thumbColor={soundEnabled ? '#ffffff' : '#FFCDD2'}
+                trackColor={{ false: '#B00020', true: '#13C36B' }}
               />
             </View>
           </View>
@@ -101,7 +100,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0B3A26',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingHorizontal: 24,
     paddingVertical: 32,
   },
@@ -110,27 +109,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   logo: {
-    width: 180,
-    height: 180,
+    width: 160,
+    height: 160,
     resizeMode: 'contain',
-    marginBottom: 24,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 8,
   },
-  subtitle: { 
-    fontSize: 15, 
-    color: '#E6FFE6', 
-    marginBottom: 20 
-  },
   button: { 
     backgroundColor: '#C21807',
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    marginVertical: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    marginVertical: 4,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -143,9 +137,9 @@ const styles = StyleSheet.create({
   buttonStats: { 
     backgroundColor: '#D4AF37',
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    marginVertical: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    marginVertical: 4,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -158,9 +152,9 @@ const styles = StyleSheet.create({
   buttonRules: { 
     backgroundColor: '#0FA958',
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    marginVertical: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    marginVertical: 4,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -172,14 +166,14 @@ const styles = StyleSheet.create({
   },
   buttonText: { 
     color: '#fff', 
-    fontSize: 18, 
+    fontSize: 16, 
     fontWeight: '700',
     textAlign: 'center',
   },
   simplePrefs: {
     width: '100%',
-    marginTop: 40,
-    marginBottom: 24,
+    marginTop: 24,
+    paddingBottom: 24,
     alignItems: 'center',
   },
   prefRow: {
@@ -188,12 +182,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: 260,
     maxWidth: '90%',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
-  },
-  prefRowLast: {
-    borderBottomWidth: 0,
+    paddingVertical: 6,
+    marginVertical: 4,
   },
   prefLabel: {
     color: '#fff',
