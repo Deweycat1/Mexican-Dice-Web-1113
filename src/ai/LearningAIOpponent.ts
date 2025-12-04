@@ -278,9 +278,9 @@ export class LearningAIDiceOpponent {
     const noPreviousClaim = currentClaim == null;
     const truthLegal = noPreviousClaim ? true : isLegalRaise(currentClaim, truthClaim);
     const truthReverses = !noPreviousClaim && isReverseOf(currentClaim, truthClaim);
-    const forcesTruth =
-      truthClaim === 21 ||
-      (!noPreviousClaim && truthClaim === 31);
+    // 21 (Mexican) must remain perfectly truthful so players can trust that showdown.
+    // 31 (Reverse) is no longer forced here; it can now appear as a bluff in select cases.
+    const forcesTruth = truthClaim === 21;
     const truthBeats =
       noPreviousClaim ||
       this.compareClaimsFn!(truthClaim, currentClaim!) > 0 ||
@@ -307,6 +307,7 @@ export class LearningAIDiceOpponent {
 
     const profile = this.getProfile(opponentId);
     const category = this.categorizeClaimFn!(currentClaim);
+    const allowReverseBluff = this.shouldConsiderReverseBluff(currentClaim, truthClaim);
     
     // Track Mexican claim frequency
     if (category === 'mexican') {
@@ -441,7 +442,7 @@ export class LearningAIDiceOpponent {
     // When bluffing, go bold - pick a pressure claim that jumps higher
     const claim = truthful != null && Math.random() < 0.40 + this.truthBias
       ? truthful
-      : this.pickPressureClaim(currentClaim, true);
+      : this.pickBluffClaim(currentClaim!, allowReverseBluff, pCallMean);
 
     this.lastContext = { opponentId, action: 'RAISE', context: raiseContext };
     return { type: 'raise', claim };
@@ -589,6 +590,21 @@ export class LearningAIDiceOpponent {
     return claim ?? currentClaim;
   }
 
+  private pickBluffClaim(currentClaim: number, allowReverse: boolean, callMean: number) {
+    if (allowReverse) {
+      // Bluffing a reverse is most tempting when the opponent made a high claim and
+      // when we believe they rarely call. Let the chance scale with both factors.
+      const pressure = Math.max(0, currentClaim - 60) / 40; // grows as claims surpass 60
+      const baseChance = 0.15 + pressure * 0.25;
+      const confidenceBonus = (1 - callMean) * 0.2;
+      const reverseChance = Math.min(0.55, baseChance + confidenceBonus);
+      if (Math.random() < reverseChance) {
+        return 31;
+      }
+    }
+    return this.pickPressureClaim(currentClaim, true);
+  }
+
   private pressureJumpAbove(baseline: number) {
     let claim: number | null = baseline;
     const steps = Math.random() < 0.66 ? 1 : 2;
@@ -605,6 +621,12 @@ export class LearningAIDiceOpponent {
 
   private isWeakTruth(claim: number) {
     return this.categorizeClaimFn!(claim) === 'normal';
+  }
+
+  private shouldConsiderReverseBluff(currentClaim: number | null, truthClaim: number) {
+    if (currentClaim == null) return false;
+    if (truthClaim === 21 || truthClaim === 31) return false;
+    return currentClaim >= 60;
   }
 
   private categoryOneHot(category: ClaimCategory) {

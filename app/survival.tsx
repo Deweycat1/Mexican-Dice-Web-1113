@@ -64,8 +64,10 @@ type StreakMeterProps = {
   isSurvivalOver: boolean;
 };
 
+const COLOR_LIGHT_GREEN = '#8EF6A0';
 const COLOR_GREEN = '#2ECC71';
 const COLOR_GOLD = '#E0B50C';
+const COLOR_DARK_GOLD = '#B8860B';
 const COLOR_RED = '#C21807';
 
 const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, isSurvivalOver }) => {
@@ -124,6 +126,18 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, is
     outputRange: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF', '#FF0000'],
   });
 
+  const progress = clampedProgress;
+  let gradientColors: string[];
+  if (progress <= 0.2) {
+    gradientColors = [COLOR_LIGHT_GREEN, COLOR_GREEN];
+  } else if (progress <= 0.4) {
+    gradientColors = [COLOR_LIGHT_GREEN, COLOR_GREEN, COLOR_GOLD];
+  } else if (progress <= 0.7) {
+    gradientColors = [COLOR_LIGHT_GREEN, COLOR_GREEN, COLOR_GOLD, COLOR_DARK_GOLD];
+  } else {
+    gradientColors = [COLOR_LIGHT_GREEN, COLOR_GREEN, COLOR_GOLD, COLOR_DARK_GOLD, COLOR_RED];
+  }
+
   return (
     <View style={styles.streakMeterContainer} pointerEvents="none">
       <View style={styles.streakMeterOuter}>
@@ -142,7 +156,7 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, is
             ]}
           >
             <LinearGradient
-              colors={[COLOR_GREEN, COLOR_GOLD, COLOR_RED]}
+              colors={gradientColors}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.streakGradient}
