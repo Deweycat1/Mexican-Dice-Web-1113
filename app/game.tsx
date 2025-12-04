@@ -59,40 +59,30 @@ function facesFromRoll(value: number | null | undefined): readonly [number | nul
 
 // Devil/demon themed Rival opening lines
 const rivalOpeningLines = [
-  // Sinister but playful
-  "Welcome to my little hell. You won't like the heat.",
-  "You rolled into the wrong circle today.",
-  "I hope your soul is fireproof.",
-  "Careful. I play with souls the way you play with dice.",
-  "Try not to scream. It distracts me.",
-
-  // Cocky / mocking
-  "Ready to burn through those points?",
-  "Good. I needed a warm up snack.",
-  "I can smell fear. Delicious.",
-  "You brought bravery. Cute. Useless, but cute.",
-  "I love when mortals think they can win.",
-
-  // Dark humor
-  "Relax. Only your pride is at risk. Probably.",
-  "Don't worry. Pain builds character.",
-  "Let's make this quick. I have tormenting to do.",
-  "Losing to me counts as a minor sin.",
-  "If you hear whispering, that is just your doom.",
-
-  // Taunting / tempting
-  "I'll trade you a win for your dignity. Deal?",
-  "Go ahead. Make your first mistake.",
-  "If you win, I'll be shocked. Truly.",
-  "You step into my fire, you get burned.",
-  "Play well. I hate a boring sacrifice.",
-
-  // Mischievous / smart-ass
-  "I sharpened my dice just for you.",
-  "Try not to melt. I like a challenge.",
-  "One roll in and your fate is sealed.",
-  "Feeling brave? Or just flammable?",
-  "Let's see how fast you fall.",
+  "A new challenger! I love fresh chaos.",
+  "Welcome, traveler. Care to dance with chance?",
+  "Step into my playground of tricks.",
+  "Oh good, someone to out-roll.",
+  "I’ve been cooking up mischief just for you.",
+  "My goblins bet against you. Prove them wrong.",
+  "Careful — my dice have personality.",
+  "A brave soul! Or a confused one. Either works.",
+  "Hope you stretched. My imps roll fast.",
+  "Let’s spark some friendly mayhem.",
+  "Don't mind the giggling gremlin. He likes newbies.",
+  "You brought confidence? Adorable.",
+  "Come closer… I don’t bite. My dice might.",
+  "Ah! A worthy opponent… maybe.",
+  "Try to keep up. My tricks multiply quickly.",
+  "The shadows are watching. They’re rooting for me.",
+  "Ooo, you've got potential. Tiny potential, but still.",
+  "Did you hear that? My dice are whispering your fate.",
+  "Let’s tango with probability.",
+  "Warm up your fingers — this is a fast game.",
+  "If luck were a beast, I’d have it on a leash.",
+  "Roll boldly! The gremlins like confidence.",
+  "I hope you enjoy surprises.",
+  "Ready to play? My minions certainly are.",
 ];
 
 const pickRandomRivalLine = () => {
@@ -1154,7 +1144,7 @@ const styles = StyleSheet.create({
   },
   claimHeaderContainer: {
     alignItems: 'center',
-    paddingTop: 30,
+    paddingTop: 40,
     marginBottom: 8,
   },
   claimHeaderLine: {
