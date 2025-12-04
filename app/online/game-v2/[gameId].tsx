@@ -8,12 +8,13 @@ import {
   Image,
   Modal,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
@@ -232,6 +233,9 @@ async function requestRematchForGame(game: OnlineGameV2, myPlayerId: string): Pr
 export default function OnlineGameV2Screen() {
   const params = useLocalSearchParams<{ gameId?: string | string[] }>();
   const router = useRouter();
+  const { height } = useWindowDimensions();
+  const isSmallScreen = height < 700;
+  const isTallScreen = height > 820;
   const normalizedGameId = useMemo(() => {
     const raw = params.gameId;
     if (Array.isArray(raw)) return raw[0];
@@ -980,14 +984,50 @@ export default function OnlineGameV2Screen() {
   const canClaim = isMyTurn && myRoll != null;
   const canShowSocial = canClaim && myRoll === 41;
   const canCallBluff = isMyTurn && lastClaim != null && roundState.lastClaimer && roundState.lastClaimer !== myRole;
+  const layoutTweaks = useMemo(
+    () => ({
+      contentPadding: {
+        paddingHorizontal: isSmallScreen ? 12 : 18,
+        paddingBottom: isSmallScreen ? 12 : 10,
+        paddingTop: isSmallScreen ? 6 : 12,
+      },
+      headerPadding: {
+        padding: isSmallScreen ? 12 : 14,
+      },
+      headerRowSpacing: {
+        marginBottom: isSmallScreen ? 8 : 12,
+      },
+      claimText: {
+        fontSize: isSmallScreen ? 16 : 18,
+      },
+      statusText: {
+        fontSize: isSmallScreen ? 14 : 16,
+        marginTop: isSmallScreen ? 8 : 12,
+      },
+      historyBox: {
+        marginTop: isSmallScreen ? 8 : 12,
+      },
+      diceArea: {
+        minHeight: isTallScreen ? DIE_SIZE * 3 : isSmallScreen ? DIE_SIZE * 2.2 : DIE_SIZE * 2.6,
+        marginTop: isSmallScreen ? -DIE_SIZE : -DIE_SIZE * 1.34,
+        marginBottom: isTallScreen ? DIE_SIZE * 0.3 : DIE_SIZE * 0.2,
+        paddingVertical: isTallScreen ? 12 : 0,
+      },
+      controlsSpacing: {
+        marginTop: isSmallScreen ? -DIE_SIZE : isTallScreen ? -DIE_SIZE * 1.3 : -DIE_SIZE * 1.5,
+        paddingVertical: isSmallScreen ? 10 : 14,
+      },
+    }),
+    [isSmallScreen, isTallScreen]
+  );
 
   return (
     <View style={styles.root}>
       <FeltBackground>
         <SafeAreaView style={styles.safe}>
-          <View style={styles.content}>
-            <View style={styles.headerCard}>
-              <View style={styles.headerRow}>
+          <View style={[styles.content, layoutTweaks.contentPadding]}>
+            <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
+              <View style={[styles.headerRow, layoutTweaks.headerRowSpacing]}>
                 <View style={styles.playerColumn}>
                   <View style={styles.avatarCircle}>
                     <Image
@@ -1002,7 +1042,13 @@ export default function OnlineGameV2Screen() {
                 </View>
 
                 <View style={styles.titleColumn}>
-                  <Text style={styles.claimText}>{claimSummary}</Text>
+                  <Text
+                    style={[styles.claimText, layoutTweaks.claimText]}
+                    numberOfLines={3}
+                    ellipsizeMode="tail"
+                  >
+                    {claimSummary}
+                  </Text>
                 </View>
 
                 <View style={styles.playerColumn}>
@@ -1021,7 +1067,7 @@ export default function OnlineGameV2Screen() {
                 </View>
               </View>
 
-              <Text style={styles.status} numberOfLines={2}>
+              <Text style={[styles.status, layoutTweaks.statusText]} numberOfLines={2} ellipsizeMode="tail">
                 {myTurnText}
               </Text>
             </View>
@@ -1056,7 +1102,11 @@ export default function OnlineGameV2Screen() {
             <Pressable
               onPress={() => setHistoryModalOpen(true)}
               hitSlop={10}
-              style={({ pressed }) => [styles.historyBox, { opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [
+                styles.historyBox,
+                layoutTweaks.historyBox,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
             >
               <Animated.View style={{ opacity: fadeAnim }}>
                 {collapsedHistory.length > 0 ? (
@@ -1071,7 +1121,7 @@ export default function OnlineGameV2Screen() {
               </Animated.View>
             </Pressable>
 
-            <View style={styles.diceArea}>
+            <View style={[styles.diceArea, layoutTweaks.diceArea]}>
               <View style={styles.diceRow}>
                 {showSocialReveal ? (
                   <AnimatedDiceReveal
@@ -1109,7 +1159,7 @@ export default function OnlineGameV2Screen() {
               </View>
             </View>
 
-            <View style={styles.controls}>
+            <View style={[styles.controls, layoutTweaks.controlsSpacing]}>
               <View style={styles.actionRow}>
                 <StyledButton
                   label={canRoll ? 'Roll' : 'Claim'}

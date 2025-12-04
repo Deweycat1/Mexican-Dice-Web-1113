@@ -6,14 +6,15 @@ import {
     Image,
     Modal,
     Pressable,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     View,
     Alert,
     Platform,
+    useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import BluffModal from '../src/components/BluffModal';
 import DialogBanner from '../src/components/DialogBanner';
@@ -114,6 +115,9 @@ const pickRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)
 
 export default function Game() {
   const router = useRouter();
+  const { height } = useWindowDimensions();
+  const isSmallScreen = height < 700;
+  const isTallScreen = height > 820;
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -231,6 +235,35 @@ export default function Game() {
     hasRolled &&
     rolledValue !== null &&
     (lastClaimValue == null || meetsOrBeats(rolledValue, lastClaimValue) || isAlwaysClaimable(rolledValue));
+  const layoutTweaks = useMemo(
+    () => ({
+      contentPadding: {
+        paddingHorizontal: isSmallScreen ? 12 : 18,
+        paddingBottom: isSmallScreen ? 12 : 20,
+        paddingTop: isSmallScreen ? 6 : 12,
+      },
+      headerPadding: {
+        padding: isSmallScreen ? 12 : 14,
+      },
+      headerRowSpacing: {
+        marginBottom: isSmallScreen ? 8 : 12,
+      },
+      narrationHeight: {
+        minHeight: isSmallScreen ? 48 : 60,
+      },
+      diceArea: {
+        minHeight: isTallScreen ? DIE_SIZE * 3 : isSmallScreen ? DIE_SIZE * 2.2 : DIE_SIZE * 2.6,
+        marginTop: isSmallScreen ? -DIE_SIZE * 0.9 : -DIE_SIZE * 1.34,
+        marginBottom: isTallScreen ? DIE_SIZE * 0.1 : 0,
+        paddingVertical: isTallScreen ? 12 : 0,
+      },
+      controlsSpacing: {
+        marginTop: isSmallScreen ? -DIE_SIZE * 1.1 : isTallScreen ? -DIE_SIZE * 1.3 : -DIE_SIZE * 1.5,
+        paddingVertical: isSmallScreen ? 10 : 14,
+      },
+    }),
+    [isSmallScreen, isTallScreen]
+  );
 
   const isRivalClaimPhase = useMemo(() => {
     if (isGameOver) return false;
@@ -724,9 +757,9 @@ export default function Game() {
               </View>
             </Animated.View>
           )}
-          <View style={styles.content}>
+          <View style={[styles.content, layoutTweaks.contentPadding]}>
             {/* HEADER */}
-            <View style={styles.headerCard}>
+            <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
               {/* DIALOG BANNER - positioned absolutely within header */}
               {dialogVisible && dialogSpeaker && dialogLine && (
                 <Animated.View
@@ -743,7 +776,7 @@ export default function Game() {
               )}
 
               {/* Top row: Player avatar, title, Rival avatar */}
-              <View style={styles.headerRow}>
+              <View style={[styles.headerRow, layoutTweaks.headerRowSpacing]}>
                 {/* Player Column */}
                 <View style={styles.playerColumn}>
                   <View style={styles.avatarCircle}>
@@ -771,8 +804,18 @@ export default function Game() {
                 </View>
 
                 {/* Title Column - Now shows current claim */}
-                <View style={styles.titleColumn}>
-                  <Text style={styles.subtle} numberOfLines={3} ellipsizeMode="tail">
+                <View
+                  style={[
+                    styles.titleColumn,
+                    isSmallScreen && styles.titleColumnCompact,
+                    isTallScreen && styles.titleColumnTall,
+                  ]}
+                >
+                  <Text
+                    style={[styles.subtle, isSmallScreen && styles.subtleSmall]}
+                    numberOfLines={3}
+                    ellipsizeMode="tail"
+                  >
                     {claimText}
                   </Text>
                 </View>
@@ -805,9 +848,9 @@ export default function Game() {
               </View>
 
               {/* Status text below */}
-              <View style={styles.narrationContainer}>
+              <View style={[styles.narrationContainer, layoutTweaks.narrationHeight]}>
                 <Text
-                  style={styles.status}
+                  style={[styles.status, isSmallScreen && styles.statusSmall]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
                 >
@@ -843,7 +886,7 @@ export default function Game() {
             </Pressable>
 
             {/* DICE BLOCK */}
-            <View testID="dice-area" style={styles.diceArea}>
+            <View testID="dice-area" style={[styles.diceArea, layoutTweaks.diceArea]}>
               <View style={styles.diceRow}>
                 {showCpuThinking ? (
                   <>
@@ -884,7 +927,7 @@ export default function Game() {
             </View>
 
             {/* ACTION BAR */}
-            <View style={styles.controls}>
+            <View style={[styles.controls, layoutTweaks.controlsSpacing]}>
               <View style={styles.actionRow}>
                 <StyledButton
                   label={hasRolled && !mustBluff ? 'Claim Roll' : 'Roll'}
@@ -1096,6 +1139,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     flexShrink: 1,
   },
+  titleColumnCompact: {
+    marginTop: 12,
+  },
+  titleColumnTall: {
+    marginTop: 28,
+  },
   title: {
     color: '#fff',
     fontWeight: '800',
@@ -1118,10 +1167,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: 'center',
   },
+  subtleSmall: {
+    fontSize: 16,
+  },
   status: {
     color: '#fff',
     opacity: 0.95,
     textAlign: 'center',
+  },
+  statusSmall: {
+    fontSize: 14,
   },
   narrationContainer: {
     minHeight: 60,

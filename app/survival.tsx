@@ -6,12 +6,13 @@ import {
     Image,
     Modal,
     Pressable,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     View,
+    useWindowDimensions,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
@@ -68,6 +69,7 @@ type StreakMeterProps = {
   currentStreak: number;
   globalBest: number;
   isSurvivalOver: boolean;
+  compact?: boolean;
 };
 
 const COLOR_LIGHT_GREEN = '#8EF6A0';
@@ -76,7 +78,12 @@ const COLOR_GOLD = '#E0B50C';
 const COLOR_DARK_GOLD = '#B8860B';
 const COLOR_RED = '#C21807';
 
-const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, isSurvivalOver }) => {
+const StreakMeter: React.FC<StreakMeterProps> = ({
+  currentStreak,
+  globalBest,
+  isSurvivalOver,
+  compact = false,
+}) => {
   const safeGlobalBest = typeof globalBest === 'number' ? globalBest : 0;
   const recordTarget = Math.max(safeGlobalBest, 1);
   const targetToBeat = Math.max(safeGlobalBest + 1, 1);
@@ -145,7 +152,10 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, is
   }
 
   return (
-    <View style={styles.streakMeterContainer} pointerEvents="none">
+    <View
+      style={[styles.streakMeterContainer, compact && styles.streakMeterContainerCompact]}
+      pointerEvents="none"
+    >
       <View style={styles.streakMeterOuter}>
         {hasBrokenRecord ? (
           <Animated.View
@@ -180,6 +190,9 @@ const StreakMeter: React.FC<StreakMeterProps> = ({ currentStreak, globalBest, is
 
 export default function Survival() {
   const router = useRouter();
+  const { height } = useWindowDimensions();
+  const isSmallScreen = height < 700;
+  const isTallScreen = height > 820;
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -774,6 +787,33 @@ export default function Survival() {
     }
     return 'values';
   }, [isRivalClaimPhase, turn, lastPlayerRoll]);
+  const layoutTweaks = useMemo(
+    () => ({
+      contentPadding: {
+        paddingHorizontal: isSmallScreen ? 12 : 18,
+        paddingBottom: isSmallScreen ? 12 : 20,
+        paddingTop: isSmallScreen ? 6 : 12,
+      },
+      headerPadding: {
+        padding: isSmallScreen ? 12 : 14,
+        marginTop: isSmallScreen ? 4 : 8,
+      },
+      narrationHeight: {
+        minHeight: isSmallScreen ? 48 : 60,
+      },
+      diceArea: {
+        minHeight: isTallScreen ? DIE_SIZE * 3 : isSmallScreen ? DIE_SIZE * 2.2 : DIE_SIZE * 2.6,
+        marginTop: isSmallScreen ? -DIE_SIZE : -DIE_SIZE * 1.34,
+        marginBottom: isTallScreen ? DIE_SIZE * 0.3 : DIE_SIZE * 0.2,
+        paddingVertical: isTallScreen ? 12 : 0,
+      },
+      controlsSpacing: {
+        marginTop: isSmallScreen ? -DIE_SIZE * 1.1 : -DIE_SIZE * 1.5,
+        paddingVertical: isSmallScreen ? 10 : 14,
+      },
+    }),
+    [isSmallScreen, isTallScreen]
+  );
 
   const showCpuRevealDice =
     !isGameOver &&
@@ -1057,9 +1097,9 @@ export default function Survival() {
               </View>
             </Animated.View>
           )}
-          <View style={styles.content}>
+          <View style={[styles.content, layoutTweaks.contentPadding]}>
             {/* HEADER */}
-            <View style={styles.headerCard}>
+            <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
               <View style={styles.titleRow}>
                 <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Survival</Animated.Text>
                 <Image
@@ -1070,13 +1110,13 @@ export default function Survival() {
               </View>
               <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
               {claimText ? (
-                <Text style={styles.subtle}>{claimText}</Text>
+                <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall]}>{claimText}</Text>
               ) : (
-                <Text style={styles.subtle}>No active claim yet.</Text>
+                <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall]}>No active claim yet.</Text>
               )}
-              <View style={styles.narrationContainer}>
+              <View style={[styles.narrationContainer, layoutTweaks.narrationHeight]}>
                 <Text
-                  style={styles.status}
+                  style={[styles.status, isSmallScreen && styles.statusSmall]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
                 >
@@ -1089,6 +1129,7 @@ export default function Survival() {
               currentStreak={currentStreak}
               globalBest={globalBest}
               isSurvivalOver={isSurvivalOver}
+              compact={isSmallScreen}
             />
 
             {/* HISTORY BOX */}
@@ -1118,18 +1159,21 @@ export default function Survival() {
             </Pressable>
 
             {/* DICE BLOCK */}
-            <Animated.View 
-              testID="dice-area" 
+            <Animated.View
+              testID="dice-area"
               style={[
                 styles.diceArea,
+                layoutTweaks.diceArea,
                 {
                   transform: [
                     { translateY: diceJiggleAnim },
                     { translateX: screenShakeAnim },
-                    { rotate: screenTiltAnim.interpolate({
-                      inputRange: [-1, 1],
-                      outputRange: ['-1rad', '1rad'],
-                    }) },
+                    {
+                      rotate: screenTiltAnim.interpolate({
+                        inputRange: [-1, 1],
+                        outputRange: ['-1rad', '1rad'],
+                      }),
+                    },
                   ],
                 },
               ]}
@@ -1174,7 +1218,7 @@ export default function Survival() {
             </Animated.View>
 
             {/* ACTION BAR */}
-            <View style={styles.controls}>
+            <View style={[styles.controls, layoutTweaks.controlsSpacing]}>
               <View style={styles.actionRow}>
                 <StyledButton
                   label={primaryLabel}
@@ -1473,10 +1517,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: 'center',
   },
+  subtleSmall: {
+    fontSize: 16,
+  },
   status: {
     color: '#fff',
     opacity: 0.95,
     textAlign: 'center',
+  },
+  statusSmall: {
+    fontSize: 14,
   },
   narrationContainer: {
     minHeight: 44,
@@ -1502,6 +1552,10 @@ const styles = StyleSheet.create({
     width: '70%',
     marginTop: 8,
     marginBottom: 4,
+  },
+  streakMeterContainerCompact: {
+    marginTop: 4,
+    marginBottom: 2,
   },
   streakMeterOuter: {
     width: '100%',
