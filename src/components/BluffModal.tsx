@@ -1,8 +1,5 @@
 import React from 'react';
-import { Image, Modal, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
-
-// Import image at top level to avoid bundler issues on web
-const mexicanLogo = require('../../assets/images/mexican-dice-logo.png');
+import { Modal, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 type Props = {
   visible: boolean;
@@ -14,7 +11,7 @@ type Props = {
 };
 
 const formatClaim = (value: number) => {
-  if (value === 21) return '21 (Mexican)';
+  if (value === 21) return '21 (Inferno🔥)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
   const hi = Math.floor(value / 10);
@@ -22,17 +19,7 @@ const formatClaim = (value: number) => {
   return `${hi}${lo}`;
 };
 
-const renderClaim = (value: number) => {
-  const text = formatClaim(value);
-  if (value === 21) {
-    return (
-      <>
-        21 (Mexican <Image source={mexicanLogo} style={{ width: 16, height: 16, marginBottom: -2 }} />)
-      </>
-    );
-  }
-  return text;
-};
+const renderClaim = (value: number) => formatClaim(value);
 
 export default function BluffModal({ visible, options, onCancel, onSelect, canShowSocial, onShowSocial }: Props) {
   return (

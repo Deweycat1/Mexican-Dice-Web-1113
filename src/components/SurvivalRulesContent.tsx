@@ -5,7 +5,7 @@ export default function SurvivalRulesContent() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Survival Mode Rules</Text>
-      <Text style={styles.subtitle}>(A streamlined, single player twist on Mexican Dice)</Text>
+      <Text style={styles.subtitle}>(A streamlined, single player twist on Inferno Dice)</Text>
 
       <Text style={styles.heading}>How Survival Works</Text>
       <Text style={styles.paragraph}>You face off against the Rival in an endless series of rounds.</Text>
@@ -37,22 +37,22 @@ export default function SurvivalRulesContent() {
 
       <Text style={styles.heading}>Special Rolls</Text>
 
-      <Text style={styles.rollHeading}>21 Mexican</Text>
+      <Text style={styles.rollHeading}>21 Inferno</Text>
       <Text style={styles.paragraph}>The highest roll in the game.</Text>
       <Text style={styles.paragraph}>
-        If you win a round using a Mexican, whether truth or bluff, your streak increases by 2 instead of 1.
+        If you win a round using an Inferno, whether truth or bluff, your streak increases by 2 instead of 1.
       </Text>
-      <Text style={styles.paragraph}>When a Mexican is claimed, the opponent must either:</Text>
+      <Text style={styles.paragraph}>When an Inferno is claimed, the opponent must either:</Text>
       <Text style={styles.bullet}>• Roll a real 21</Text>
       <Text style={styles.bullet}>• Call Bluff</Text>
-      <Text style={styles.paragraph}>Mexican retains its power even when reversed.</Text>
+      <Text style={styles.paragraph}>Inferno retains its power even when reversed.</Text>
 
       <Text style={styles.rollHeading}>31 Reverse</Text>
       <Text style={styles.paragraph}>A Reverse reflects the challenge back to the previous player.</Text>
       <Text style={styles.paragraph}>Example:</Text>
       <Text style={styles.paragraph}>If the Rival reverses onto you, you must beat your own previous claim.</Text>
       <Text style={styles.paragraph}>You may always claim a Reverse, truthfully or as a bluff.</Text>
-      <Text style={styles.paragraph}>If a Mexican is reversed onto a player, the plus two streak value still applies.</Text>
+      <Text style={styles.paragraph}>If an Inferno is reversed onto a player, the plus two streak value still applies.</Text>
 
       <Text style={styles.rollHeading}>41 Social</Text>
       <Text style={styles.paragraph}>A Social cannot be claimed or bluffed. It must be shown immediately.</Text>
@@ -68,13 +68,13 @@ export default function SurvivalRulesContent() {
       <Text style={styles.paragraph}>If the Rival was bluffing: You win the round and your streak increases.</Text>
       <Text style={styles.paragraph}>Streak increase amounts:</Text>
       <Text style={styles.bullet}>• Normal win → plus one</Text>
-      <Text style={styles.bullet}>• Win involving a Mexican → plus two</Text>
+      <Text style={styles.bullet}>• Win involving an Inferno → plus two</Text>
 
       <Text style={styles.heading}>Winning a Round</Text>
       <Text style={styles.paragraph}>You win a round if:</Text>
       <Text style={styles.bullet}>• You beat the Rival’s claim, truth or bluff</Text>
       <Text style={styles.bullet}>• You call a bluff correctly</Text>
-      <Text style={styles.bullet}>• You win through special roll logic such as Mexican or Reverse</Text>
+      <Text style={styles.bullet}>• You win through special roll logic such as Inferno or Reverse</Text>
       <Text style={styles.paragraph}>Every win increases your streak except 41 Social resets, which give no streak.</Text>
 
       <Text style={styles.heading}>Losing a Round</Text>

@@ -1,1 +1,1 @@
-export const MEXICAN_ICON = '🎲';
+export const MEXICAN_ICON = '🔥';

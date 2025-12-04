@@ -231,7 +231,7 @@ export default function SecretStatsScreen() {
 
     // Second click — ask for final confirmation
     const proceed = typeof window !== 'undefined' && window.confirm(
-      "FINAL WARNING: This will permanently delete ALL stats for Mexican Dice. This cannot be undone. Continue?"
+      "FINAL WARNING: This will permanently delete ALL stats for Inferno Dice. This cannot be undone. Continue?"
     );
     if (!proceed) {
       setPendingConfirm(false);
@@ -289,7 +289,7 @@ export default function SecretStatsScreen() {
   const getRollLabel = (roll: string): string => {
     switch (roll) {
       case '21':
-        return '21 (Mexican)';
+        return '21 (Inferno🔥)';
       case '31':
         return '31 (Reverse)';
       case '41':

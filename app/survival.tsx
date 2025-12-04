@@ -30,7 +30,7 @@ import { DIE_SIZE, DICE_SPACING } from '../src/theme/dice';
 
 function formatClaimDetailed(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  if (value === 21) return '21 (Mexican)';
+  if (value === 21) return '21 (Inferno🔥)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
   const [hi, lo] = splitClaim(value);
@@ -743,15 +743,11 @@ export default function Survival() {
   const narration = (buildBanner?.() || message || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
 
-  // Helper component to render claim with inline logo for Mexican
+  // Helper component to render claim with inline logo for Inferno
   const renderClaim = (value: number | null | undefined) => {
     const text = formatClaimDetailed(value);
     if (value === 21) {
-      return (
-        <>
-          21 (Mexican <Image source={require('../assets/images/mexican-dice-logo.png')} style={{ width: 16, height: 16, marginBottom: -2 }} />)
-        </>
-      );
+      return '21 (Inferno🔥)';
     }
     return text;
   };

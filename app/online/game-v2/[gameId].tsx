@@ -40,7 +40,7 @@ import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStat
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  if (value === 21) return '21 (Mexican)';
+  if (value === 21) return '21 (Inferno🔥)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
   const [hi, lo] = splitClaim(value);
@@ -697,7 +697,7 @@ export default function OnlineGameV2Screen() {
       const prev = lastClaim;
       const activeChallenge = resolveActiveChallenge(roundState.baselineClaim, prev);
       if (activeChallenge === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
-        Alert.alert('Invalid claim', 'After Mexican (21), only 21, 31, or 41 are legal.');
+        Alert.alert('Invalid claim', 'After Inferno (21), only 21, 31, or 41 are legal.');
         return;
       }
       const baseline = activeChallenge;

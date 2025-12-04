@@ -815,7 +815,7 @@ export const useGameStore = create<Store>((set, get) => {
           return `The Rival reversed ${previousClaim} with ${claim}. Your move...roll & claim or call bluff.`;
         }
         if (claim === 21) {
-          return `The Rival claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31...otherwise call bluff.`;
+          return `The Rival claims 21 (Inferno${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31...otherwise call bluff.`;
         }
         if (isAlwaysClaimable(claim)) {
           return `The Rival claims ${claim}. Your move...roll & claim or call bluff.`;
@@ -895,7 +895,7 @@ export const useGameStore = create<Store>((set, get) => {
 
     isRolling: false,
     mustBluff: false,
-    message: `Welcome to Mexican ${MEXICAN_ICON} Dice!`,
+    message: `Welcome to Inferno ${MEXICAN_ICON} Dice!`,
     mexicanFlashNonce: 0,
     cpuSocialDice: null,
     cpuSocialRevealNonce: 0,
@@ -1030,7 +1030,7 @@ export const useGameStore = create<Store>((set, get) => {
       const activeChallenge = resolveActiveChallenge(state.baselineClaim, prev);
 
       if (activeChallenge === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
-        const result = applyLoss('player', 2, `You failed to answer Mexican ${MEXICAN_ICON} with 21, 31, or 41. You lose 2.`);
+        const result = applyLoss('player', 2, `You failed to answer Inferno${MEXICAN_ICON} with 21, 31, or 41. You lose 2.`);
         aiOpponent.observeRoundOutcome(true);
         persistAiState();
         if (!result.gameOver) {
@@ -1096,7 +1096,7 @@ export const useGameStore = create<Store>((set, get) => {
           return `You reversed ${prev} with ${claim}.`;
         }
         if (claim === 21) {
-          return `You claim 21 (Mexican ${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
+          return `You claim 21 (Inferno${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
         }
         if (claim === 31 || claim === 41) {
           return `You claim ${claim}. The Rival must roll a real 21 or bluff 21/31, otherwise call bluff.`;
@@ -1197,8 +1197,8 @@ export const useGameStore = create<Store>((set, get) => {
       const state = get();
       if (isMexican(state.lastClaim)) {
         return state.turn === 'player'
-          ? `The Rival claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`
-          : `You claimed 21 (Mexican ${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
+          ? `The Rival claims 21 (Inferno${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`
+          : `You claimed 21 (Inferno${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
       }
       return state.message;
     },

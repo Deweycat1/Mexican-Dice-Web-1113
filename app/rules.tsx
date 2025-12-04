@@ -9,7 +9,7 @@ export default function RulesScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mexican Dice...Rules!</Text>
+      <Text style={styles.title}>Inferno Dice...Rules!</Text>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.rulesCard}>
@@ -26,20 +26,6 @@ export default function RulesScreen() {
           paddingVertical: 24,
         }}
       >
-        <Pressable
-          onPress={() => router.push('/game')}
-          style={({ pressed }) => StyleSheet.flatten([
-            styles.ctaButton,
-            pressed && styles.ctaButtonPressed,
-          ])}
-        >
-          <Text style={styles.ctaText}>
-            Get it now?!
-            {'\n'}
-            Start Playing!!!
-          </Text>
-        </Pressable>
-
         <Pressable
           onPress={() => router.push('/')}
           style={({ pressed }) => StyleSheet.flatten([
@@ -75,32 +61,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
     rowGap: 12,
-  },
-  ctaButton: {
-    backgroundColor: '#0FA958',
-    borderWidth: 3,
-    borderColor: '#e0b50c',
-    paddingVertical: 14,
-    paddingHorizontal: 30,
-    borderRadius: 999,
-    shadowColor: '#e0b50c',
-    shadowOpacity: 0.7,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
-    marginBottom: 12,
-  },
-  ctaButtonPressed: {
-    shadowOpacity: 0.4,
-    transform: [{ scale: 0.97 }],
-  },
-  ctaText: {
-    color: '#fff',
-    fontWeight: '900',
-    fontSize: 20,
-    letterSpacing: 0.5,
-    textShadowColor: '#000',
-    textShadowRadius: 3,
-    textAlign: 'center',
   },
   menuButton: {
     backgroundColor: '#C21807',

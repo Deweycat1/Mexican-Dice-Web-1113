@@ -24,8 +24,8 @@ export function RulesContent({ containerStyle, textColor = '#E6FFE6' }: Props) {
 
       <Text style={[styles.heading, colorStyle]}>Special Rolls</Text>
 
-      <Text style={[styles.rollHeading, colorStyle]}>21 “Mexican”</Text>
-      <Text style={[styles.paragraph, colorStyle]}>Claiming a Mexican makes the round worth 2 points. The next player must either:</Text>
+      <Text style={[styles.rollHeading, colorStyle]}>21 “Inferno”</Text>
+      <Text style={[styles.paragraph, colorStyle]}>Claiming an Inferno makes the round worth 2 points. The next player must either:</Text>
       <Text style={[styles.bullet, colorStyle]}>• Roll for a real 21</Text>
       <Text style={[styles.bullet, colorStyle]}>• Call Bluff</Text>
       <Text style={[styles.paragraph, colorStyle]}>
@@ -35,7 +35,7 @@ export function RulesContent({ containerStyle, textColor = '#E6FFE6' }: Props) {
       <Text style={[styles.rollHeading, colorStyle]}>31 “Reverse”</Text>
       <Text style={[styles.paragraph, colorStyle]}>
         A Reverse sends the challenge back to the previous player, who must now match or beat the reflected roll. You may always claim
-        a Reverse (truth or bluff). If a Mexican gets reversed onto a player, the 2-point penalty still applies.
+        a Reverse (truth or bluff). If an Inferno gets reversed onto a player, the 2-point penalty still applies.
       </Text>
 
       <Text style={[styles.rollHeading, colorStyle]}>41 “Social”</Text>
@@ -54,7 +54,7 @@ export function RulesContent({ containerStyle, textColor = '#E6FFE6' }: Props) {
       <Text style={[styles.bullet, colorStyle]}>• Claim true → Caller loses 1 point</Text>
       <Text style={[styles.bullet, colorStyle]}>• Claim false → Bluffer loses 1 point</Text>
 
-      <Text style={[styles.subheading, colorStyle]}>Mexican Rounds</Text>
+      <Text style={[styles.subheading, colorStyle]}>Inferno Rounds</Text>
       <Text style={[styles.bullet, colorStyle]}>• The loser always loses 2 points</Text>
 
       <Text style={[styles.heading, colorStyle]}>Wink Feature (Multiplayer Only)</Text>
