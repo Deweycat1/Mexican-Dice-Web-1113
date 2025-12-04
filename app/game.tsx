@@ -772,7 +772,9 @@ export default function Game() {
 
                 {/* Title Column - Now shows current claim */}
                 <View style={styles.titleColumn}>
-                  <Text style={styles.subtle}>{claimText}</Text>
+                  <Text style={styles.subtle} numberOfLines={3} ellipsizeMode="tail">
+                    {claimText}
+                  </Text>
                 </View>
 
                 {/* Rival Column */}
@@ -1022,6 +1024,7 @@ export default function Game() {
 }
 
 const BAR_BG = '#115E38';
+const HEADER_MIN_HEIGHT = 220; // Enough space for claim text plus two narration lines
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0B3A26' },
@@ -1037,12 +1040,15 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 14,
     marginTop: 8,
+    minHeight: HEADER_MIN_HEIGHT,
+    justifyContent: 'space-between',
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    flexGrow: 1,
   },
   playerColumn: {
     alignItems: 'center',
@@ -1088,7 +1094,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 8,
-    marginTop: 75,
+    flexShrink: 1,
   },
   title: {
     color: '#fff',
@@ -1118,7 +1124,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   narrationContainer: {
-    minHeight: 44,
+    minHeight: 60,
     justifyContent: 'center',
     marginTop: 2,
     marginBottom: 4,
