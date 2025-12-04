@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -235,6 +236,8 @@ export default function OnlineGameV2Screen() {
     if (Array.isArray(raw)) return raw[0];
     return raw ?? null;
   }, [params.gameId]);
+  const { height } = useWindowDimensions();
+  const isShortScreen = height < 720;
 
   const [game, setGame] = useState<OnlineGameV2 | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -513,6 +516,8 @@ export default function OnlineGameV2Screen() {
         ? 'Accept Rematch'
         : 'Rematch?';
   const showRematchButton = isGameFinished && !!myRole;
+  const MAIN_DICE_SIZE = isShortScreen ? 84 : 100;
+  const REVEAL_DICE_SIZE = isShortScreen ? 84 : 100;
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
@@ -1030,6 +1035,7 @@ export default function OnlineGameV2Screen() {
                   banner.type === 'womp-womp' && styles.bannerFail,
                   banner.type === 'social' && styles.bannerSocial,
                   banner.type === 'wink' && glowStyle,
+                  isShortScreen && styles.bannerContainerCompact,
                 ]}
               >
                 {banner.type === 'wink' ? (
@@ -1065,7 +1071,7 @@ export default function OnlineGameV2Screen() {
               </Animated.View>
             </Pressable>
 
-            <View style={styles.diceArea}>
+            <View style={[styles.diceArea, isShortScreen && styles.diceAreaCompact]}>
               <View style={styles.diceRow}>
             {showSocialReveal ? (
               <AnimatedDiceReveal
@@ -1074,7 +1080,7 @@ export default function OnlineGameV2Screen() {
                 onRevealComplete={handleSocialRevealComplete}
               />
             ) : isRevealingBluff && revealDiceValues ? (
-              <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={100} />
+              <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={REVEAL_DICE_SIZE} />
             ) : isMyTurn ? (
               <>
                 <Dice
@@ -1082,7 +1088,7 @@ export default function OnlineGameV2Screen() {
                   rolling={isMyTurn && rolling && myRoll == null}
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
-                  size={100}
+                  size={MAIN_DICE_SIZE}
                 />
                 <View style={{ width: 24 }} />
                 <Dice
@@ -1090,20 +1096,20 @@ export default function OnlineGameV2Screen() {
                   rolling={isMyTurn && rolling && myRoll == null}
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
-                  size={100}
+                  size={MAIN_DICE_SIZE}
                 />
               </>
             ) : (
               <>
-                <Dice value={null} size={100} thinkingOverlay="rival" />
+                <Dice value={null} size={MAIN_DICE_SIZE} thinkingOverlay="rival" />
                 <View style={{ width: 24 }} />
-                <Dice value={null} size={100} thinkingOverlay="thought" />
+                <Dice value={null} size={MAIN_DICE_SIZE} thinkingOverlay="thought" />
               </>
             )}
           </View>
         </View>
 
-            <View style={styles.controls}>
+            <View style={[styles.controls, isShortScreen && styles.controlsCompact]}>
               <View style={styles.actionRow}>
                 <StyledButton
                   label={canRoll ? 'Roll' : 'Claim'}
@@ -1389,6 +1395,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 30,
   },
+  bannerContainerCompact: {
+    top: 230,
+  },
   bannerSuccess: {
     backgroundColor: '#0F5132',
     borderColor: '#0C4128',
@@ -1441,9 +1450,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 260,
-    marginTop: -134,
-    marginBottom: 20,
+    minHeight: 220,
+    marginTop: -120,
+    marginBottom: 18,
+  },
+  diceAreaCompact: {
+    minHeight: 200,
+    marginTop: -90,
+    marginBottom: 14,
   },
   diceRow: {
     flexDirection: 'row',
@@ -1455,10 +1469,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -150,
+    marginTop: -130,
     position: 'relative',
     zIndex: 10,
-    marginBottom: -10,
+    marginBottom: -6,
+  },
+  controlsCompact: {
+    marginTop: -110,
+    marginBottom: 0,
   },
   actionRow: {
     flexDirection: 'row',
