@@ -308,6 +308,7 @@ export class LearningAIDiceOpponent {
     const profile = this.getProfile(opponentId);
     const category = this.categorizeClaimFn!(currentClaim);
     const allowReverseBluff = this.shouldConsiderReverseBluff(currentClaim, truthClaim);
+    const allowMexicanBluff = this.shouldConsiderMexicanBluff(currentClaim, truthClaim);
     
     // Track Mexican claim frequency
     if (category === 'mexican') {
@@ -442,7 +443,7 @@ export class LearningAIDiceOpponent {
     // When bluffing, go bold - pick a pressure claim that jumps higher
     const claim = truthful != null && Math.random() < 0.40 + this.truthBias
       ? truthful
-      : this.pickBluffClaim(currentClaim!, allowReverseBluff, pCallMean);
+      : this.pickBluffClaim(currentClaim!, allowReverseBluff, allowMexicanBluff, pCallMean);
 
     this.lastContext = { opponentId, action: 'RAISE', context: raiseContext };
     return { type: 'raise', claim };
@@ -590,7 +591,7 @@ export class LearningAIDiceOpponent {
     return claim ?? currentClaim;
   }
 
-  private pickBluffClaim(currentClaim: number, allowReverse: boolean, callMean: number) {
+  private pickBluffClaim(currentClaim: number, allowReverse: boolean, allowMexicanBluff: boolean, callMean: number) {
     if (allowReverse) {
       // Bluffing a reverse is most tempting when the opponent made a high claim and
       // when we believe they rarely call. Let the chance scale with both factors.
@@ -600,6 +601,17 @@ export class LearningAIDiceOpponent {
       const reverseChance = Math.min(0.55, baseChance + confidenceBonus);
       if (Math.random() < reverseChance) {
         return 31;
+      }
+    }
+    if (allowMexicanBluff) {
+      // Treat Mexican as a rare, nuclear bluff. Only consider it when the opponent pushed
+      // very high and we think they rarely call.
+      const pressure = Math.max(0, currentClaim - 61) / 45;
+      const baseChance = 0.05 + pressure * 0.12;
+      const confidenceBonus = (1 - callMean) * 0.1;
+      const mexicanChance = Math.min(0.25, baseChance + confidenceBonus);
+      if (Math.random() < mexicanChance) {
+        return 21;
       }
     }
     return this.pickPressureClaim(currentClaim, true);
@@ -627,6 +639,14 @@ export class LearningAIDiceOpponent {
     if (currentClaim == null) return false;
     if (truthClaim === 21 || truthClaim === 31) return false;
     return currentClaim >= 60;
+  }
+
+  private shouldConsiderMexicanBluff(currentClaim: number | null, truthClaim: number) {
+    if (currentClaim == null) return false;
+    // Real 21s still exit early via the forcesTruth path; only consider bluffing Mexican
+    // when we do NOT actually hold it and the player made a huge claim.
+    if (truthClaim === 21) return false;
+    return currentClaim >= 61;
   }
 
   private categoryOneHot(category: ClaimCategory) {
