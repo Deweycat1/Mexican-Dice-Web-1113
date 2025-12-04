@@ -24,6 +24,7 @@ import FeltBackground from '../../../src/components/FeltBackground';
 import RulesContent from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
+import { useSettingsStore } from '../../../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../../../src/theme/dice';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import {
@@ -36,7 +37,7 @@ import {
   splitClaim,
 } from '../../../src/engine/mexican';
 import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
-import { getCurrentUser } from '../../../src/lib/auth';
+import { initializeAuth } from '../../../src/lib/auth';
 import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
 
@@ -236,6 +237,7 @@ export default function OnlineGameV2Screen() {
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
+  const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const normalizedGameId = useMemo(() => {
     const raw = params.gameId;
     if (Array.isArray(raw)) return raw[0];
@@ -266,10 +268,23 @@ export default function OnlineGameV2Screen() {
   const prevStatusRef = useRef<GameStatus | null>(null);
 
   useEffect(() => {
+    let mounted = true;
     (async () => {
-      const user = await getCurrentUser();
-      setUserId(user?.id ?? null);
+      try {
+        const user = await initializeAuth();
+        if (mounted) {
+          setUserId(user?.id ?? null);
+        }
+      } catch (err) {
+        console.error('[OnlineGameV2] Failed to initialize auth', err);
+        if (mounted) {
+          setUserId(null);
+        }
+      }
     })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -654,7 +669,9 @@ export default function OnlineGameV2Screen() {
     }
     setBanner(null);
     setRollingAnim(true);
-    Haptics.selectionAsync().catch(() => {});
+    if (hapticsEnabled) {
+      Haptics.selectionAsync().catch(() => {});
+    }
     try {
       const { values, normalized } = rollDice();
       const legalTruth = computeLegalTruth(claimToCheck ?? null, normalized);
@@ -682,7 +699,7 @@ export default function OnlineGameV2Screen() {
     } finally {
       setTimeout(() => setRollingAnim(false), 400);
     }
-  }, [game, myRole, isMyTurn, isRevealAnimating, roundState, claimToCheck, handleUpdate, userId]);
+  }, [claimToCheck, game, handleUpdate, hapticsEnabled, isMyTurn, isRevealAnimating, myRole, roundState, userId]);
 
   const appendHistory = useCallback(
     (entry: HistoryItem): HistoryItem[] => {

@@ -29,6 +29,9 @@ export default function HomeScreen() {
       <Link href="/rules" style={styles.button}>
         <Text style={styles.buttonText}>Rules</Text>
       </Link>
+      <Link href="/settings" style={styles.button}>
+        <Text style={styles.buttonText}>Settings</Text>
+      </Link>
     </View>
   );
 }

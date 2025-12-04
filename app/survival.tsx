@@ -25,6 +25,7 @@ import StyledButton from '../src/components/StyledButton';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { useGameStore } from '../src/state/useGameStore';
+import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING } from '../src/theme/dice';
 
 function formatClaim(value: number | null | undefined): string {
@@ -193,6 +194,7 @@ export default function Survival() {
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
+  const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -369,21 +371,28 @@ export default function Survival() {
 
   // haptics scaling and pattern
   useEffect(() => {
-    // clear existing timer
     if (hapticTimerRef.current) {
       clearInterval(hapticTimerRef.current);
       hapticTimerRef.current = null;
+    }
+
+    if (!hapticsEnabled) {
+      return undefined;
     }
 
     const intervalMs = periodMs;
 
     const fireHaptic = () => {
       if (isSurvivalOver) return;
+      if (!useSettingsStore.getState().hapticsEnabled) return;
       try {
         if (currentStreak >= 20) {
           // strong double pulse
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-          setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}), 100);
+          setTimeout(() => {
+            if (!useSettingsStore.getState().hapticsEnabled) return;
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+          }, 100);
         } else if (currentStreak >= 15) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
         } else if (currentStreak >= 5) {
@@ -394,11 +403,8 @@ export default function Survival() {
       } catch {}
     };
 
-    // start interval
     const id = setInterval(fireHaptic, intervalMs);
     hapticTimerRef.current = id as unknown as number;
-
-    // fire immediately once to match visual feel
     fireHaptic();
 
     return () => {
@@ -407,7 +413,7 @@ export default function Survival() {
         hapticTimerRef.current = null;
       }
     };
-  }, [periodMs, currentStreak, isSurvivalOver]);
+  }, [currentStreak, hapticsEnabled, isSurvivalOver, periodMs]);
 
   useEffect(() => {
     return () => {
@@ -920,7 +926,9 @@ export default function Survival() {
     }
 
     if (hasRolled && !mustBluff && lastPlayerRoll != null) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (hapticsEnabled) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
       console.log('SURVIVAL: claiming current roll', { claim: lastPlayerRoll, lastClaimValue });
       playerClaim(lastPlayerRoll);
       return;
@@ -933,7 +941,9 @@ export default function Survival() {
 
     console.log('SURVIVAL: rolling dice', { turn, lastClaimValue, hasRolled });
     setRollingAnim(true);
-    Haptics.selectionAsync();
+    if (hapticsEnabled) {
+      Haptics.selectionAsync().catch(() => {});
+    }
     playerRoll();
     setTimeout(() => setRollingAnim(false), 400);
   }
@@ -974,7 +984,9 @@ export default function Survival() {
       console.log('BLUFF: missing data to precompute truth; using default reveal path (Survival)');
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (hapticsEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
     console.log('BLUFF: Revealing Rival dice regardless of truth state (Survival)');
     setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
@@ -994,7 +1006,9 @@ export default function Survival() {
 
   function handleSelectClaim(claim: number) {
     if (controlsDisabled) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (hapticsEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
     playerClaim(claim);
     setClaimPickerOpen(false);
   }

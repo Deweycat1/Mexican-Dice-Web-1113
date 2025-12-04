@@ -650,7 +650,7 @@ export default function OnlineLobbyScreen() {
             <StyledButton
               label={creatingMatch ? 'Starting…' : 'Start Match'}
               onPress={handleCreateMatch}
-              disabled={creatingMatch || !userId}
+              disabled={creatingMatch}
               style={[styles.primaryButton, styles.startMatchGreen]}
               textStyle={styles.startMatchGreenText}
             />

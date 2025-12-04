@@ -28,6 +28,7 @@ import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, 
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { useGameStore } from '../src/state/useGameStore';
+import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
 
 // ---------- helpers ----------
@@ -118,6 +119,7 @@ export default function Game() {
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
+  const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -547,7 +549,9 @@ export default function Game() {
     if (controlsDisabled || isRevealAnimating) return;
 
     if (hasRolled && !mustBluff && lastPlayerRoll != null) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (hapticsEnabled) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      }
       playerClaim(lastPlayerRoll);
       return;
     }
@@ -560,7 +564,9 @@ export default function Game() {
     }
 
     setRollingAnim(true);
-    Haptics.selectionAsync();
+    if (hapticsEnabled) {
+      Haptics.selectionAsync().catch(() => {});
+    }
     playerRoll();
     setTimeout(() => setRollingAnim(false), 400);
   }
@@ -583,7 +589,9 @@ export default function Game() {
       console.log('BLUFF: missing data to precompute truth; using default reveal path');
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (hapticsEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
     console.log('BLUFF: Revealing Rival dice regardless of truth state');
     setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
@@ -603,7 +611,9 @@ export default function Game() {
 
   function handleSelectClaim(claim: number) {
     if (controlsDisabled) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (hapticsEnabled) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
     playerClaim(claim);
     setClaimPickerOpen(false);
   }

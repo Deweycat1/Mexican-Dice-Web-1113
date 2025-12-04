@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useBackgroundMusic } from '../src/hooks/useBackgroundMusic';
 import RulesContent from '../src/components/RulesContent';
+import { useSettingsStore } from '../src/state/useSettingsStore';
 
 // IMPORTANT: add the audio asset at assets/audio/mexican-dice-game.mp3
 const music = require('../assets/audio/mexican-dice-game.mp3');
@@ -22,6 +23,21 @@ export default function RulesScreen() {
     initialVolume: 0.4,
     storageKey: 'rules_sound_allowed',
   });
+  const soundEnabled = useSettingsStore((state) => state.soundEnabled);
+  const hasHydrated = useSettingsStore((state) => state.hasHydrated);
+  const hydrate = useSettingsStore((state) => state.hydrate);
+
+  useEffect(() => {
+    if (!hasHydrated) {
+      hydrate();
+    }
+  }, [hasHydrated, hydrate]);
+
+  useEffect(() => {
+    if (!soundEnabled) {
+      pause();
+    }
+  }, [pause, soundEnabled]);
 
   return (
     <View style={styles.container}>
@@ -32,14 +48,17 @@ export default function RulesScreen() {
           <Text style={styles.statusLabel}>Theme Song:</Text>
           <View style={styles.buttonRow}>
             <Pressable
-              onPress={play}
-              disabled={!isLoaded}
+              onPress={() => {
+                if (!soundEnabled) return;
+                play();
+              }}
+              disabled={!isLoaded || !soundEnabled}
               style={({ pressed }) =>
                 StyleSheet.flatten([
                   styles.button,
                   isPlaying ? styles.playingButton : styles.playButton,
                   pressed && styles.buttonPressed,
-                  !isLoaded && styles.buttonDisabled,
+                  (!isLoaded || !soundEnabled) && styles.buttonDisabled,
                 ])
               }
             >
