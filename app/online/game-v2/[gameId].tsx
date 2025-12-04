@@ -37,7 +37,7 @@ import {
   splitClaim,
 } from '../../../src/engine/mexican';
 import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
-import { initializeAuth } from '../../../src/lib/auth';
+import { getCurrentUser } from '../../../src/lib/auth';
 import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
 
@@ -265,27 +265,31 @@ export default function OnlineGameV2Screen() {
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
   const [winkArmed, setWinkArmed] = useState(false);
   const [isRequestingRematch, setIsRequestingRematch] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
   const prevStatusRef = useRef<GameStatus | null>(null);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const user = await initializeAuth();
+        const user = await getCurrentUser();
         if (mounted) {
           setUserId(user?.id ?? null);
         }
       } catch (err) {
-        console.error('[OnlineGameV2] Failed to initialize auth', err);
+        console.error('[OnlineGameV2] Failed to load auth user', err);
         if (mounted) {
           setUserId(null);
         }
+      } finally {
+        if (mounted) setAuthLoading(false);
       }
     })();
     return () => {
       mounted = false;
     };
   }, []);
+
 
   useEffect(() => {
     if (!normalizedGameId) {
@@ -458,6 +462,22 @@ export default function OnlineGameV2Screen() {
     if (userId === game.guest_id) return 'guest';
     return null;
   }, [game?.host_id, game?.guest_id, userId]);
+
+  useEffect(() => {
+    console.log('[OnlineGameV2] state', {
+      normalizedGameId,
+      loading,
+      error,
+      hasGame: !!game,
+      gameId: game?.id,
+      gameStatus: game?.status,
+      userId,
+      myRole,
+      host_id: game?.host_id,
+      guest_id: game?.guest_id,
+      authLoading,
+    });
+  }, [normalizedGameId, loading, error, game, userId, myRole, authLoading]);
 
   const isMyTurn = !!game && !!userId && game.current_player_id === userId;
   const opponentRole: 'host' | 'guest' | null = myRole === 'host' ? 'guest' : myRole === 'guest' ? 'host' : null;
@@ -942,7 +962,7 @@ export default function OnlineGameV2Screen() {
     }
   }, [game, userId, router]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <View style={styles.root}>
         <FeltBackground>
@@ -977,7 +997,27 @@ export default function OnlineGameV2Screen() {
     );
   }
 
-  if (!game || !myRole) {
+  if (!game) {
+    return (
+      <View style={styles.root}>
+        <FeltBackground>
+          <SafeAreaView style={styles.safe}>
+            <View style={styles.centered}>
+              <Text style={styles.errorText}>Match not found.</Text>
+              <StyledButton
+                label="Back to Lobby"
+                variant="primary"
+                onPress={() => router.replace('/online')}
+                style={{ marginTop: 20, minWidth: 200 }}
+              />
+            </View>
+          </SafeAreaView>
+        </FeltBackground>
+      </View>
+    );
+  }
+
+  if (!myRole) {
     return (
       <View style={styles.root}>
         <FeltBackground>

@@ -102,6 +102,10 @@ export default function OnlineLobbyScreen() {
   const [loadingGames, setLoadingGames] = useState(false);
 
   useEffect(() => {
+    console.log('[OnlineLobby] state', { loadingUser, userId, creatingMatch });
+  }, [loadingUser, userId, creatingMatch]);
+
+  useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
@@ -650,7 +654,7 @@ export default function OnlineLobbyScreen() {
             <StyledButton
               label={creatingMatch ? 'Starting…' : 'Start Match'}
               onPress={handleCreateMatch}
-              disabled={creatingMatch}
+              disabled={creatingMatch || loadingUser}
               style={[styles.primaryButton, styles.startMatchGreen]}
               textStyle={styles.startMatchGreenText}
             />

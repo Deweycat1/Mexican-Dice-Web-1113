@@ -4,7 +4,6 @@ import { Stack } from 'expo-router';
 import Head from 'expo-router/head';
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
@@ -50,17 +49,15 @@ export default function RootLayout() {
         </script>
       </Head>
 
-      <SafeAreaProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            headerStyle: { backgroundColor: '#0B3A26' },
-            headerTintColor: '#fff',
-            contentStyle: { backgroundColor: '#0B3A26' },
-          }}
-        />
-        {Platform.OS === 'web' && <Analytics />}
-      </SafeAreaProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          headerStyle: { backgroundColor: '#0B3A26' },
+          headerTintColor: '#fff',
+          contentStyle: { backgroundColor: '#0B3A26' },
+        }}
+      />
+      {Platform.OS === 'web' && <Analytics />}
     </>
   );
 }
