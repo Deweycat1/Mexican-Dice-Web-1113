@@ -611,11 +611,6 @@ export default function OnlineLobbyScreen() {
     <View style={styles.root}>
       <FeltBackground>
         <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.breadcrumbRow}>
-            <TouchableOpacity onPress={() => router.push('/')}>
-              <Text style={styles.breadcrumbText}>{'\u2190'} Main menu</Text>
-            </TouchableOpacity>
-          </View>
 
           <View style={styles.banner}>
             <Text style={styles.bannerText}>{friendlyHint}</Text>
@@ -664,6 +659,13 @@ export default function OnlineLobbyScreen() {
               {renderSection('Completed games', sections.completed, 'No completed games yet.')}
             </>
           )}
+
+          <StyledButton
+            label="Main Menu"
+            variant="primary"
+            onPress={() => router.push('/')}
+            style={styles.footerButton}
+          />
         </ScrollView>
       </FeltBackground>
     </View>
@@ -698,14 +700,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-  },
-  breadcrumbRow: {
-    marginBottom: 10,
-  },
-  breadcrumbText: {
-    color: '#E0B50C',
-    fontSize: 14,
-    fontWeight: '700',
   },
   bannerText: {
     color: '#E6FFE6',
@@ -861,5 +855,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+  },
+  footerButton: {
+    marginTop: 20,
+    marginBottom: 40,
+    alignSelf: 'center',
   },
 });
