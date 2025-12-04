@@ -215,15 +215,6 @@ export default function Game() {
     return text;
   };
 
-  const claimText = useMemo(() => {
-    const rollPart = formatRoll(lastPlayerRoll);
-    return (
-      <>
-        Current claim: {renderClaim(lastClaim)} Your roll: {rollPart}
-      </>
-    );
-  }, [lastClaim, lastPlayerRoll]);
-
   const [playerHi, playerLo] = facesFromRoll(lastPlayerRoll);
   const [cpuHi, cpuLo] = facesFromRoll(lastCpuRoll);
   const rolling = rollingAnim || isRolling;
@@ -821,13 +812,14 @@ export default function Game() {
                     isTallScreen && styles.titleColumnTall,
                   ]}
                 >
-                  <Text
-                    style={[styles.subtle, isSmallScreen && styles.subtleSmall]}
-                    numberOfLines={3}
-                    ellipsizeMode="tail"
-                  >
-                    {claimText}
-                  </Text>
+                  <View style={styles.claimHeaderContainer}>
+                    <Text style={styles.claimHeaderLine}>
+                      Current claim: {renderClaim(lastClaim)}
+                    </Text>
+                    <Text style={styles.claimHeaderLine}>
+                      Your roll: {formatRoll(lastPlayerRoll)}
+                    </Text>
+                  </View>
                 </View>
 
                 {/* Rival Column */}
@@ -1155,6 +1147,17 @@ const styles = StyleSheet.create({
   titleColumnTall: {
     marginTop: 28,
   },
+  claimHeaderContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  claimHeaderLine: {
+    color: '#E0B50C',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginVertical: 2,
+  },
   title: {
     color: '#fff',
     fontWeight: '800',
@@ -1169,16 +1172,6 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 60,
     height: 60,
-  },
-  subtle: {
-    color: '#E0B50C',
-    fontWeight: '800',
-    fontSize: 18,
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  subtleSmall: {
-    fontSize: 16,
   },
   status: {
     color: '#fff',
