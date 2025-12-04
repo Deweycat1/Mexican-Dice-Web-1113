@@ -30,9 +30,6 @@ import { DIE_SIZE, DICE_SPACING } from '../src/theme/dice';
 
 function formatClaim(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  if (value === 21) return '21 (Mexican)';
-  if (value === 31) return '31 (Reverse)';
-  if (value === 41) return '41 (Social)';
   const hi = Math.floor(value / 10);
   const lo = value % 10;
   return `${hi}${lo}`;
