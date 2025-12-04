@@ -24,6 +24,7 @@ import StyledButton from '../src/components/StyledButton';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { useGameStore } from '../src/state/useGameStore';
+import { DIE_SIZE, DICE_SPACING } from '../src/theme/dice';
 
 function formatClaim(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -44,6 +45,11 @@ function facesFromRoll(value: number | null | undefined): readonly [number | nul
   const [hi, lo] = splitClaim(value);
   return [hi, lo] as const;
 }
+
+const DICE_JIGGLE_SMALL = DIE_SIZE * 0.05;
+const DICE_JIGGLE_MEDIUM = DIE_SIZE * 0.08;
+const DICE_JIGGLE_HEAVY = DIE_SIZE * 0.1;
+const DICE_JIGGLE_EPIC = DIE_SIZE * 0.12;
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -444,7 +450,7 @@ export default function Survival() {
       diceJiggleAnim.setValue(0);
       Animated.sequence([
         Animated.timing(diceJiggleAnim, {
-          toValue: -5,
+          toValue: -DICE_JIGGLE_SMALL,
           duration: 225,
           useNativeDriver: true,
         }),
@@ -542,8 +548,16 @@ export default function Survival() {
       // Heavy dice wiggle
       diceJiggleAnim.setValue(0);
       Animated.sequence([
-        Animated.timing(diceJiggleAnim, { toValue: -8, duration: 80, useNativeDriver: true }),
-        Animated.timing(diceJiggleAnim, { toValue: 8, duration: 80, useNativeDriver: true }),
+        Animated.timing(diceJiggleAnim, {
+          toValue: -DICE_JIGGLE_MEDIUM,
+          duration: 80,
+          useNativeDriver: true,
+        }),
+        Animated.timing(diceJiggleAnim, {
+          toValue: DICE_JIGGLE_MEDIUM,
+          duration: 80,
+          useNativeDriver: true,
+        }),
         Animated.timing(diceJiggleAnim, { toValue: 0, duration: 100, useNativeDriver: true }),
       ]).start();
 
@@ -569,7 +583,11 @@ export default function Survival() {
       // Heavy dice bounce
       diceJiggleAnim.setValue(0);
       Animated.sequence([
-        Animated.timing(diceJiggleAnim, { toValue: -10, duration: 100, useNativeDriver: true }),
+        Animated.timing(diceJiggleAnim, {
+          toValue: -DICE_JIGGLE_HEAVY,
+          duration: 100,
+          useNativeDriver: true,
+        }),
         Animated.timing(diceJiggleAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
       ]).start();
 
@@ -664,7 +682,11 @@ export default function Survival() {
       // Slight slow-motion effect on dice (longer jiggle)
       diceJiggleAnim.setValue(0);
       Animated.sequence([
-        Animated.timing(diceJiggleAnim, { toValue: -12, duration: 200, useNativeDriver: true }),
+        Animated.timing(diceJiggleAnim, {
+          toValue: -DICE_JIGGLE_EPIC,
+          duration: 200,
+          useNativeDriver: true,
+        }),
         Animated.timing(diceJiggleAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
       ]).start();
 
@@ -1113,24 +1135,24 @@ export default function Survival() {
               ]}
             >
               <View style={styles.diceRow}>
-            {showCpuThinking ? (
-              <>
-                <Dice value={null} size={100} thinkingOverlay="rival" />
-                <View style={{ width: 24 }} />
-                <Dice value={null} size={100} thinkingOverlay="thought" />
-              </>
-            ) : showSocialReveal ? (
-              <AnimatedDiceReveal
-                hidden={socialRevealHidden}
-                diceValues={socialDiceValues}
-                onRevealComplete={handleSocialRevealComplete}
-              />
-            ) : showCpuRevealDice ? (
-              <AnimatedDiceReveal
-                hidden={!cpuDiceRevealed}
-                diceValues={[cpuHi, cpuLo]}
-                onRevealComplete={handleCpuRevealComplete}
-              />
+                {showCpuThinking ? (
+                  <>
+                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="rival" />
+                    <View style={{ width: DICE_SPACING }} />
+                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="thought" />
+                  </>
+                ) : showSocialReveal ? (
+                  <AnimatedDiceReveal
+                    hidden={socialRevealHidden}
+                    diceValues={socialDiceValues}
+                    onRevealComplete={handleSocialRevealComplete}
+                  />
+                ) : showCpuRevealDice ? (
+                  <AnimatedDiceReveal
+                    hidden={!cpuDiceRevealed}
+                    diceValues={[cpuHi, cpuLo]}
+                    onRevealComplete={handleCpuRevealComplete}
+                  />
                 ) : (
                   <>
                     <Dice
@@ -1139,7 +1161,7 @@ export default function Survival() {
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
                     />
-                    <View style={{ width: 24 }} />
+                    <View style={{ width: DICE_SPACING }} />
                     <Dice
                       value={turn === 'player' ? playerLo : cpuLo}
                       rolling={rolling}
@@ -1466,9 +1488,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 260,
-    marginTop: -134,
-    marginBottom: 20,
+    minHeight: DIE_SIZE * 2.6,
+    marginTop: -DIE_SIZE * 1.34,
+    marginBottom: DIE_SIZE * 0.2,
   },
   diceRow: {
     flexDirection: 'row',
@@ -1515,7 +1537,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -150,
+    marginTop: -DIE_SIZE * 1.5,
     position: 'relative',
     zIndex: 10,
   },

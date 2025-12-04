@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Dice from './Dice';
+import { DIE_SIZE } from '../theme/dice';
 
 type AnimatedDiceRevealProps = {
   hidden: boolean;
@@ -17,7 +18,7 @@ type AnimatedDiceRevealProps = {
 export default function AnimatedDiceReveal({
   hidden,
   diceValues,
-  size = 100,
+  size = DIE_SIZE,
   onRevealComplete,
 }: AnimatedDiceRevealProps) {
   const [showActual, setShowActual] = useState(!hidden);
@@ -73,17 +74,20 @@ export default function AnimatedDiceReveal({
 
   const dieStyle = {
     transform: [
-      { perspective: 800 }, // IMPORTANT: adds 3D depth perception
+      { perspective: size * 8 }, // maintain same relative 3D depth
       { rotateY },
     ],
   };
 
   const [hi, lo] = diceValues;
+  const dieGap = size * 0.24;
+  const wrapperSize = size + size * 0.16;
+  const wrapperPadding = size * 0.08;
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { paddingHorizontal: size * 0.08 }]}>
       {/* Left die with extra padding to prevent clipping */}
-      <View style={[styles.dieWrapper, { width: size + 16, height: size + 16 }]}>
+      <View style={[styles.dieWrapper, { width: wrapperSize, height: wrapperSize, padding: wrapperPadding }]}>
         <Animated.View style={[styles.dieOverflow, dieStyle]}>
           <Dice
             value={showActual ? hi : null}
@@ -93,10 +97,10 @@ export default function AnimatedDiceReveal({
         </Animated.View>
       </View>
 
-      <View style={{ width: 24 }} />
+      <View style={{ width: dieGap }} />
 
       {/* Right die with extra padding to prevent clipping */}
-      <View style={[styles.dieWrapper, { width: size + 16, height: size + 16 }]}>
+      <View style={[styles.dieWrapper, { width: wrapperSize, height: wrapperSize, padding: wrapperPadding }]}>
         <Animated.View style={[styles.dieOverflow, dieStyle]}>
           <Dice
             value={showActual ? lo : null}
@@ -115,15 +119,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'visible',
-    // Extra padding on container to ensure no clipping during rotation
-    paddingHorizontal: 8,
   },
   dieWrapper: {
     overflow: 'visible',
     alignItems: 'center',
     justifyContent: 'center',
-    // Extra padding inside each wrapper prevents edge clipping
-    padding: 8,
   },
   dieOverflow: {
     overflow: 'visible',

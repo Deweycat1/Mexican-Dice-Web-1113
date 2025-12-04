@@ -27,6 +27,7 @@ import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, 
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { useGameStore } from '../src/state/useGameStore';
+import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
 
 // ---------- helpers ----------
 function formatClaim(value: number | null | undefined): string {
@@ -763,7 +764,7 @@ export default function Game() {
                     <ScoreDie
                       points={playerScore}
                       style={styles.scoreDie}
-                      size={38}
+                      size={SCORE_DIE_BASE_SIZE}
                       animationKey={scoreDiceAnimKey}
                     />
                   </Animated.View>
@@ -794,7 +795,7 @@ export default function Game() {
                     <ScoreDie
                       points={cpuScore}
                       style={styles.scoreDie}
-                      size={38}
+                      size={SCORE_DIE_BASE_SIZE}
                       animationKey={scoreDiceAnimKey}
                     />
                   </Animated.View>
@@ -842,43 +843,43 @@ export default function Game() {
             {/* DICE BLOCK */}
             <View testID="dice-area" style={styles.diceArea}>
               <View style={styles.diceRow}>
-            {showCpuThinking ? (
-              <>
-                <Dice value={null} size={100} thinkingOverlay="rival" />
-                <View style={{ width: 24 }} />
-                <Dice value={null} size={100} thinkingOverlay="thought" />
-              </>
-            ) : showSocialReveal ? (
-              <AnimatedDiceReveal
-                hidden={socialRevealHidden}
-                diceValues={socialDiceValues}
-                onRevealComplete={handleSocialRevealComplete}
-              />
-            ) : showCpuRevealDice ? (
-              <AnimatedDiceReveal
-                hidden={!cpuDiceRevealed}
-                diceValues={[cpuHi, cpuLo]}
-                onRevealComplete={handleCpuRevealComplete}
-              />
-            ) : (
-              <>
-                <Dice
-                  value={turn === 'player' ? playerHi : cpuHi}
-                  rolling={rolling}
-                  displayMode={diceDisplayMode}
-                  overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
-                />
-                <View style={{ width: 24 }} />
-                <Dice
-                  value={turn === 'player' ? playerLo : cpuLo}
-                  rolling={rolling}
-                  displayMode={diceDisplayMode}
-                  overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
-                />
-              </>
-            )}
-          </View>
-        </View>
+                {showCpuThinking ? (
+                  <>
+                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="rival" />
+                    <View style={{ width: DICE_SPACING }} />
+                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="thought" />
+                  </>
+                ) : showSocialReveal ? (
+                  <AnimatedDiceReveal
+                    hidden={socialRevealHidden}
+                    diceValues={socialDiceValues}
+                    onRevealComplete={handleSocialRevealComplete}
+                  />
+                ) : showCpuRevealDice ? (
+                  <AnimatedDiceReveal
+                    hidden={!cpuDiceRevealed}
+                    diceValues={[cpuHi, cpuLo]}
+                    onRevealComplete={handleCpuRevealComplete}
+                  />
+                ) : (
+                  <>
+                    <Dice
+                      value={turn === 'player' ? playerHi : cpuHi}
+                      rolling={rolling}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                    />
+                    <View style={{ width: DICE_SPACING }} />
+                    <Dice
+                      value={turn === 'player' ? playerLo : cpuLo}
+                      rolling={rolling}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                    />
+                  </>
+                )}
+              </View>
+            </View>
 
             {/* ACTION BAR */}
             <View style={styles.controls}>
@@ -1126,8 +1127,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 260,
-    marginTop: -134,
+    minHeight: DIE_SIZE * 2.6,
+    marginTop: -DIE_SIZE * 1.34,
     marginBottom: 0,
   },
   diceRow: {
@@ -1140,7 +1141,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -150,
+    marginTop: -DIE_SIZE * 1.5,
   },
   actionRow: {
     flexDirection: 'row',

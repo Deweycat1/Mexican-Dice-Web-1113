@@ -23,6 +23,7 @@ import FeltBackground from '../../../src/components/FeltBackground';
 import RulesContent from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
+import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../../../src/theme/dice';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import {
   claimMatchesRoll,
@@ -997,7 +998,7 @@ export default function OnlineGameV2Screen() {
                   <Text style={styles.playerLabel}>
                     Your{'\n'}Score
                   </Text>
-                  <ScoreDie points={myScore} style={styles.scoreDie} size={38} />
+                  <ScoreDie points={myScore} style={styles.scoreDie} size={SCORE_DIE_BASE_SIZE} />
                 </View>
 
                 <View style={styles.titleColumn}>
@@ -1012,7 +1013,11 @@ export default function OnlineGameV2Screen() {
                     />
                   </View>
                   <Text style={styles.playerLabel}>{opponentName}</Text>
-                  <ScoreDie points={opponentScore} style={styles.scoreDie} size={38} />
+                  <ScoreDie
+                    points={opponentScore}
+                    style={styles.scoreDie}
+                    size={SCORE_DIE_BASE_SIZE}
+                  />
                 </View>
               </View>
 
@@ -1068,41 +1073,41 @@ export default function OnlineGameV2Screen() {
 
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
-            {showSocialReveal ? (
-              <AnimatedDiceReveal
-                hidden={socialRevealHidden}
-                diceValues={socialDiceValues}
-                onRevealComplete={handleSocialRevealComplete}
-              />
-            ) : isRevealingBluff && revealDiceValues ? (
-              <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={100} />
-            ) : isMyTurn ? (
-              <>
-                <Dice
-                  value={dieHi}
-                  rolling={isMyTurn && rolling && myRoll == null}
-                  displayMode={diceDisplayMode}
-                  overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
-                  size={100}
-                />
-                <View style={{ width: 24 }} />
-                <Dice
-                  value={dieLo}
-                  rolling={isMyTurn && rolling && myRoll == null}
-                  displayMode={diceDisplayMode}
-                  overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
-                  size={100}
-                />
-              </>
-            ) : (
-              <>
-                <Dice value={null} size={100} thinkingOverlay="rival" />
-                <View style={{ width: 24 }} />
-                <Dice value={null} size={100} thinkingOverlay="thought" />
-              </>
-            )}
-          </View>
-        </View>
+                {showSocialReveal ? (
+                  <AnimatedDiceReveal
+                    hidden={socialRevealHidden}
+                    diceValues={socialDiceValues}
+                    onRevealComplete={handleSocialRevealComplete}
+                  />
+                ) : isRevealingBluff && revealDiceValues ? (
+                  <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={DIE_SIZE} />
+                ) : isMyTurn ? (
+                  <>
+                    <Dice
+                      value={dieHi}
+                      rolling={isMyTurn && rolling && myRoll == null}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                      size={DIE_SIZE}
+                    />
+                    <View style={{ width: DICE_SPACING }} />
+                    <Dice
+                      value={dieLo}
+                      rolling={isMyTurn && rolling && myRoll == null}
+                      displayMode={diceDisplayMode}
+                      overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                      size={DIE_SIZE}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="rival" />
+                    <View style={{ width: DICE_SPACING }} />
+                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="thought" />
+                  </>
+                )}
+              </View>
+            </View>
 
             <View style={styles.controls}>
               <View style={styles.actionRow}>
@@ -1442,9 +1447,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 260,
-    marginTop: -134,
-    marginBottom: 20,
+    minHeight: DIE_SIZE * 2.6,
+    marginTop: -DIE_SIZE * 1.34,
+    marginBottom: DIE_SIZE * 0.2,
   },
   diceRow: {
     flexDirection: 'row',
@@ -1456,7 +1461,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -150,
+    marginTop: -DIE_SIZE * 1.5,
     position: 'relative',
     zIndex: 10,
     marginBottom: -10,

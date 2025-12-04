@@ -19,6 +19,7 @@ import { splitClaim } from '../src/engine/mexican';
 import { ensureUserProfile, getCurrentUser } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';
 import { getOrCreateUserDisplayName } from '../src/identity/userDisplayName';
+import { SCORE_DIE_SIZE } from '../src/theme/dice';
 
 const STARTING_SCORE = 5;
 const MAX_ACTIVE_GAMES = 5;
@@ -74,8 +75,8 @@ const isValidFriendUsername = (raw: string) => {
   return safePattern.test(value);
 };
 
-const SCORE_DIE_BASE_SIZE = 38;
 const CURRENT_CLAIM_DIE_SCALE = 0.8;
+const CURRENT_CLAIM_DIE_GAP = SCORE_DIE_SIZE * (6 / 38);
 
 const normalizeColorAnimal = (value: string) => {
   if (!value) return '';
@@ -534,13 +535,13 @@ export default function OnlineLobbyScreen() {
                 <View style={styles.currentClaimDiceRow}>
                   <ScoreDie
                     points={claimDicePoints[0]}
-                    size={SCORE_DIE_BASE_SIZE}
+                    size={SCORE_DIE_SIZE}
                     style={styles.currentClaimDie}
                   />
-                  <View style={{ width: 6 }} />
+                  <View style={{ width: CURRENT_CLAIM_DIE_GAP }} />
                   <ScoreDie
                     points={claimDicePoints[1]}
-                    size={SCORE_DIE_BASE_SIZE}
+                    size={SCORE_DIE_SIZE}
                     style={styles.currentClaimDie}
                   />
                 </View>

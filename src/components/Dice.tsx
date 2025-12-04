@@ -10,6 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { DIE_SIZE } from '../theme/dice';
+
 type DiceProps = {
   value: number | null;
   size?: number;
@@ -61,7 +63,7 @@ const pipsFor: Record<number, { x: number; y: number }[]> = {
 
 export default function Dice({
   value,
-  size = 100,
+  size = DIE_SIZE,
   rolling,
   displayMode = 'values',
   overlayText,
@@ -136,9 +138,11 @@ export default function Dice({
     []
   );
 
-  // Scale border radius based on size: smaller dice = more square
-  const borderRadius = size <= 40 ? size * 0.2 : 20;
-  const svgRx = size <= 40 ? size * 0.2 : 18;
+  const borderRadius = size * 0.2;
+  const svgRx = size * 0.18;
+  const faceInset = size * 0.02;
+  const highlightRx = size * 0.15;
+  const overlayFontSize = displayMode === 'question' ? size * 0.52 : size * 0.28;
 
   return (
     <Animated.View style={[styles.wrap, { width: size, height: size, borderRadius }, animatedStyle]}>
@@ -156,10 +160,10 @@ export default function Dice({
         </Defs>
 
         <Rect
-          x={2}
-          y={2}
-          width={size - 4}
-          height={size - 4}
+          x={faceInset}
+          y={faceInset}
+          width={size - faceInset * 2}
+          height={size - faceInset * 2}
           rx={svgRx}
           fill={`url(#${faceGradientId})`}
         />
@@ -168,7 +172,7 @@ export default function Dice({
           y={size * 0.08}
           width={size * 0.42}
           height={size * 0.25}
-          rx={size <= 40 ? size * 0.15 : 12}
+          rx={highlightRx}
           fill={`url(#${highlightGradientId})`}
         />
 
@@ -203,14 +207,7 @@ export default function Dice({
           </View>
         ) : (
           <Animated.View pointerEvents="none" style={[styles.overlay, pulseStyle]}>
-            <Text
-              style={[
-                styles.overlayText,
-                displayMode === 'question' ? styles.questionText : styles.promptText,
-              ]}
-            >
-              {overlayLabel}
-            </Text>
+            <Text style={[styles.overlayText, { fontSize: overlayFontSize }]}>{overlayLabel}</Text>
           </Animated.View>
         ))}
     </Animated.View>
@@ -220,7 +217,6 @@ export default function Dice({
 const styles = StyleSheet.create({
   wrap: {
     position: 'relative',
-    borderRadius: 20,
     backgroundColor: BASE_RED,
   },
   overlay: {
@@ -233,12 +229,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700',
     letterSpacing: 0.4,
-  },
-  questionText: {
-    fontSize: 52,
-  },
-  promptText: {
-    fontSize: 28,
   },
   overlayThought: {
     textAlign: 'center',

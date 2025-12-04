@@ -5,6 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import Cup, { CupRef } from './Cup';
 import Dice from './Dice';
 import FeltBackground from './FeltBackground';
+import { DIE_SIZE, DICE_SPACING } from '../theme/dice';
 
 type Side = 'player' | 'cpu';
 
@@ -73,14 +74,13 @@ export default function CupTable({
 }
 
 const styles = StyleSheet.create({
-  pad: { flex: 1, paddingTop: 24, alignItems: 'center' },
+  pad: { flex: 1, paddingTop: DICE_SPACING, alignItems: 'center' },
   diceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: DICE_SPACING,
+    marginBottom: DIE_SIZE * 0.16,
   },
-  spacer: { width: 24 },
-  cupArea: { marginTop: 20 },
+  spacer: { width: DICE_SPACING },
+  cupArea: { marginTop: DIE_SIZE * 0.2 },
 });
-

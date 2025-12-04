@@ -19,6 +19,7 @@ import FeltBackground from '@/src/components/FeltBackground';
 import OnlineGameOverModal from '@/src/components/OnlineGameOverModal';
 import { ScoreDie } from '@/src/components/ScoreDie';
 import StyledButton from '@/src/components/StyledButton';
+import { BASE_DIE_SIZE, DICE_SPACING_BASE } from '@/src/theme/dice';
 
 import { applyClaim, CoreGameState } from '@/src/engine/coreGame';
 import { rollDice } from '@/src/engine/onlineRoll';
@@ -777,13 +778,15 @@ export default function OnlineMatchScreen() {
                   rolling={isRolling}
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                  size={BASE_DIE_SIZE}
                 />
-                <View style={{ width: 24 }} />
+                <View style={{ width: DICE_SPACING_BASE }} />
                 <Dice
                   value={dieLo}
                   rolling={isRolling}
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                  size={BASE_DIE_SIZE}
                 />
               </View>
             </View>
@@ -1003,8 +1006,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 260,
-    marginTop: -134,
+    minHeight: BASE_DIE_SIZE * 2.6,
+    marginTop: -BASE_DIE_SIZE * 1.34,
     marginBottom: 0,
   },
   diceRow: {
@@ -1017,7 +1020,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -150,
+    marginTop: -BASE_DIE_SIZE * 1.5,
   },
   actionRow: {
     flexDirection: 'row',

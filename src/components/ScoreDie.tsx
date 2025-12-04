@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, ViewStyle } from 'react-native';
 import Dice from './Dice';
+import { SMALL_SCORE_DIE_BASE_SIZE } from '../theme/dice';
 
 type ScoreDieProps = {
   points: number; // 0–5
@@ -23,7 +24,12 @@ const clampFace = (points: number): number => {
   return rawFace;
 };
 
-export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style, size = 30, animationKey }) => {
+export const ScoreDie: React.FC<ScoreDieProps> = ({
+  points,
+  style,
+  size = SMALL_SCORE_DIE_BASE_SIZE,
+  animationKey,
+}) => {
   const targetFace = useMemo(() => clampFace(points), [points]);
 
   const [face, setFace] = useState<number>(() => targetFace);
@@ -32,14 +38,15 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({ points, style, size = 30, an
   const entryTranslateY = useRef(new Animated.Value(0)).current;
 
   const runEntryAnimation = useCallback(() => {
-    entryTranslateY.setValue(-80);
+    const entryOffset = size * 0.8;
+    entryTranslateY.setValue(-entryOffset);
     Animated.spring(entryTranslateY, {
       toValue: 0,
       friction: 6,
       tension: 80,
       useNativeDriver: true,
     }).start();
-  }, [entryTranslateY]);
+  }, [entryTranslateY, size]);
 
   useEffect(() => {
     if (targetFace === face) return;
