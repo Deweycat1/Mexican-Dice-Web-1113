@@ -8,13 +8,12 @@ import {
   Image,
   Modal,
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
@@ -24,22 +23,19 @@ import FeltBackground from '../../../src/components/FeltBackground';
 import RulesContent from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
-import { useSettingsStore } from '../../../src/state/useSettingsStore';
-import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../../../src/theme/dice';
-import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import {
   claimMatchesRoll,
   isChallengeClaim,
   isLegalRaise,
-  isReverseOf,
   resolveActiveChallenge,
   resolveBluff,
-  splitClaim,
+  splitClaim
 } from '../../../src/engine/mexican';
 import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
 import { getCurrentUser } from '../../../src/lib/auth';
 import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
+import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -234,10 +230,6 @@ async function requestRematchForGame(game: OnlineGameV2, myPlayerId: string): Pr
 export default function OnlineGameV2Screen() {
   const params = useLocalSearchParams<{ gameId?: string | string[] }>();
   const router = useRouter();
-  const { height } = useWindowDimensions();
-  const isSmallScreen = height < 700;
-  const isTallScreen = height > 820;
-  const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const normalizedGameId = useMemo(() => {
     const raw = params.gameId;
     if (Array.isArray(raw)) return raw[0];
@@ -265,31 +257,14 @@ export default function OnlineGameV2Screen() {
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
   const [winkArmed, setWinkArmed] = useState(false);
   const [isRequestingRematch, setIsRequestingRematch] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
   const prevStatusRef = useRef<GameStatus | null>(null);
 
   useEffect(() => {
-    let mounted = true;
     (async () => {
-      try {
-        const user = await getCurrentUser();
-        if (mounted) {
-          setUserId(user?.id ?? null);
-        }
-      } catch (err) {
-        console.error('[OnlineGameV2] Failed to load auth user', err);
-        if (mounted) {
-          setUserId(null);
-        }
-      } finally {
-        if (mounted) setAuthLoading(false);
-      }
+      const user = await getCurrentUser();
+      setUserId(user?.id ?? null);
     })();
-    return () => {
-      mounted = false;
-    };
   }, []);
-
 
   useEffect(() => {
     if (!normalizedGameId) {
@@ -462,22 +437,6 @@ export default function OnlineGameV2Screen() {
     if (userId === game.guest_id) return 'guest';
     return null;
   }, [game?.host_id, game?.guest_id, userId]);
-
-  useEffect(() => {
-    console.log('[OnlineGameV2] state', {
-      normalizedGameId,
-      loading,
-      error,
-      hasGame: !!game,
-      gameId: game?.id,
-      gameStatus: game?.status,
-      userId,
-      myRole,
-      host_id: game?.host_id,
-      guest_id: game?.guest_id,
-      authLoading,
-    });
-  }, [normalizedGameId, loading, error, game, userId, myRole, authLoading]);
 
   const isMyTurn = !!game && !!userId && game.current_player_id === userId;
   const opponentRole: 'host' | 'guest' | null = myRole === 'host' ? 'guest' : myRole === 'guest' ? 'host' : null;
@@ -689,9 +648,7 @@ export default function OnlineGameV2Screen() {
     }
     setBanner(null);
     setRollingAnim(true);
-    if (hapticsEnabled) {
-      Haptics.selectionAsync().catch(() => {});
-    }
+    Haptics.selectionAsync().catch(() => {});
     try {
       const { values, normalized } = rollDice();
       const legalTruth = computeLegalTruth(claimToCheck ?? null, normalized);
@@ -719,7 +676,7 @@ export default function OnlineGameV2Screen() {
     } finally {
       setTimeout(() => setRollingAnim(false), 400);
     }
-  }, [claimToCheck, game, handleUpdate, hapticsEnabled, isMyTurn, isRevealAnimating, myRole, roundState, userId]);
+  }, [game, myRole, isMyTurn, isRevealAnimating, roundState, claimToCheck, handleUpdate, userId]);
 
   const appendHistory = useCallback(
     (entry: HistoryItem): HistoryItem[] => {
@@ -962,7 +919,7 @@ export default function OnlineGameV2Screen() {
     }
   }, [game, userId, router]);
 
-  if (loading || authLoading) {
+  if (loading) {
     return (
       <View style={styles.root}>
         <FeltBackground>
@@ -997,27 +954,7 @@ export default function OnlineGameV2Screen() {
     );
   }
 
-  if (!game) {
-    return (
-      <View style={styles.root}>
-        <FeltBackground>
-          <SafeAreaView style={styles.safe}>
-            <View style={styles.centered}>
-              <Text style={styles.errorText}>Match not found.</Text>
-              <StyledButton
-                label="Back to Lobby"
-                variant="primary"
-                onPress={() => router.replace('/online')}
-                style={{ marginTop: 20, minWidth: 200 }}
-              />
-            </View>
-          </SafeAreaView>
-        </FeltBackground>
-      </View>
-    );
-  }
-
-  if (!myRole) {
+  if (!game || !myRole) {
     return (
       <View style={styles.root}>
         <FeltBackground>
@@ -1041,50 +978,14 @@ export default function OnlineGameV2Screen() {
   const canClaim = isMyTurn && myRoll != null;
   const canShowSocial = canClaim && myRoll === 41;
   const canCallBluff = isMyTurn && lastClaim != null && roundState.lastClaimer && roundState.lastClaimer !== myRole;
-  const layoutTweaks = useMemo(
-    () => ({
-      contentPadding: {
-        paddingHorizontal: isSmallScreen ? 12 : 18,
-        paddingBottom: isSmallScreen ? 12 : 10,
-        paddingTop: isSmallScreen ? 6 : 12,
-      },
-      headerPadding: {
-        padding: isSmallScreen ? 12 : 14,
-      },
-      headerRowSpacing: {
-        marginBottom: isSmallScreen ? 8 : 12,
-      },
-      claimText: {
-        fontSize: isSmallScreen ? 16 : 18,
-      },
-      statusText: {
-        fontSize: isSmallScreen ? 14 : 16,
-        marginTop: isSmallScreen ? 8 : 12,
-      },
-      historyBox: {
-        marginTop: isSmallScreen ? 8 : 12,
-      },
-      diceArea: {
-        minHeight: isTallScreen ? DIE_SIZE * 3 : isSmallScreen ? DIE_SIZE * 2.2 : DIE_SIZE * 2.6,
-        marginTop: isSmallScreen ? -DIE_SIZE : -DIE_SIZE * 1.34,
-        marginBottom: isTallScreen ? DIE_SIZE * 0.3 : DIE_SIZE * 0.2,
-        paddingVertical: isTallScreen ? 12 : 0,
-      },
-      controlsSpacing: {
-        marginTop: isSmallScreen ? -DIE_SIZE : isTallScreen ? -DIE_SIZE * 1.3 : -DIE_SIZE * 1.5,
-        paddingVertical: isSmallScreen ? 10 : 14,
-      },
-    }),
-    [isSmallScreen, isTallScreen]
-  );
 
   return (
     <View style={styles.root}>
       <FeltBackground>
         <SafeAreaView style={styles.safe}>
-          <View style={[styles.content, layoutTweaks.contentPadding]}>
-            <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
-              <View style={[styles.headerRow, layoutTweaks.headerRowSpacing]}>
+          <View style={styles.content}>
+            <View style={styles.headerCard}>
+              <View style={styles.headerRow}>
                 <View style={styles.playerColumn}>
                   <View style={styles.avatarCircle}>
                     <Image
@@ -1095,17 +996,11 @@ export default function OnlineGameV2Screen() {
                   <Text style={styles.playerLabel}>
                     Your{'\n'}Score
                   </Text>
-                  <ScoreDie points={myScore} style={styles.scoreDie} size={SCORE_DIE_BASE_SIZE} />
+                  <ScoreDie points={myScore} style={styles.scoreDie} size={38} />
                 </View>
 
                 <View style={styles.titleColumn}>
-                  <Text
-                    style={[styles.claimText, layoutTweaks.claimText]}
-                    numberOfLines={3}
-                    ellipsizeMode="tail"
-                  >
-                    {claimSummary}
-                  </Text>
+                  <Text style={styles.claimText}>{claimSummary}</Text>
                 </View>
 
                 <View style={styles.playerColumn}>
@@ -1116,15 +1011,11 @@ export default function OnlineGameV2Screen() {
                     />
                   </View>
                   <Text style={styles.playerLabel}>{opponentName}</Text>
-                  <ScoreDie
-                    points={opponentScore}
-                    style={styles.scoreDie}
-                    size={SCORE_DIE_BASE_SIZE}
-                  />
+                  <ScoreDie points={opponentScore} style={styles.scoreDie} size={38} />
                 </View>
               </View>
 
-              <Text style={[styles.status, layoutTweaks.statusText]} numberOfLines={2} ellipsizeMode="tail">
+              <Text style={styles.status} numberOfLines={2}>
                 {myTurnText}
               </Text>
             </View>
@@ -1159,11 +1050,7 @@ export default function OnlineGameV2Screen() {
             <Pressable
               onPress={() => setHistoryModalOpen(true)}
               hitSlop={10}
-              style={({ pressed }) => [
-                styles.historyBox,
-                layoutTweaks.historyBox,
-                { opacity: pressed ? 0.7 : 1 },
-              ]}
+              style={({ pressed }) => [styles.historyBox, { opacity: pressed ? 0.7 : 1 }]}
             >
               <Animated.View style={{ opacity: fadeAnim }}>
                 {collapsedHistory.length > 0 ? (
@@ -1178,45 +1065,45 @@ export default function OnlineGameV2Screen() {
               </Animated.View>
             </Pressable>
 
-            <View style={[styles.diceArea, layoutTweaks.diceArea]}>
+            <View style={styles.diceArea}>
               <View style={styles.diceRow}>
-                {showSocialReveal ? (
-                  <AnimatedDiceReveal
-                    hidden={socialRevealHidden}
-                    diceValues={socialDiceValues}
-                    onRevealComplete={handleSocialRevealComplete}
-                  />
-                ) : isRevealingBluff && revealDiceValues ? (
-                  <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={DIE_SIZE} />
-                ) : isMyTurn ? (
-                  <>
-                    <Dice
-                      value={dieHi}
-                      rolling={isMyTurn && rolling && myRoll == null}
-                      displayMode={diceDisplayMode}
-                      overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
-                      size={DIE_SIZE}
-                    />
-                    <View style={{ width: DICE_SPACING }} />
-                    <Dice
-                      value={dieLo}
-                      rolling={isMyTurn && rolling && myRoll == null}
-                      displayMode={diceDisplayMode}
-                      overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
-                      size={DIE_SIZE}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="rival" />
-                    <View style={{ width: DICE_SPACING }} />
-                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="thought" />
-                  </>
-                )}
-              </View>
-            </View>
+            {showSocialReveal ? (
+              <AnimatedDiceReveal
+                hidden={socialRevealHidden}
+                diceValues={socialDiceValues}
+                onRevealComplete={handleSocialRevealComplete}
+              />
+            ) : isRevealingBluff && revealDiceValues ? (
+              <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={100} />
+            ) : isMyTurn ? (
+              <>
+                <Dice
+                  value={dieHi}
+                  rolling={isMyTurn && rolling && myRoll == null}
+                  displayMode={diceDisplayMode}
+                  overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                  size={100}
+                />
+                <View style={{ width: 24 }} />
+                <Dice
+                  value={dieLo}
+                  rolling={isMyTurn && rolling && myRoll == null}
+                  displayMode={diceDisplayMode}
+                  overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                  size={100}
+                />
+              </>
+            ) : (
+              <>
+                <Dice value={null} size={100} thinkingOverlay="rival" />
+                <View style={{ width: 24 }} />
+                <Dice value={null} size={100} thinkingOverlay="thought" />
+              </>
+            )}
+          </View>
+        </View>
 
-            <View style={[styles.controls, layoutTweaks.controlsSpacing]}>
+            <View style={styles.controls}>
               <View style={styles.actionRow}>
                 <StyledButton
                   label={canRoll ? 'Roll' : 'Claim'}
@@ -1554,9 +1441,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: DIE_SIZE * 2.6,
-    marginTop: -DIE_SIZE * 1.34,
-    marginBottom: DIE_SIZE * 0.2,
+    minHeight: 260,
+    marginTop: -134,
+    marginBottom: 20,
   },
   diceRow: {
     flexDirection: 'row',
@@ -1568,7 +1455,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -DIE_SIZE * 1.5,
+    marginTop: -150,
     position: 'relative',
     zIndex: 10,
     marginBottom: -10,

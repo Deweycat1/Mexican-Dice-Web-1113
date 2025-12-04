@@ -16,10 +16,9 @@ import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
 import StyledButton from '../src/components/StyledButton';
 import { splitClaim } from '../src/engine/mexican';
+import { getOrCreateUserDisplayName } from '../src/identity/userDisplayName';
 import { ensureUserProfile, getCurrentUser } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';
-import { getOrCreateUserDisplayName } from '../src/identity/userDisplayName';
-import { SCORE_DIE_SIZE } from '../src/theme/dice';
 
 const STARTING_SCORE = 5;
 const MAX_ACTIVE_GAMES = 5;
@@ -75,8 +74,8 @@ const isValidFriendUsername = (raw: string) => {
   return safePattern.test(value);
 };
 
+const SCORE_DIE_BASE_SIZE = 38;
 const CURRENT_CLAIM_DIE_SCALE = 0.8;
-const CURRENT_CLAIM_DIE_GAP = SCORE_DIE_SIZE * (6 / 38);
 
 const normalizeColorAnimal = (value: string) => {
   if (!value) return '';
@@ -100,10 +99,6 @@ export default function OnlineLobbyScreen() {
   const [games, setGames] = useState<LobbyGame[]>([]);
   const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
   const [loadingGames, setLoadingGames] = useState(false);
-
-  useEffect(() => {
-    console.log('[OnlineLobby] state', { loadingUser, userId, creatingMatch });
-  }, [loadingUser, userId, creatingMatch]);
 
   useEffect(() => {
     let isMounted = true;
@@ -539,13 +534,13 @@ export default function OnlineLobbyScreen() {
                 <View style={styles.currentClaimDiceRow}>
                   <ScoreDie
                     points={claimDicePoints[0]}
-                    size={SCORE_DIE_SIZE}
+                    size={SCORE_DIE_BASE_SIZE}
                     style={styles.currentClaimDie}
                   />
-                  <View style={{ width: CURRENT_CLAIM_DIE_GAP }} />
+                  <View style={{ width: 6 }} />
                   <ScoreDie
                     points={claimDicePoints[1]}
-                    size={SCORE_DIE_SIZE}
+                    size={SCORE_DIE_BASE_SIZE}
                     style={styles.currentClaimDie}
                   />
                 </View>
@@ -654,7 +649,7 @@ export default function OnlineLobbyScreen() {
             <StyledButton
               label={creatingMatch ? 'Starting…' : 'Start Match'}
               onPress={handleCreateMatch}
-              disabled={creatingMatch || loadingUser}
+              disabled={creatingMatch || !userId}
               style={[styles.primaryButton, styles.startMatchGreen]}
               textStyle={styles.startMatchGreenText}
             />
