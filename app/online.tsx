@@ -1,8 +1,9 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -366,44 +367,61 @@ export default function OnlineLobbyScreen() {
   );
 
   const sections = useMemo(() => {
+    const empty = {
+      challenges: [] as LobbyGame[],
+      yourTurn: [] as LobbyGame[],
+      theirTurn: [] as LobbyGame[],
+      completed: [] as LobbyGame[],
+    };
+
     if (!userId) {
-      return {
-        challenges: [] as LobbyGame[],
-        yourTurn: [] as LobbyGame[],
-        theirTurn: [] as LobbyGame[],
-        completed: [] as LobbyGame[],
-      };
+      return empty;
     }
+
+    const buckets = { ...empty };
 
     const activeGames = games.filter((g) => g.status !== 'cancelled');
 
-    const challenges = activeGames.filter((game) => {
-      if (!game.guest_id || game.guest_id !== userId) return false;
-      if (game.status !== 'in_progress') return false;
-      if (game.current_player_id !== game.host_id) return false;
+    activeGames.forEach((game) => {
+      if (game.status === 'finished') {
+        if (buckets.completed.length < 5) {
+          buckets.completed.push(game);
+        }
+        return;
+      }
+
       const hostScore = game.host_score ?? STARTING_SCORE;
       const guestScore = game.guest_score ?? STARTING_SCORE;
-      return hostScore === STARTING_SCORE && guestScore === STARTING_SCORE;
+      const isChallengeForYou =
+        game.guest_id === userId &&
+        game.status === 'in_progress' &&
+        game.current_player_id === game.host_id &&
+        hostScore === STARTING_SCORE &&
+        guestScore === STARTING_SCORE;
+
+      if (isChallengeForYou) {
+        buckets.challenges.push(game);
+        return;
+      }
+
+      if (game.status === 'waiting' && game.host_id === userId && !game.guest_id) {
+        buckets.yourTurn.push(game);
+        return;
+      }
+
+      if (game.status === 'in_progress') {
+        if (game.current_player_id === userId) {
+          buckets.yourTurn.push(game);
+          return;
+        }
+        if (game.current_player_id && game.current_player_id !== userId) {
+          buckets.theirTurn.push(game);
+          return;
+        }
+      }
     });
 
-    const yourTurn = activeGames.filter(
-      (game) =>
-        (game.status === 'in_progress' && game.current_player_id === userId) ||
-        (game.status === 'waiting' && game.host_id === userId && !game.guest_id)
-    );
-
-    const theirTurn = activeGames.filter((game) => {
-      const isInProgress = game.status === 'in_progress';
-      const someoneToMove = !!game.current_player_id;
-      const notYou = game.current_player_id !== userId;
-      return isInProgress && someoneToMove && notYou;
-    });
-
-    const completed = activeGames
-      .filter((game) => game.status === 'finished')
-      .slice(0, 5);
-
-    return { challenges, yourTurn, theirTurn, completed };
+    return buckets;
   }, [games, userId]);
 
   const renderGameCard = (game: LobbyGame) => {
@@ -589,60 +607,69 @@ export default function OnlineLobbyScreen() {
   return (
     <View style={styles.root}>
       <FeltBackground>
-        <ScrollView contentContainerStyle={styles.content}>
-          <View style={styles.breadcrumbRow}>
-            <TouchableOpacity onPress={() => router.push('/')}>
-              <Text style={styles.breadcrumbText}>{'\u2190'} Main menu</Text>
-            </TouchableOpacity>
-          </View>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.innerContent}>
+            <View>
+              <View style={styles.banner}>
+                <Text style={styles.bannerText}>{friendlyHint}</Text>
+              </View>
 
-          <View style={styles.banner}>
-            <Text style={styles.bannerText}>{friendlyHint}</Text>
-          </View>
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>Start a new match</Text>
+                <Text style={styles.cardSubtitle}>
+                  Invite a friend using their color-animal code (for example: "Blue-Panda").
+                </Text>
+                {myUsername && (
+                  <Text style={styles.yourCode}>
+                    Your Username: <Text style={styles.yourCodeValue}>{myUsername}</Text>
+                  </Text>
+                )}
+                <TextInput
+                  style={styles.input}
+                  placeholder="Friend’s Username"
+                  placeholderTextColor="#8B949E"
+                  value={friendCode}
+                  onChangeText={setFriendCode}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+                <StyledButton
+                  label={creatingMatch ? 'Starting…' : 'Start Match'}
+                  onPress={handleCreateMatch}
+                  disabled={creatingMatch || !userId}
+                  style={[styles.primaryButton, styles.startMatchGreen]}
+                  textStyle={styles.startMatchGreenText}
+                />
+                {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
+              </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Start a new match</Text>
-        <Text style={styles.cardSubtitle}>
-          Invite a friend using their color-animal code (for example: "Blue-Panda").
-        </Text>
-        {myUsername && (
-          <Text style={styles.yourCode}>
-            Your Username:{' '}
-            <Text style={styles.yourCodeValue}>{myUsername}</Text>
-          </Text>
-        )}
-        <TextInput
-          style={styles.input}
-          placeholder="Friend’s Username"
-          placeholderTextColor="#8B949E"
-          value={friendCode}
-          onChangeText={setFriendCode}
-          autoCapitalize="words"
-          autoCorrect={false}
-        />
-            <StyledButton
-              label={creatingMatch ? 'Starting…' : 'Start Match'}
-              onPress={handleCreateMatch}
-              disabled={creatingMatch || !userId}
-              style={[styles.primaryButton, styles.startMatchGreen]}
-              textStyle={styles.startMatchGreenText}
-            />
-            {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
-          </View>
-
-          {loadingGames ? (
-            <View style={styles.loadingMatches}>
-              <ActivityIndicator size="small" color="#FE9902" />
-              <Text style={styles.loadingText}>Loading matches…</Text>
+              {loadingGames ? (
+                <View style={styles.loadingMatches}>
+                  <ActivityIndicator size="small" color="#FE9902" />
+                  <Text style={styles.loadingText}>Loading matches…</Text>
+                </View>
+              ) : (
+                <>
+                  {renderSection('Challenges', sections.challenges, 'No new challenges yet.')}
+                  {renderSection('Your Turn', sections.yourTurn, 'No games where it’s your turn yet.')}
+                  {renderSection(
+                    'Their Turn',
+                    sections.theirTurn,
+                    'No games waiting on your friends.'
+                  )}
+                  {renderSection('Completed games', sections.completed, 'No completed games yet.')}
+                </>
+              )}
             </View>
-          ) : (
-            <>
-              {renderSection('Challenges', sections.challenges, 'No new challenges yet.')}
-              {renderSection('Your Turn', sections.yourTurn, 'No games where it’s your turn yet.')}
-              {renderSection('Their Turn', sections.theirTurn, 'No games waiting on your friends.')}
-              {renderSection('Completed games', sections.completed, 'No completed games yet.')}
-            </>
-          )}
+
+            <View style={styles.flexSpacer} />
+
+            <Link href="/" asChild>
+              <Pressable style={styles.mainMenuButton}>
+                <Text style={styles.mainMenuButtonText}>Main Menu</Text>
+              </Pressable>
+            </Link>
+          </View>
         </ScrollView>
       </FeltBackground>
     </View>
@@ -654,9 +681,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1F262A',
   },
-  content: {
+  scrollContent: {
+    flexGrow: 1,
     padding: 20,
     paddingBottom: 40,
+  },
+  innerContent: {
+    flex: 1,
+  },
+  flexSpacer: {
+    flexGrow: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -677,14 +711,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-  },
-  breadcrumbRow: {
-    marginBottom: 10,
-  },
-  breadcrumbText: {
-    color: '#FE9902',
-    fontSize: 14,
-    fontWeight: '700',
   },
   bannerText: {
     color: '#F0F6FC',
@@ -840,5 +866,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
+  },
+  mainMenuButton: {
+    backgroundColor: '#C21807',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#8B0000',
+    marginTop: 16,
+  },
+  mainMenuButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
