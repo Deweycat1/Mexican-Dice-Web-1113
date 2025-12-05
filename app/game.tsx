@@ -1183,8 +1183,9 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   userAvatarImage: {
-    width: 62,
-    height: 62,
+    width: 50.2,
+    height: 50.2,
+    resizeMode: 'contain',
   },
   rivalAvatarImage: {
     width: 56,

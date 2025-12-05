@@ -77,6 +77,7 @@ export type Store = {
   lastBluffCaller: Turn | null;
   lastBluffDefenderTruth: boolean | null;
   bluffResultNonce: number;
+  pendingInfernoDelay: boolean;
   
   // Turn timing tracking
   playerTurnStartTime: number | null;
@@ -709,13 +710,18 @@ export const useGameStore = create<Store>((set, get) => {
       return;
     }
 
+    const shouldForceInfernoDelay = start.pendingInfernoDelay;
+    if (shouldForceInfernoDelay) {
+      set({ pendingInfernoDelay: false });
+    }
+
     beginTurnLock();
     set({ isBusy: true });
 
     try {
       // Add suspense when game is close to ending (either player has 1-2 points left)
       const isCloseGame = start.playerScore <= 2 || start.cpuScore <= 2;
-      const thinkingDelay = isCloseGame ? 3000 : 1000;
+      const thinkingDelay = shouldForceInfernoDelay ? 3000 : isCloseGame ? 3000 : 1000;
       
       await new Promise((resolve) => setTimeout(resolve, thinkingDelay));
 
@@ -895,6 +901,7 @@ export const useGameStore = create<Store>((set, get) => {
     isRolling: false,
     mustBluff: false,
     message: `Welcome to Inferno ${MEXICAN_ICON} Dice!`,
+    pendingInfernoDelay: false,
     mexicanFlashNonce: 0,
     cpuSocialDice: null,
     cpuSocialRevealNonce: 0,
@@ -906,18 +913,18 @@ export const useGameStore = create<Store>((set, get) => {
     // Turn timing tracking
     playerTurnStartTime: null,
 
-  turnLock: false,
-  isBusy: false,
-  gameOver: null,
-  // survival score bucket (kept separate from normal game scores)
-  survivalPlayerScore: STARTING_SCORE,
-  survivalCpuScore: STARTING_SCORE,
-  // Survival defaults
-  mode: 'normal',
-  currentStreak: 0,
-  bestStreak: 0,
-  globalBest: 0,
-  isSurvivalOver: false,
+    turnLock: false,
+    isBusy: false,
+    gameOver: null,
+    // survival score bucket (kept separate from normal game scores)
+    survivalPlayerScore: STARTING_SCORE,
+    survivalCpuScore: STARTING_SCORE,
+    // Survival defaults
+    mode: 'normal',
+    currentStreak: 0,
+    bestStreak: 0,
+    globalBest: 0,
+    isSurvivalOver: false,
 
     newGame: () => {
       roundIndexCounter = 0;
@@ -939,6 +946,7 @@ export const useGameStore = create<Store>((set, get) => {
         playerTurnStartTime: null,
         survivalPlayerScore: STARTING_SCORE,
         survivalCpuScore: STARTING_SCORE,
+        pendingInfernoDelay: false,
         // do not touch survivalHistory here; it is for survival mode sessions
         survivalClaims: [],
         turnLock: false,
@@ -1032,7 +1040,7 @@ export const useGameStore = create<Store>((set, get) => {
         persistAiState();
         if (!result.gameOver) {
           resetRoundState();
-          set({ turn: 'cpu' });
+          set({ turn: 'cpu', pendingInfernoDelay: false });
           endTurnLock();
           set({ isBusy: false });
           cpuTurn();
@@ -1078,6 +1086,7 @@ export const useGameStore = create<Store>((set, get) => {
           turn: 'cpu',
           message: 'Social (41) shown. Round resets.',
           socialBannerNonce: prevState.socialBannerNonce + 1,
+          pendingInfernoDelay: false,
         }));
         set({ isBusy: false });
         endTurnLock();
@@ -1142,6 +1151,7 @@ export const useGameStore = create<Store>((set, get) => {
         mustBluff: false,
         lastPlayerRoll: state.lastPlayerRoll,
         message,
+        pendingInfernoDelay: claim === 21,
       });
 
       set({ isBusy: false });
@@ -1181,6 +1191,7 @@ export const useGameStore = create<Store>((set, get) => {
       endTurnLock();
 
       if (!result.gameOver && get().turn === 'cpu') {
+        set({ pendingInfernoDelay: false });
         cpuTurn();
       }
     },

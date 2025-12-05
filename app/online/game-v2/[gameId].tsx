@@ -996,7 +996,7 @@ export default function OnlineGameV2Screen() {
                   <View style={styles.avatarCircle}>
                     <Image
                       source={require('../../../assets/images/User.png')}
-                      style={styles.avatarImage}
+                      style={styles.userAvatarImage}
                     />
                   </View>
                   <Text style={styles.playerLabel}>
@@ -1353,6 +1353,11 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: 58,
     height: 58,
+    resizeMode: 'contain',
+  },
+  userAvatarImage: {
+    width: 47.0,
+    height: 47.0,
     resizeMode: 'contain',
   },
   playerLabel: {
