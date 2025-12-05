@@ -11,10 +11,10 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User } from '@supabase/supabase-js';
+import { PostgrestError, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { getOrCreateUserDisplayName, setUserDisplayName } from '../identity/userDisplayName';
-import { normalizeColorAnimalName } from './colorAnimalName';
+import { generateRandomColorAnimalName, normalizeColorAnimalName } from './colorAnimalName';
 
 const AUTH_SESSION_KEY = 'mexican-dice-auth-session';
 
@@ -176,31 +176,105 @@ export type UserProfile = {
 
 const isNullOrWhitespace = (value?: string | null) => !value || value.trim().length === 0;
 
-async function ensureColorAnimalUsername(userId: string, fallbackSource?: string | null) {
-  const sourceName = fallbackSource && !isNullOrWhitespace(fallbackSource)
-    ? fallbackSource
-    : await getOrCreateUserDisplayName();
-  let normalized = normalizeColorAnimalName(sourceName);
-  if (!normalized) {
-    const regenerated = await getOrCreateUserDisplayName();
-    normalized = normalizeColorAnimalName(regenerated);
+const MAX_USERNAME_ATTEMPTS = 10;
+const UNIQUE_USERNAME_CODE = '23505';
+const UNIQUE_USERNAME_CONSTRAINT = 'users_username_key';
+
+const isUniqueUsernameError = (error?: PostgrestError | null) => {
+  if (!error) return false;
+  if (error.code !== UNIQUE_USERNAME_CODE) return false;
+  if (!error.message) return true;
+  return error.message.includes(UNIQUE_USERNAME_CONSTRAINT);
+};
+
+const normalizeCandidate = (value?: string | null) => {
+  if (!value || isNullOrWhitespace(value)) {
+    return null;
   }
-  if (!normalized) {
+  const normalized = normalizeColorAnimalName(value);
+  return normalized || null;
+};
+
+const nextUsernameCandidate = (attempt: number, preferred?: string | null) => {
+  if (attempt === 0) {
+    const normalizedPreferred = normalizeCandidate(preferred);
+    if (normalizedPreferred) {
+      return normalizedPreferred;
+    }
+  }
+  const normalizedRandom = normalizeCandidate(generateRandomColorAnimalName());
+  if (!normalizedRandom) {
     throw new Error('Failed to generate username');
   }
+  return normalizedRandom;
+};
 
-  const { error } = await supabase
-    .from('users')
-    .update({ username: normalized })
-    .eq('id', userId);
+async function ensureColorAnimalUsername(userId: string, fallbackSource?: string | null) {
+  const preferredSource =
+    !isNullOrWhitespace(fallbackSource) ? fallbackSource : await getOrCreateUserDisplayName();
 
-  if (error) {
+  for (let attempt = 0; attempt < MAX_USERNAME_ATTEMPTS; attempt += 1) {
+    const candidate = nextUsernameCandidate(attempt, preferredSource);
+
+    const { error } = await supabase
+      .from('users')
+      .update({ username: candidate })
+      .eq('id', userId)
+      .select('username')
+      .single();
+
+    if (!error) {
+      await setUserDisplayName(candidate);
+      return candidate;
+    }
+
+    if (isUniqueUsernameError(error)) {
+      console.warn(
+        `⚠️ Username "${candidate}" already taken. Retrying (${attempt + 1}/${MAX_USERNAME_ATTEMPTS})`
+      );
+      continue;
+    }
+
     console.error('⚠️ Failed to assign username:', error);
-    throw new Error(error.message ?? 'Failed to assign username');
+    throw new Error(error?.message ?? 'Failed to assign username');
   }
 
-  await setUserDisplayName(normalized);
-  return normalized;
+  throw new Error('Failed to assign username after multiple attempts');
+}
+
+async function createProfileWithUniqueUsername(userId: string): Promise<UserProfile> {
+  const preferredSource = await getOrCreateUserDisplayName();
+
+  for (let attempt = 0; attempt < MAX_USERNAME_ATTEMPTS; attempt += 1) {
+    const candidate = nextUsernameCandidate(attempt, preferredSource);
+
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        id: userId,
+        username: candidate,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      await setUserDisplayName(candidate);
+      console.log('✅ User profile created:', data.username);
+      return data as UserProfile;
+    }
+
+    if (isUniqueUsernameError(error)) {
+      console.warn(
+        `⚠️ Username collision for "${candidate}". Retrying (${attempt + 1}/${MAX_USERNAME_ATTEMPTS})`
+      );
+      continue;
+    }
+
+    console.error('❌ Error creating user profile:', error);
+    throw new Error(`Failed to create user profile: ${error?.message ?? 'Unknown error'}`);
+  }
+
+  throw new Error('Failed to create user profile after multiple username attempts');
 }
 
 /**
@@ -228,11 +302,20 @@ export async function ensureUserProfile(): Promise<UserProfile> {
     console.log('✅ User authenticated:', user.id);
     
     // Step 2: Try to fetch existing profile from public.users
-    const { data: existingProfile } = await supabase
+    const {
+      data: existingProfile,
+      error: profileError,
+      status,
+    } = await supabase
       .from('users')
       .select('*')
       .eq('id', user.id)
       .single();
+
+    if (profileError && status !== 406) {
+      console.error('❌ Error loading user profile:', profileError);
+      throw new Error(profileError.message ?? 'Failed to load user profile');
+    }
     
     // Check if profile exists and has a valid username
     if (existingProfile) {
@@ -273,38 +356,7 @@ export async function ensureUserProfile(): Promise<UserProfile> {
     
     // Step 3: No profile exists - generate a friendly username
     console.log('📝 No profile found, creating new profile...');
-    
-    const generatedUsernameRaw = await getOrCreateUserDisplayName();
-    const generatedUsername = normalizeColorAnimalName(generatedUsernameRaw);
-    
-    if (!generatedUsername) {
-      throw new Error('Failed to generate username');
-    }
-    
-    console.log('🎲 Generated username:', generatedUsername);
-    
-    // Step 4: Insert new profile into public.users
-    const { data: newProfile, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: user.id,
-        username: generatedUsername,
-      })
-      .select()
-      .single();
-    
-    if (insertError) {
-      console.error('❌ Error creating user profile:', insertError);
-      throw new Error(`Failed to create user profile: ${insertError.message}`);
-    }
-    
-    if (!newProfile) {
-      throw new Error('No data returned from profile insert');
-    }
-    
-    console.log('✅ User profile created:', newProfile.username);
-    await setUserDisplayName(newProfile.username);
-    
+    const newProfile = await createProfileWithUniqueUsername(user.id);
     return {
       id: newProfile.id,
       username: newProfile.username,
