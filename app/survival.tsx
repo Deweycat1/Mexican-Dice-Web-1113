@@ -25,6 +25,7 @@ import StyledButton from '../src/components/StyledButton';
 import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
+import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DICE_SPACING, DIE_SIZE } from '../src/theme/dice';
@@ -379,6 +380,14 @@ export default function Survival() {
       }
     };
   }, [pulseAnim, amplitude, periodMs]);
+
+  useEffect(() => {
+    if (isFocused && musicEnabled) {
+      void startInfernoMusic();
+    } else {
+      void stopInfernoMusic();
+    }
+  }, [isFocused, musicEnabled]);
 
   // haptics scaling and pattern
   useEffect(() => {

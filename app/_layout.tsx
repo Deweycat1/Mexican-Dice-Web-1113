@@ -38,13 +38,20 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    const onSurvivalScreen = pathname?.startsWith('/survival');
-    const onInfernoScreen = pathname?.startsWith('/game');
-    if (!musicEnabled || onSurvivalScreen || onInfernoScreen) {
+    const onSurvivalScreen = pathname?.includes('survival');
+    const onInfernoScreen = pathname?.includes('inferno');
+
+    if (!musicEnabled) {
       void stopRollingMusic();
-    } else {
-      void startRollingMusic();
+      return;
     }
+
+    if (onSurvivalScreen || onInfernoScreen) {
+      void stopRollingMusic();
+      return;
+    }
+
+    void startRollingMusic();
   }, [pathname, musicEnabled]);
 
   useEffect(() => {

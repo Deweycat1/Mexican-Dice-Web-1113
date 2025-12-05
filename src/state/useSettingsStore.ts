@@ -3,6 +3,12 @@ import { create } from 'zustand';
 
 const SETTINGS_KEY = 'suddendice.settings';
 
+const DEFAULT_SETTINGS = {
+  hapticsEnabled: true,
+  musicEnabled: false,
+  sfxEnabled: false,
+} as const;
+
 type SettingsSnapshot = {
   hapticsEnabled: boolean;
   musicEnabled: boolean;
@@ -21,9 +27,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
   const persist = async (partial: Partial<SettingsSnapshot>) => {
     try {
       const next: SettingsSnapshot = {
-        hapticsEnabled: partial.hapticsEnabled ?? get().hapticsEnabled,
-        musicEnabled: partial.musicEnabled ?? get().musicEnabled,
-        sfxEnabled: partial.sfxEnabled ?? get().sfxEnabled,
+        hapticsEnabled: partial.hapticsEnabled ?? get().hapticsEnabled ?? DEFAULT_SETTINGS.hapticsEnabled,
+        musicEnabled: partial.musicEnabled ?? get().musicEnabled ?? DEFAULT_SETTINGS.musicEnabled,
+        sfxEnabled: partial.sfxEnabled ?? get().sfxEnabled ?? DEFAULT_SETTINGS.sfxEnabled,
       };
       await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
     } catch {
@@ -32,9 +38,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
   };
 
   return {
-    hapticsEnabled: true,
-    musicEnabled: false,
-    sfxEnabled: false,
+    ...DEFAULT_SETTINGS,
     hasHydrated: false,
     hydrate: async () => {
       if (get().hasHydrated) return;
@@ -45,15 +49,22 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
           set((state) => ({
             ...state,
             hapticsEnabled:
-              typeof parsed.hapticsEnabled === 'boolean' ? parsed.hapticsEnabled : state.hapticsEnabled,
+              typeof parsed.hapticsEnabled === 'boolean'
+                ? parsed.hapticsEnabled
+                : DEFAULT_SETTINGS.hapticsEnabled,
             musicEnabled:
               typeof parsed.musicEnabled === 'boolean'
                 ? parsed.musicEnabled
-                : state.musicEnabled,
+                : DEFAULT_SETTINGS.musicEnabled,
             sfxEnabled:
               typeof parsed.sfxEnabled === 'boolean'
                 ? parsed.sfxEnabled
-                : state.sfxEnabled,
+                : DEFAULT_SETTINGS.sfxEnabled,
+          }));
+        } else {
+          set((state) => ({
+            ...state,
+            ...DEFAULT_SETTINGS,
           }));
         }
       } catch {
