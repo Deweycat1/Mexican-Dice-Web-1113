@@ -21,3 +21,14 @@ export function generateRandomColorAnimalName() {
   const randomAnimal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
   return `${randomColor}-${randomAnimal}`;
 }
+
+export function normalizeColorAnimalName(value: string | null | undefined): string {
+  if (!value) return '';
+  return value
+    .trim()
+    .replace(/\s+/g, '-')
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join('-');
+}

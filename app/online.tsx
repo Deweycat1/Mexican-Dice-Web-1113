@@ -16,7 +16,8 @@ import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
 import StyledButton from '../src/components/StyledButton';
 import { splitClaim } from '../src/engine/mexican';
-import { ensureUserProfile, getCurrentUser } from '../src/lib/auth';
+import { ensureUserProfile } from '../src/lib/auth';
+import { normalizeColorAnimalName } from '../src/lib/colorAnimalName';
 import { supabase } from '../src/lib/supabase';
 
 const STARTING_SCORE = 5;
@@ -76,17 +77,6 @@ const isValidFriendUsername = (raw: string) => {
 const SCORE_DIE_BASE_SIZE = 38;
 const CURRENT_CLAIM_DIE_SCALE = 0.8;
 
-const normalizeColorAnimal = (value: string) => {
-  if (!value) return '';
-  return value
-    .trim()
-    .replace(/\s+/g, '-')
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join('-');
-};
-
 export default function OnlineLobbyScreen() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -103,21 +93,10 @@ export default function OnlineLobbyScreen() {
     let isMounted = true;
     (async () => {
     try {
-      await ensureUserProfile();
-      const user = await getCurrentUser();
+      const profile = await ensureUserProfile();
       if (isMounted) {
-        setUserId(user?.id ?? null);
-      }
-
-      if (user?.id) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('username')
-          .eq('id', user.id)
-          .single();
-        if (!error && isMounted) {
-          setMyUsername(data?.username ?? null);
-        }
+        setUserId(profile.id);
+        setMyUsername(profile.username ?? null);
       }
     } catch (err) {
       console.error('[OnlineLobby] Failed to load user', err);
@@ -250,7 +229,7 @@ export default function OnlineLobbyScreen() {
           return;
         }
 
-        const normalized = normalizeColorAnimal(trimmed);
+        const normalized = normalizeColorAnimalName(trimmed);
         if (!normalized) {
           Alert.alert(
             'Invalid username',

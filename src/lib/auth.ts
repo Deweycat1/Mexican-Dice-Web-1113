@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { getOrCreateUserDisplayName, setUserDisplayName } from '../identity/userDisplayName';
+import { normalizeColorAnimalName } from './colorAnimalName';
 
 const AUTH_SESSION_KEY = 'mexican-dice-auth-session';
 
@@ -173,6 +174,35 @@ export type UserProfile = {
   created_at?: string;
 };
 
+const isNullOrWhitespace = (value?: string | null) => !value || value.trim().length === 0;
+
+async function ensureColorAnimalUsername(userId: string, fallbackSource?: string | null) {
+  const sourceName = fallbackSource && !isNullOrWhitespace(fallbackSource)
+    ? fallbackSource
+    : await getOrCreateUserDisplayName();
+  let normalized = normalizeColorAnimalName(sourceName);
+  if (!normalized) {
+    const regenerated = await getOrCreateUserDisplayName();
+    normalized = normalizeColorAnimalName(regenerated);
+  }
+  if (!normalized) {
+    throw new Error('Failed to generate username');
+  }
+
+  const { error } = await supabase
+    .from('users')
+    .update({ username: normalized })
+    .eq('id', userId);
+
+  if (error) {
+    console.error('⚠️ Failed to assign username:', error);
+    throw new Error(error.message ?? 'Failed to assign username');
+  }
+
+  await setUserDisplayName(normalized);
+  return normalized;
+}
+
 /**
  * Ensure the current authenticated user has a profile in public.users
  * 
@@ -205,35 +235,25 @@ export async function ensureUserProfile(): Promise<UserProfile> {
       .single();
     
     // Check if profile exists and has a valid username
-    if (existingProfile && existingProfile.username) {
+    if (existingProfile) {
+      if (isNullOrWhitespace(existingProfile.username)) {
+        console.log('🧼 Repairing missing username for user:', user.id);
+        const repairedUsername = await ensureColorAnimalUsername(user.id);
+        return {
+          id: existingProfile.id,
+          username: repairedUsername,
+          created_at: existingProfile.created_at,
+        };
+      }
+
       // Check if it's an old Player-XXXX format username
       const isOldFormat = /^Player-\d{4}$/.test(existingProfile.username);
       
       if (isOldFormat) {
         console.log('🔄 Old username format detected, upgrading:', existingProfile.username);
         // Generate new Color-Animal username and update
-        const newUsername = await getOrCreateUserDisplayName();
-        
-        console.log('✨ Upgrading to:', newUsername);
-        
-        // Update the username in database
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ username: newUsername })
-          .eq('id', user.id);
-        
-        if (updateError) {
-          console.error('⚠️ Failed to upgrade username:', updateError);
-          // Return old username if update fails
-          return {
-            id: existingProfile.id,
-            username: existingProfile.username,
-            created_at: existingProfile.created_at,
-          };
-        }
-        
+        const newUsername = await ensureColorAnimalUsername(user.id);
         console.log('✅ Username upgraded successfully');
-        await setUserDisplayName(newUsername);
         return {
           id: existingProfile.id,
           username: newUsername,
@@ -254,7 +274,12 @@ export async function ensureUserProfile(): Promise<UserProfile> {
     // Step 3: No profile exists - generate a friendly username
     console.log('📝 No profile found, creating new profile...');
     
-    const generatedUsername = await getOrCreateUserDisplayName();
+    const generatedUsernameRaw = await getOrCreateUserDisplayName();
+    const generatedUsername = normalizeColorAnimalName(generatedUsernameRaw);
+    
+    if (!generatedUsername) {
+      throw new Error('Failed to generate username');
+    }
     
     console.log('🎲 Generated username:', generatedUsername);
     

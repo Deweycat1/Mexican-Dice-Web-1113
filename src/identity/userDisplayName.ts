@@ -1,20 +1,26 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { generateRandomColorAnimalName } from '../lib/colorAnimalName';
+import { generateRandomColorAnimalName, normalizeColorAnimalName } from '../lib/colorAnimalName';
 
 const USER_DISPLAY_NAME_KEY = 'md_user_display_name_v1';
 
 export async function getStoredUserDisplayName(): Promise<string | null> {
   const existing = await AsyncStorage.getItem(USER_DISPLAY_NAME_KEY);
   if (existing && existing.trim().length > 0) {
-    return existing;
+    const normalized = normalizeColorAnimalName(existing);
+    if (normalized && normalized !== existing) {
+      await AsyncStorage.setItem(USER_DISPLAY_NAME_KEY, normalized);
+      return normalized;
+    }
+    return normalized || existing;
   }
   return null;
 }
 
 export async function setUserDisplayName(name: string) {
-  if (!name) return;
-  await AsyncStorage.setItem(USER_DISPLAY_NAME_KEY, name);
+  const normalized = normalizeColorAnimalName(name);
+  if (!normalized) return;
+  await AsyncStorage.setItem(USER_DISPLAY_NAME_KEY, normalized);
 }
 
 export async function getOrCreateUserDisplayName(): Promise<string> {
@@ -24,5 +30,5 @@ export async function getOrCreateUserDisplayName(): Promise<string> {
   }
   const generated = generateRandomColorAnimalName();
   await setUserDisplayName(generated);
-  return generated;
+  return normalizeColorAnimalName(generated) || generated;
 }
