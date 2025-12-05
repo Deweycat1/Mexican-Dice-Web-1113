@@ -170,7 +170,7 @@ export default function RollClaimComparisonScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0FA958" />
+          <ActivityIndicator size="large" color="#53A7F3" />
           <Text style={styles.loadingText}>Loading statistics...</Text>
         </View>
         <Pressable
@@ -329,7 +329,7 @@ export default function RollClaimComparisonScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#1B1D1F',
   },
   scrollView: {
     flex: 1,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   backButtonTopText: {
-    color: '#0FA958',
+    color: '#53A7F3',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -368,10 +368,10 @@ const styles = StyleSheet.create({
   },
   highlightCard: {
     flex: 1,
-    backgroundColor: 'rgba(15, 169, 88, 0.15)',
+    backgroundColor: '#2A3136',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(15, 169, 88, 0.3)',
+    borderColor: '#30363D',
     padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -393,27 +393,27 @@ const styles = StyleSheet.create({
   },
   highlightLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#8B949E',
     textAlign: 'center',
   },
   highlightDetail: {
     fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#8B949E',
     textAlign: 'center',
     marginTop: 4,
   },
   tableContainer: {
-    backgroundColor: 'rgba(15, 169, 88, 0.15)',
+    backgroundColor: '#2A3136',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(15, 169, 88, 0.3)',
+    borderColor: '#30363D',
     padding: 16,
     marginTop: 8,
   },
   tableHeader: {
     flexDirection: 'row',
     borderBottomWidth: 2,
-    borderBottomColor: 'rgba(15, 169, 88, 0.4)',
+    borderBottomColor: '#30363D',
     paddingBottom: 12,
     marginBottom: 12,
   },
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: '700',
-    color: '#0FA958',
+    color: '#E0B50C',
     textAlign: 'center',
   },
   tableRow: {
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cellTextRolled: {
-    color: '#0FA958',
+    color: '#53A7F3',
     fontWeight: '600',
   },
   cellTextClaimed: {
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   },
   miniBar: {
     height: 4,
-    backgroundColor: '#0FA958',
+    backgroundColor: '#53A7F3',
     borderRadius: 2,
     minWidth: 2,
   },
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
     color: '#FF6B6B',
   },
   diffNegative: {
-    color: '#4ECDC4',
+    color: '#53A7F3',
   },
   insightCell: {
     flex: 1.2,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#F0F6FC',
   },
   errorContainer: {
     flex: 1,
@@ -507,12 +507,14 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#8B949E',
     textAlign: 'center',
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#0FA958',
+    backgroundColor: '#53A7F3',
+    borderColor: '#1C75BC',
+    borderWidth: 2,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -522,7 +524,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: '#F0F6FC',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -543,12 +545,14 @@ const styles = StyleSheet.create({
   },
   noDataText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#8B949E',
     textAlign: 'center',
     paddingVertical: 20,
   },
   bottomMenuButton: {
-    backgroundColor: '#0FA958',
+    backgroundColor: '#53A7F3',
+    borderColor: '#1C75BC',
+    borderWidth: 2,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -558,7 +562,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   bottomMenuButtonText: {
-    color: '#FFFFFF',
+    color: '#F0F6FC',
     fontSize: 16,
     fontWeight: '700',
   },
