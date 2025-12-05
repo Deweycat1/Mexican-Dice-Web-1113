@@ -4,14 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function SurvivalRulesContent() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Survival Mode Rules</Text>
+      <Text style={styles.title}>Inferno🔥Mode Rules</Text>
       <Text style={styles.subtitle}>(A streamlined, single player twist on Inferno Dice)</Text>
 
-      <Text style={styles.heading}>How Survival Works</Text>
+      <Text style={styles.heading}>How Inferno🔥Mode Works</Text>
       <Text style={styles.paragraph}>You face off against the Rival in an endless series of rounds.</Text>
       <Text style={styles.paragraph}>Each time you win a round, your streak increases.</Text>
       <Text style={styles.paragraph}>If you lose a round, your streak ends immediately.</Text>
-      <Text style={styles.paragraph}>There are no points or scorekeeper dice in Survival Mode.</Text>
+      <Text style={styles.paragraph}>There are no points or scorekeeper dice in Inferno🔥Mode.</Text>
       <Text style={styles.paragraph}>Your only objective is simple: survive as long as possible.</Text>
 
       <Text style={styles.heading}>Rolling and Claims</Text>
@@ -78,7 +78,7 @@ export default function SurvivalRulesContent() {
       <Text style={styles.paragraph}>Every win increases your streak except 41 Social resets, which give no streak.</Text>
 
       <Text style={styles.heading}>Losing a Round</Text>
-      <Text style={styles.paragraph}>Your Survival run ends immediately if:</Text>
+      <Text style={styles.paragraph}>Your Inferno🔥Mode run ends immediately if:</Text>
       <Text style={styles.bullet}>• You fail to match or beat the active claim</Text>
       <Text style={styles.bullet}>• You are caught bluffing</Text>
       <Text style={styles.bullet}>• You incorrectly call a bluff</Text>

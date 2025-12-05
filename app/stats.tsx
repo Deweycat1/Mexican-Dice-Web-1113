@@ -375,7 +375,7 @@ export default function StatsScreen() {
             <View style={styles.card}>
               <Text style={styles.noDataText}>
                 {survivalAverage
-                  ? 'Play Survival to unlock player tendency stats!'
+                  ? 'Play Inferno🔥Mode to unlock player tendency stats!'
                   : 'Play a few games to unlock your Random Stats!'}
               </Text>
             </View>

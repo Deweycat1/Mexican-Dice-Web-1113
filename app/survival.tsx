@@ -3,7 +3,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Animated,
-    Image,
     Modal,
     Pressable,
     ScrollView,
@@ -1122,12 +1121,7 @@ export default function Survival() {
             {/* HEADER */}
             <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
               <View style={styles.titleRow}>
-                <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Survival</Animated.Text>
-                <Image
-                  source={require('../assets/images/mexican-dice-logo.png')}
-                  style={styles.logoImage}
-                />
-                <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Mode</Animated.Text>
+                <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Inferno🔥Mode</Animated.Text>
               </View>
               <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
               {claimText ? (
@@ -1569,11 +1563,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
-  },
-  logoImage: {
-    width: 32,
-    height: 32,
-    marginHorizontal: 8,
   },
   scoreLine: {
     color: '#F0F6FC',

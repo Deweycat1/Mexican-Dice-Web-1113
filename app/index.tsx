@@ -46,7 +46,7 @@ export default function HomeScreen() {
             </Link>
 
             <Link href="/survival" style={styles.buttonStats}>
-              <Text style={styles.buttonText}>Survival Mode</Text>
+              <Text style={styles.buttonText}>Inferno🔥Mode</Text>
             </Link>
             <Link href="/online" style={styles.button}>
               <Text style={styles.buttonText}>Online Multiplayer</Text>

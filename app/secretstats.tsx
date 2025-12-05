@@ -343,7 +343,7 @@ export default function SecretStatsScreen() {
         <Text style={styles.backButtonTopText}>← Back</Text>
       </Pressable>
       
-      <Text style={styles.title}>Win & Survival Stats</Text>
+      <Text style={styles.title}>Win & Inferno🔥Mode Stats</Text>
       <Text style={styles.subtitle}>🔒 Hidden Analytics</Text>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -406,7 +406,7 @@ export default function SecretStatsScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔥 Survival Mode</Text>
+          <Text style={styles.cardTitle}>🔥 Inferno🔥Mode</Text>
           <View style={styles.statsTable}>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Global Best Streak</Text>
@@ -444,7 +444,7 @@ export default function SecretStatsScreen() {
 
         {survivalAverage && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏔️ Average Survival Mode Streak</Text>
+            <Text style={styles.cardTitle}>🏔️ Average Inferno🔥Mode Streak</Text>
             <Text style={styles.bigNumber}>{survivalAverage.averageSurvivalStreak.toFixed(2)}</Text>
             <Text style={styles.cardSubtext}>
               Based on {survivalAverage.sampleSize.toLocaleString()} completed runs
@@ -544,7 +544,7 @@ export default function SecretStatsScreen() {
         {/* Survival: Percent of users scoring >10 */}
         {survivalOver10 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🔥 Survival Mode</Text>
+            <Text style={styles.cardTitle}>🔥 Inferno🔥Mode</Text>
             <View style={styles.statsTable}>
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>% of users scoring &gt; 10</Text>
@@ -553,7 +553,7 @@ export default function SecretStatsScreen() {
                 </Text>
               </View>
               <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Total Survival Players</Text>
+                <Text style={styles.statLabel}>Total Inferno🔥Mode Players</Text>
                 <Text style={styles.statCountLarge}>{survivalOver10.totalSurvivalUsers ?? 0}</Text>
               </View>
               <View style={styles.statRow}>
