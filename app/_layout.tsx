@@ -8,11 +8,11 @@ import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 export default function RootLayout() {
-  // Ensure web root/background fills viewport and uses the canonical dark green
+  // Ensure web root/background fills viewport and uses the dark gunmetal base
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     try {
-      const color = '#0B3A26';
+      const color = '#1B1D1F';
       const html = document.documentElement as HTMLElement;
       const body = document.body as HTMLElement;
       html.style.backgroundColor = color;
@@ -52,9 +52,9 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          headerStyle: { backgroundColor: '#0B3A26' },
+          headerStyle: { backgroundColor: '#1B1D1F' },
           headerTintColor: '#fff',
-          contentStyle: { backgroundColor: '#0B3A26' },
+          contentStyle: { backgroundColor: '#1B1D1F' },
         }}
       />
       {Platform.OS === 'web' && <Analytics />}
