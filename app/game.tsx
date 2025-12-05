@@ -1059,11 +1059,11 @@ export default function Game() {
   );
 }
 
-const BAR_BG = '#115E38';
+const BAR_BG = '#2A2D31';
 const HEADER_MIN_HEIGHT = 220; // Enough space for claim text plus two narration lines
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0B3A26' },
+  root: { flex: 1, backgroundColor: '#1B1D1F' },
   safe: { flex: 1 },
   content: {
     flex: 1,
@@ -1072,7 +1072,7 @@ const styles = StyleSheet.create({
   },
   headerCard: {
     position: 'relative',
-    backgroundColor: '#115E38',
+    backgroundColor: '#2A2D31',
     borderRadius: 14,
     padding: 14,
     marginTop: 8,
@@ -1219,10 +1219,10 @@ const styles = StyleSheet.create({
     borderColor: '#8B0000',
   },
   menuActionButtonSuccess: {
-    backgroundColor: '#2ECC71',
+    backgroundColor: '#42C6FF',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#1E8E4E',
+    borderColor: '#1E8AC4',
   },
   newGameBtn: {
     borderWidth: 2,
@@ -1243,7 +1243,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '70%',
     minHeight: 72,
-    backgroundColor: 'rgba(0,0,0,0.32)',
+    backgroundColor: '#3C4045',
     borderColor: '#000',
     borderWidth: 2,
     borderRadius: 6,
@@ -1337,7 +1337,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1a4d2e',
+    backgroundColor: '#3C4045',
     borderRadius: 12,
     padding: 20,
     maxHeight: '70%',
@@ -1415,7 +1415,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rulesContent: {
-    backgroundColor: '#1a4d2e',
+    backgroundColor: '#3C4045',
     borderRadius: 12,
     padding: 20,
     width: '85%',

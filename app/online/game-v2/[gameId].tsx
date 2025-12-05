@@ -1280,12 +1280,12 @@ export default function OnlineGameV2Screen() {
   );
 }
 
-const BAR_BG = '#115E38';
+const BAR_BG = '#161B22';
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#0D1117',
   },
   safe: {
     flex: 1,
@@ -1303,21 +1303,23 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#fff',
+    color: '#F0F6FC',
     fontSize: 18,
     fontWeight: '600',
   },
   errorText: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontSize: 18,
     textAlign: 'center',
   },
   headerCard: {
     position: 'relative',
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: '#161B22',
     borderRadius: 22,
     padding: 14,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#30363D',
   },
   headerRow: {
     flexDirection: 'row',
@@ -1344,7 +1346,7 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   playerLabel: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
@@ -1363,7 +1365,7 @@ const styles = StyleSheet.create({
   },
   status: {
     marginTop: 12,
-    color: '#fff',
+    color: '#F0F6FC',
     fontSize: 16,
     textAlign: 'center',
   },
@@ -1429,10 +1431,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '70%',
     minHeight: 72,
-    backgroundColor: 'rgba(0,0,0,0.32)',
-    borderColor: '#000',
-    borderWidth: 2,
-    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#30363D',
+    borderWidth: 1,
+    borderRadius: 8,
     padding: 10,
     marginTop: 12,
     marginBottom: 10,
@@ -1441,7 +1443,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   historyText: {
-    color: '#E6FFE6',
+    color: '#8B949E',
     textAlign: 'center',
     fontSize: 13,
     marginVertical: 2,
@@ -1503,10 +1505,10 @@ const styles = StyleSheet.create({
     borderColor: '#8B0000',
   },
   menuActionButtonSuccess: {
-    backgroundColor: '#2ECC71',
+    backgroundColor: '#42C6FF',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#1E8E4E',
+    borderColor: '#1E8AC4',
   },
   goldOutlineButton: {
     borderWidth: 2,
@@ -1533,19 +1535,19 @@ const styles = StyleSheet.create({
   rematchStatusText: {
     marginTop: 4,
     fontSize: 11,
-    color: '#E6FFE6',
+    color: '#8B949E',
     textAlign: 'center',
   },
   finishedBox: {
     marginTop: 24,
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: '#161B22',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#30363D',
   },
   finishedText: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontSize: 18,
     textAlign: 'center',
   },
@@ -1563,13 +1565,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1a4d2e',
+    backgroundColor: '#161B22',
     borderRadius: 12,
     padding: 20,
     maxHeight: '70%',
     width: '85%',
-    borderColor: '#e0b50c',
-    borderWidth: 2,
+    borderColor: '#30363D',
+    borderWidth: 1,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1578,7 +1580,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontWeight: '800',
     fontSize: 18,
   },
@@ -1586,7 +1588,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   closeButtonText: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -1600,13 +1602,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   historyItemText: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontSize: 14,
     flex: 1,
     lineHeight: 20,
   },
   noHistoryText: {
-    color: '#C9F0D6',
+    color: '#8B949E',
     textAlign: 'center',
     fontSize: 14,
     marginVertical: 20,
@@ -1625,13 +1627,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rulesContent: {
-    backgroundColor: '#1a4d2e',
+    backgroundColor: '#161B22',
     borderRadius: 12,
     padding: 20,
     width: '85%',
     maxHeight: '75%',
-    borderColor: '#e0b50c',
-    borderWidth: 2,
+    borderColor: '#30363D',
+    borderWidth: 1,
   },
   rulesHeader: {
     flexDirection: 'row',
@@ -1640,7 +1642,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rulesTitle: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontWeight: '800',
     fontSize: 20,
   },
@@ -1648,7 +1650,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   rulesClose: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontSize: 22,
     fontWeight: '700',
   },

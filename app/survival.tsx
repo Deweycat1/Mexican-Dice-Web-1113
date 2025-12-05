@@ -1483,13 +1483,12 @@ export default function Survival() {
   );
 }
 
-const BAR_BG = '#115E38';
 const PLUS_ONE_FLASHES = 5;
 const PLUS_ONE_TOTAL_DURATION = 800; // matches previous emoji burst timing
 const PLUS_ONE_FLASH_INTERVAL = PLUS_ONE_TOTAL_DURATION / (PLUS_ONE_FLASHES * 2);
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0B3A26' },
+  root: { flex: 1, backgroundColor: '#0D1117' },
   safe: { flex: 1 },
   content: {
     flex: 1,
@@ -1497,13 +1496,13 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   headerCard: {
-    backgroundColor: '#115E38',
+    backgroundColor: '#161B22',
     borderRadius: 14,
     padding: 14,
     marginTop: 8,
   },
   title: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontWeight: '800',
     fontSize: 28,
     marginBottom: 4,
@@ -1521,7 +1520,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   scoreLine: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontWeight: '600',
     marginBottom: 2,
     textAlign: 'center',
@@ -1537,7 +1536,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   status: {
-    color: '#fff',
+    color: '#F0F6FC',
     opacity: 0.95,
     textAlign: 'center',
   },
@@ -1578,9 +1577,9 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#000000',
+    borderColor: '#30363D',
     overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   streakMeterFill: {
     height: '100%',
@@ -1592,7 +1591,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   streakMeterLabelText: {
-    color: '#C9F0D6',
+    color: '#8B949E',
     fontSize: 11,
   },
   streakGradient: {
@@ -1603,7 +1602,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   controls: {
-    backgroundColor: BAR_BG,
+    backgroundColor: '#161B22',
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
@@ -1631,10 +1630,10 @@ const styles = StyleSheet.create({
     borderColor: '#8B0000',
   },
   menuActionButtonSuccess: {
-    backgroundColor: '#2ECC71',
+    backgroundColor: '#42C6FF',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#1E8E4E',
+    borderColor: '#1E8AC4',
   },
   survivalPrimaryNewGame: {
     backgroundColor: '#E0B50C',
@@ -1661,8 +1660,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '70%',
     minHeight: 72,
-    backgroundColor: 'rgba(0,0,0,0.32)',
-    borderColor: '#000',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#30363D',
     borderWidth: 2,
     borderRadius: 6,
     padding: 10,
@@ -1673,7 +1672,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   historyText: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     textAlign: 'center',
     fontSize: 13,
     marginVertical: 2,
@@ -1772,12 +1771,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1a4d2e',
+    backgroundColor: '#161B22',
     borderRadius: 12,
     padding: 20,
     maxHeight: '70%',
     width: '85%',
-    borderColor: '#e0b50c',
+    borderColor: '#30363D',
     borderWidth: 2,
     zIndex: 1001,
   },
@@ -1788,7 +1787,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontWeight: '800',
     fontSize: 18,
   },
@@ -1796,7 +1795,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   modalMessage: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
@@ -1805,7 +1804,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   closeButtonText: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -1825,13 +1824,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   historyItemText: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontSize: 14,
     flex: 1,
     lineHeight: 20,
   },
   noHistoryText: {
-    color: '#C9F0D6',
+    color: '#8B949E',
     textAlign: 'center',
     fontSize: 14,
     marginVertical: 20,
@@ -1850,12 +1849,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rulesContent: {
-    backgroundColor: '#1a4d2e',
+    backgroundColor: '#161B22',
     borderRadius: 12,
     padding: 20,
     width: '85%',
     maxHeight: '75%',
-    borderColor: '#e0b50c',
+    borderColor: '#30363D',
     borderWidth: 2,
   },
   rulesHeader: {
@@ -1865,7 +1864,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rulesTitle: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontWeight: '800',
     fontSize: 20,
   },
@@ -1873,7 +1872,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   rulesClose: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontSize: 22,
     fontWeight: '700',
   },

@@ -9,9 +9,9 @@ export default function FeltBackground({ children }: { children?: React.ReactNod
         <Svg style={StyleSheet.absoluteFill}>
           <Defs>
             <RadialGradient id="felt" cx="50%" cy="30%" r="90%">
-              <Stop offset="0%" stopColor="#0c5030" />
-              <Stop offset="70%" stopColor="#0a3f28" />
-              <Stop offset="100%" stopColor="#0a3723" />
+              <Stop offset="0%" stopColor="#25282C" />
+              <Stop offset="70%" stopColor="#202326" />
+              <Stop offset="100%" stopColor="#1B1D1F" />
             </RadialGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#felt)" />
@@ -31,4 +31,3 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
 });
-
