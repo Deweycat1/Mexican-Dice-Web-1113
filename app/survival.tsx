@@ -1322,7 +1322,7 @@ export default function Survival() {
             <View style={styles.modalCenter}>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Full History</Text>
+                  <Text style={styles.modalTitle}>Last 10 events</Text>
                   <Pressable
                     onPress={() => setHistoryModalOpen(false)}
                     style={({ pressed }) => [

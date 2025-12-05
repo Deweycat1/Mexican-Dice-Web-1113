@@ -1223,7 +1223,7 @@ export default function OnlineGameV2Screen() {
         <View style={styles.modalCenter}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Full History</Text>
+              <Text style={styles.modalTitle}>Last 10 events</Text>
               <Pressable
                 onPress={() => setHistoryModalOpen(false)}
                 style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.7 }]}
