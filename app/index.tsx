@@ -8,11 +8,13 @@ import { useSettingsStore } from '../src/state/useSettingsStore';
 
 export default function HomeScreen() {
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
-  const soundEnabled = useSettingsStore((state) => state.soundEnabled);
+  const musicEnabled = useSettingsStore((state) => state.musicEnabled);
+  const sfxEnabled = useSettingsStore((state) => state.sfxEnabled);
   const hasHydrated = useSettingsStore((state) => state.hasHydrated);
   const hydrate = useSettingsStore((state) => state.hydrate);
   const setHapticsEnabled = useSettingsStore((state) => state.setHapticsEnabled);
-  const setSoundEnabled = useSettingsStore((state) => state.setSoundEnabled);
+  const setMusicEnabled = useSettingsStore((state) => state.setMusicEnabled);
+  const setSfxEnabled = useSettingsStore((state) => state.setSfxEnabled);
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -27,11 +29,18 @@ export default function HomeScreen() {
     [setHapticsEnabled]
   );
 
-  const handleToggleSound = useCallback(
+  const handleToggleMusic = useCallback(
     (value: boolean) => {
-      void setSoundEnabled(value);
+      void setMusicEnabled(value);
     },
-    [setSoundEnabled]
+    [setMusicEnabled]
+  );
+
+  const handleToggleSfx = useCallback(
+    (value: boolean) => {
+      void setSfxEnabled(value);
+    },
+    [setSfxEnabled]
   );
 
   return (
@@ -72,12 +81,22 @@ export default function HomeScreen() {
               />
             </View>
             <View style={styles.prefRow}> 
-              <Text style={styles.prefLabel}>Sound</Text>
+              <Text style={styles.prefLabel}>Music</Text>
               <Switch
-                value={soundEnabled}
-                onValueChange={handleToggleSound}
+                value={musicEnabled}
+                onValueChange={handleToggleMusic}
                 disabled={!hasHydrated}
-                thumbColor={soundEnabled ? '#1C75BC' : '#FFCDD2'}
+                thumbColor={musicEnabled ? '#1C75BC' : '#FFCDD2'}
+                trackColor={{ false: '#B00020', true: '#53A7F3' }}
+              />
+            </View>
+            <View style={styles.prefRow}>
+              <Text style={styles.prefLabel}>Sound Effects</Text>
+              <Switch
+                value={sfxEnabled}
+                onValueChange={handleToggleSfx}
+                disabled={!hasHydrated}
+                thumbColor={sfxEnabled ? '#1C75BC' : '#FFCDD2'}
                 trackColor={{ false: '#B00020', true: '#53A7F3' }}
               />
             </View>

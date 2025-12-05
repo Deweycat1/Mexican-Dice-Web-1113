@@ -5,14 +5,16 @@ const SETTINGS_KEY = 'suddendice.settings';
 
 type SettingsSnapshot = {
   hapticsEnabled: boolean;
-  soundEnabled: boolean;
+  musicEnabled: boolean;
+  sfxEnabled: boolean;
 };
 
 type SettingsState = SettingsSnapshot & {
   hasHydrated: boolean;
   hydrate: () => Promise<void>;
   setHapticsEnabled: (value: boolean) => Promise<void>;
-  setSoundEnabled: (value: boolean) => Promise<void>;
+  setMusicEnabled: (value: boolean) => Promise<void>;
+  setSfxEnabled: (value: boolean) => Promise<void>;
 };
 
 export const useSettingsStore = create<SettingsState>((set, get) => {
@@ -20,7 +22,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
     try {
       const next: SettingsSnapshot = {
         hapticsEnabled: partial.hapticsEnabled ?? get().hapticsEnabled,
-        soundEnabled: partial.soundEnabled ?? get().soundEnabled,
+        musicEnabled: partial.musicEnabled ?? get().musicEnabled,
+        sfxEnabled: partial.sfxEnabled ?? get().sfxEnabled,
       };
       await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
     } catch {
@@ -30,7 +33,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
 
   return {
     hapticsEnabled: true,
-    soundEnabled: true,
+    musicEnabled: false,
+    sfxEnabled: false,
     hasHydrated: false,
     hydrate: async () => {
       if (get().hasHydrated) return;
@@ -42,8 +46,14 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
             ...state,
             hapticsEnabled:
               typeof parsed.hapticsEnabled === 'boolean' ? parsed.hapticsEnabled : state.hapticsEnabled,
-            soundEnabled:
-              typeof parsed.soundEnabled === 'boolean' ? parsed.soundEnabled : state.soundEnabled,
+            musicEnabled:
+              typeof parsed.musicEnabled === 'boolean'
+                ? parsed.musicEnabled
+                : state.musicEnabled,
+            sfxEnabled:
+              typeof parsed.sfxEnabled === 'boolean'
+                ? parsed.sfxEnabled
+                : state.sfxEnabled,
           }));
         }
       } catch {
@@ -56,9 +66,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
       set({ hapticsEnabled: value });
       await persist({ hapticsEnabled: value });
     },
-    setSoundEnabled: async (value: boolean) => {
-      set({ soundEnabled: value });
-      await persist({ soundEnabled: value });
+    setMusicEnabled: async (value: boolean) => {
+      set({ musicEnabled: value });
+      await persist({ musicEnabled: value });
+    },
+    setSfxEnabled: async (value: boolean) => {
+      set({ sfxEnabled: value });
+      await persist({ sfxEnabled: value });
     },
   };
 });

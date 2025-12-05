@@ -1,13 +1,18 @@
 // app/_layout.tsx
 import { Analytics } from '@vercel/analytics/react';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import Head from 'expo-router/head';
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import { startRollingMusic, stopRollingMusic } from '../src/lib/globalMusic';
+import { useSettingsStore } from '../src/state/useSettingsStore';
 
 export default function RootLayout() {
+  const pathname = usePathname();
+  const musicEnabled = useSettingsStore((state) => state.musicEnabled);
+
   // Ensure web root/background fills viewport and uses the dark gunmetal base
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -30,6 +35,15 @@ export default function RootLayout() {
       }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    const onSurvivalScreen = pathname?.startsWith('/survival');
+    if (!musicEnabled || onSurvivalScreen) {
+      void stopRollingMusic();
+    } else {
+      void startRollingMusic();
+    }
+  }, [pathname, musicEnabled]);
 
   return (
     <>

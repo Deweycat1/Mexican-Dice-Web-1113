@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -114,9 +113,11 @@ export default function Game() {
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
-  const soundEnabled = useSettingsStore((state) => state.soundEnabled);
+  const musicEnabled = useSettingsStore((state) => state.musicEnabled);
+  const sfxEnabled = useSettingsStore((state) => state.sfxEnabled);
   const setHapticsEnabled = useSettingsStore((state) => state.setHapticsEnabled);
-  const setSoundEnabled = useSettingsStore((state) => state.setSoundEnabled);
+  const setMusicEnabled = useSettingsStore((state) => state.setMusicEnabled);
+  const setSfxEnabled = useSettingsStore((state) => state.setSfxEnabled);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -547,9 +548,6 @@ export default function Game() {
     if (controlsDisabled || isRevealAnimating) return;
 
     if (hasRolled && !mustBluff && lastPlayerRoll != null) {
-      if (hapticsEnabled) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      }
       playerClaim(lastPlayerRoll);
       return;
     }
@@ -562,9 +560,6 @@ export default function Game() {
     }
 
     setRollingAnim(true);
-    if (hapticsEnabled) {
-      Haptics.selectionAsync().catch(() => {});
-    }
     playerRoll();
     setTimeout(() => setRollingAnim(false), 400);
   }
@@ -587,9 +582,6 @@ export default function Game() {
       console.log('BLUFF: missing data to precompute truth; using default reveal path');
     }
 
-    if (hapticsEnabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    }
     console.log('BLUFF: Revealing Rival dice regardless of truth state');
     setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
@@ -609,9 +601,6 @@ export default function Game() {
 
   function handleSelectClaim(claim: number) {
     if (controlsDisabled) return;
-    if (hapticsEnabled) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    }
     playerClaim(claim);
     setClaimPickerOpen(false);
   }
@@ -1106,14 +1095,27 @@ export default function Game() {
                 </View>
 
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Sound</Text>
+                  <Text style={styles.settingsLabel}>Music</Text>
                   <Switch
-                    value={soundEnabled}
+                    value={musicEnabled}
                     onValueChange={(value) => {
-                      void setSoundEnabled(value);
+                      void setMusicEnabled(value);
                     }}
                     trackColor={{ false: '#4A4E54', true: '#53A7F3' }}
-                    thumbColor={soundEnabled ? '#1C75BC' : '#9BA1A6'}
+                    thumbColor={musicEnabled ? '#1C75BC' : '#9BA1A6'}
+                    ios_backgroundColor="#4A4E54"
+                  />
+                </View>
+
+                <View style={styles.settingsRow}>
+                  <Text style={styles.settingsLabel}>Sound Effects</Text>
+                  <Switch
+                    value={sfxEnabled}
+                    onValueChange={(value) => {
+                      void setSfxEnabled(value);
+                    }}
+                    trackColor={{ false: '#4A4E54', true: '#53A7F3' }}
+                    thumbColor={sfxEnabled ? '#1C75BC' : '#9BA1A6'}
                     ios_backgroundColor="#4A4E54"
                   />
                 </View>

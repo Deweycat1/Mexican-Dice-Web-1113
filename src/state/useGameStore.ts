@@ -5,6 +5,18 @@ import { loadAiState, saveAiState } from '../ai/persistence';
 import type { DicePair } from '../engine/mexican';
 import { loadBestStreak, saveBestStreak } from './survivalStorage';
 import { MEXICAN_ICON } from '../lib/constants';
+import {
+  playBluffCallFailHaptic,
+  playBluffCallSuccessHaptic,
+  playBluffDeclaredHaptic,
+  playClaimHaptic,
+  playLosePointHaptic,
+  playRollHaptic,
+  playSpecialClaimHaptic,
+  playWinRoundHaptic,
+} from '../lib/haptics';
+import { playDiceRollSound } from '../lib/diceRollSound';
+import { useSettingsStore } from './useSettingsStore';
 
 import {
     categorizeClaim,
@@ -55,6 +67,9 @@ const settlePendingCpuRaise = (opponentCalled: boolean) => {
   pendingCpuRaise = null;
   persistAiState();
 };
+
+const isHapticsEnabled = () => useSettingsStore.getState().hapticsEnabled;
+const isSfxEnabled = () => useSettingsStore.getState().sfxEnabled;
 
 export type Store = {
   playerScore: number;
@@ -383,6 +398,12 @@ export const useGameStore = create<Store>((set, get) => {
   };
   const applyLoss = (who: Turn, amount: 1 | 2, message: string) => {
     const state = get();
+    const hapticsEnabled = isHapticsEnabled();
+    if (who === 'player') {
+      void playLosePointHaptic(hapticsEnabled);
+    } else {
+      void playWinRoundHaptic(hapticsEnabled);
+    }
     const updatedPlayer = clampFloor(state.playerScore - (who === 'player' ? amount : 0));
     const updatedCpu = clampFloor(state.cpuScore - (who === 'cpu' ? amount : 0));
     const loserScore = who === 'player' ? updatedPlayer : updatedCpu;
@@ -625,6 +646,7 @@ export const useGameStore = create<Store>((set, get) => {
 
   const processCallBluff = (caller: Turn) => {
     const state = get();
+    const hapticsEnabled = isHapticsEnabled();
     const { lastClaim, lastAction, lastPlayerRoll, lastCpuRoll } = state;
 
     if (lastClaim == null) {
@@ -647,6 +669,7 @@ export const useGameStore = create<Store>((set, get) => {
 
     if (prevActual === 21) {
       set({ mexicanFlashNonce: Date.now() });
+      void playSpecialClaimHaptic(21, hapticsEnabled);
     }
 
     const liar = outcome === +1;
@@ -664,6 +687,13 @@ export const useGameStore = create<Store>((set, get) => {
     const callerName = caller === 'player' ? 'You' : 'The Rival';
     const defenderName = prevBy === 'player' ? 'You' : 'The Rival';
     const defenderToldTruth = !liar;
+    if (caller === 'player') {
+      if (liar) {
+        void playBluffCallSuccessHaptic(hapticsEnabled);
+      } else {
+        void playBluffCallFailHaptic(hapticsEnabled);
+      }
+    }
 
     // In survival mode, always show penalty as 1 in the message (even if actual loss is 2)
     const displayPenalty = state.mode === 'survival' ? 1 : lossAmount;
@@ -709,6 +739,7 @@ export const useGameStore = create<Store>((set, get) => {
     if (start.gameOver || start.turn !== 'cpu' || start.turnLock) {
       return;
     }
+    const hapticsEnabled = isHapticsEnabled();
 
     const shouldForceInfernoDelay = start.pendingInfernoDelay;
     if (shouldForceInfernoDelay) {
@@ -739,6 +770,7 @@ export const useGameStore = create<Store>((set, get) => {
       void recordRollStat(actual);
 
       if (actual === 41) {
+        void playSpecialClaimHaptic(41, hapticsEnabled);
         // Record CPU showing Social in history BEFORE resetting
         pushSurvivalClaim('cpu', 41, 41);
         pushClaim('cpu', 41, 41);
@@ -863,6 +895,10 @@ export const useGameStore = create<Store>((set, get) => {
         return claim;
       })();
 
+      if (claim === 21 || claim === 31 || claim === 41) {
+        void playSpecialClaimHaptic(claim, hapticsEnabled);
+      }
+
       set({
         lastClaim: claim,
         baselineClaim: nextBaseline,
@@ -964,6 +1000,10 @@ export const useGameStore = create<Store>((set, get) => {
       if (state.gameOver || state.turn !== 'player' || state.turnLock) return;
       if (state.lastPlayerRoll !== null) return;
 
+      const hapticsEnabled = isHapticsEnabled();
+      void playRollHaptic(hapticsEnabled);
+      void playDiceRollSound(isSfxEnabled());
+
       if (pendingCpuRaise) {
         settlePendingCpuRaise(false);
       }
@@ -1014,6 +1054,8 @@ export const useGameStore = create<Store>((set, get) => {
     playerClaim: (claim: number) => {
       const state = get();
       if (state.gameOver || state.turn !== 'player' || state.turnLock) return;
+      const hapticsEnabled = isHapticsEnabled();
+      void playClaimHaptic(hapticsEnabled);
 
       // Record claim statistics (async, non-blocking)
       void recordClaimStat(claim);
@@ -1076,6 +1118,8 @@ export const useGameStore = create<Store>((set, get) => {
           return;
         }
 
+        void playSpecialClaimHaptic(41, hapticsEnabled);
+
         // record player's Social show in survival mode
         pushSurvivalClaim('player', 41, state.lastPlayerRoll);
         // record player's Social show in normal mode
@@ -1098,17 +1142,21 @@ export const useGameStore = create<Store>((set, get) => {
         prev === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
 
       const message = (() => {
-        if (prev != null && isReverseOf(prev, claim)) {
-          return `You reversed ${prev} with ${claim}.`;
-        }
-        if (claim === 21) {
-          return `You claim 21 (Inferno${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
-        }
-        if (claim === 31 || claim === 41) {
-          return `You claim ${claim}. The Rival must roll a real 21 or bluff 21/31, otherwise call bluff.`;
-        }
-        return `You claim ${claim}.`;
-      })();
+      if (prev != null && isReverseOf(prev, claim)) {
+        return `You reversed ${prev} with ${claim}.`;
+      }
+      if (claim === 21) {
+        return `You claim 21 (Inferno${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
+      }
+      if (claim === 31 || claim === 41) {
+        return `You claim ${claim}. The Rival must roll a real 21 or bluff 21/31, otherwise call bluff.`;
+      }
+      return `You claim ${claim}.`;
+    })();
+
+      if (claim === 21 || claim === 31) {
+        void playSpecialClaimHaptic(claim, hapticsEnabled);
+      }
 
       // record player's claim in survival mode
       pushSurvivalClaim('player', claim, state.lastPlayerRoll);
@@ -1124,6 +1172,9 @@ export const useGameStore = create<Store>((set, get) => {
         // Track aggression: bluffing is aggressive
         const isBluff = !isTruthful;
         void trackAggression('player', isBluff);
+        if (isBluff) {
+          void playBluffDeclaredHaptic(hapticsEnabled);
+        }
         
         // Track low-roll bluff behavior (for Player Tendencies)
         void recordLowRollBehavior(playerRoll, isBluff);

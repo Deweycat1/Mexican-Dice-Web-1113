@@ -1,4 +1,14 @@
-import * as Haptics from 'expo-haptics';
+import {
+  playBluffCallFailHaptic,
+  playBluffCallSuccessHaptic,
+  playBluffDeclaredHaptic,
+  playClaimHaptic,
+  playLosePointHaptic,
+  playRollHaptic,
+  playSpecialClaimHaptic,
+  playWinRoundHaptic,
+} from '../../../src/lib/haptics';
+import { useSettingsStore } from '../../../src/state/useSettingsStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -23,6 +33,7 @@ import FeltBackground from '../../../src/components/FeltBackground';
 import RulesContent from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
+import { playDiceRollSound } from '../../../src/lib/diceRollSound';
 import {
   claimMatchesRoll,
   isChallengeClaim,
@@ -258,6 +269,11 @@ export default function OnlineGameV2Screen() {
   const [winkArmed, setWinkArmed] = useState(false);
   const [isRequestingRematch, setIsRequestingRematch] = useState(false);
   const prevStatusRef = useRef<GameStatus | null>(null);
+  const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
+  const sfxEnabled = useSettingsStore((state) => state.sfxEnabled);
+  const prevScoresRef = useRef<{ host: number; guest: number } | null>(null);
+  const prevHistoryLengthRef = useRef<number>(0);
+  const historyInitializedRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -456,6 +472,30 @@ export default function OnlineGameV2Screen() {
     }
     prevStatusRef.current = game.status;
   }, [game?.status, myRole]);
+  useEffect(() => {
+    if (!game || !myRole) return;
+    const prev = prevScoresRef.current;
+    const current = { host: game.host_score, guest: game.guest_score };
+    if (!prev) {
+      prevScoresRef.current = current;
+      return;
+    }
+    if (current.host !== prev.host) {
+      if (myRole === 'host' && current.host < prev.host) {
+        void playLosePointHaptic(hapticsEnabled);
+      } else if (myRole === 'guest' && current.host < prev.host) {
+        void playWinRoundHaptic(hapticsEnabled);
+      }
+    }
+    if (current.guest !== prev.guest) {
+      if (myRole === 'guest' && current.guest < prev.guest) {
+        void playLosePointHaptic(hapticsEnabled);
+      } else if (myRole === 'host' && current.guest < prev.guest) {
+        void playWinRoundHaptic(hapticsEnabled);
+      }
+    }
+    prevScoresRef.current = current;
+  }, [game?.host_score, game?.guest_score, myRole, hapticsEnabled]);
   const claimSummary = useMemo(() => {
     const winkSuffix = roundState.lastClaimHadWink ? ' 😉' : '';
     return `Current claim: ${formatClaim(lastClaim)}${winkSuffix}     Your roll: ${formatRoll(myRoll)}`;
@@ -498,6 +538,35 @@ export default function OnlineGameV2Screen() {
       setWinkArmed(false);
     }
   }, [isMyTurn, myRoll]);
+  useEffect(() => {
+    const history = roundState.history ?? [];
+    const prevLen = prevHistoryLengthRef.current ?? 0;
+    if (!myRole) {
+      prevHistoryLengthRef.current = history.length;
+      historyInitializedRef.current = false;
+      return;
+    }
+    if (!historyInitializedRef.current) {
+      prevHistoryLengthRef.current = history.length;
+      historyInitializedRef.current = true;
+      return;
+    }
+    if (history.length < prevLen) {
+      prevHistoryLengthRef.current = history.length;
+      return;
+    }
+    if (history.length > prevLen) {
+      const newItems = history.slice(prevLen);
+      newItems.forEach((item) => {
+        if (item.type === 'claim' && item.who !== myRole) {
+          if (item.claim === 21 || item.claim === 31 || item.claim === 41) {
+            void playSpecialClaimHaptic(item.claim, hapticsEnabled);
+          }
+        }
+      });
+    }
+    prevHistoryLengthRef.current = history.length;
+  }, [roundState.history, myRole, hapticsEnabled]);
   const winkLabelBase =
     winkUsesRemaining > 0 ? `Send with 😉 (${winkUsesRemaining})` : 'No winks left';
   const winkLabel =
@@ -654,7 +723,8 @@ export default function OnlineGameV2Screen() {
     }
     setBanner(null);
     setRollingAnim(true);
-    Haptics.selectionAsync().catch(() => {});
+    void playRollHaptic(hapticsEnabled);
+    void playDiceRollSound(sfxEnabled);
     try {
       const { values, normalized } = rollDice();
       const legalTruth = computeLegalTruth(claimToCheck ?? null, normalized);
@@ -682,7 +752,7 @@ export default function OnlineGameV2Screen() {
     } finally {
       setTimeout(() => setRollingAnim(false), 400);
     }
-  }, [game, myRole, isMyTurn, isRevealAnimating, roundState, claimToCheck, handleUpdate, userId]);
+  }, [game, myRole, isMyTurn, isRevealAnimating, roundState, claimToCheck, handleUpdate, userId, hapticsEnabled, sfxEnabled]);
 
   const appendHistory = useCallback(
     (entry: HistoryItem): HistoryItem[] => {
@@ -695,6 +765,7 @@ export default function OnlineGameV2Screen() {
   const handleClaim = useCallback(
     async (claim: number, useWink?: boolean) => {
       if (!game || !myRole || !opponentRole || !isMyTurn || isRevealAnimating) return;
+      void playClaimHaptic(hapticsEnabled);
       const prev = lastClaim;
       const activeChallenge = resolveActiveChallenge(roundState.baselineClaim, prev);
       if (activeChallenge === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
@@ -739,6 +810,9 @@ export default function OnlineGameV2Screen() {
 
       const myCurrentRoll =
         myRole === 'host' ? roundState.hostRoll : roundState.guestRoll;
+      if (myCurrentRoll != null && claim !== myCurrentRoll) {
+        void playBluffDeclaredHaptic(hapticsEnabled);
+      }
       const socialDice = claim === 41 && myCurrentRoll != null ? facesFromRoll(myCurrentRoll) : null;
       const nextSocialNonce = claim === 41 ? (roundState.socialRevealNonce ?? 0) + 1 : roundState.socialRevealNonce;
 
@@ -773,6 +847,7 @@ export default function OnlineGameV2Screen() {
       }
 
       if (claim === 41) {
+        void playSpecialClaimHaptic(41, hapticsEnabled);
         nextRound.hostRoll = null;
         nextRound.guestRoll = null;
         nextRound.hostMustBluff = false;
@@ -780,6 +855,8 @@ export default function OnlineGameV2Screen() {
         nextRound.lastAction = 'normal';
         nextRound.lastClaimer = null;
         nextRound.lastClaimHadWink = false;
+      } else if (claim === 21 || claim === 31) {
+        void playSpecialClaimHaptic(claim, hapticsEnabled);
       }
 
       const payload: Record<string, any> = {
@@ -818,6 +895,7 @@ export default function OnlineGameV2Screen() {
       startSocialReveal,
       winkUsesRemaining,
       userId,
+      hapticsEnabled,
     ]
   );
 
@@ -843,6 +921,16 @@ export default function OnlineGameV2Screen() {
     const { outcome, penalty } = resolveBluff(lastClaim, defenderRoll, roundState.lastAction === 'reverseVsMexican');
     const liar = outcome === +1;
     const loserRole = liar ? defendingRole : myRole;
+    if (liar) {
+      void playBluffCallSuccessHaptic(hapticsEnabled);
+    } else {
+      void playBluffCallFailHaptic(hapticsEnabled);
+    }
+    if (loserRole === myRole) {
+      void playLosePointHaptic(hapticsEnabled);
+    } else {
+      void playWinRoundHaptic(hapticsEnabled);
+    }
     const callerName = myRole === 'host' ? hostName : guestName;
     const defenderName = defendingRole === 'host' ? hostName : guestName;
     const [revealHi, revealLo] = splitClaim(defenderRoll);
@@ -888,6 +976,7 @@ export default function OnlineGameV2Screen() {
       current_player_id: finished ? null : (myRole === 'host' ? game.host_id : game.guest_id),
       status: finished ? 'finished' : 'in_progress',
     };
+    prevScoresRef.current = { host: nextHostScore, guest: nextGuestScore };
 
     try {
       await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
@@ -899,7 +988,7 @@ export default function OnlineGameV2Screen() {
         Alert.alert('Bluff call failed', err.message ?? 'Could not resolve bluff.');
       }
     }
-  }, [game, myRole, opponentRole, isMyTurn, lastClaim, isRevealAnimating, roundState, appendHistory, handleUpdate, hostName, guestName, userId]);
+  }, [game, myRole, opponentRole, isMyTurn, lastClaim, isRevealAnimating, roundState, appendHistory, handleUpdate, hostName, guestName, userId, hapticsEnabled]);
 
   const handleQuitGame = useCallback(() => {
     console.log('[OnlineGameV2] Leave Game pressed (no confirm)');
