@@ -390,14 +390,15 @@ export default function OnlineLobbyScreen() {
         return;
       }
 
-      const hostScore = game.host_score ?? STARTING_SCORE;
-      const guestScore = game.guest_score ?? STARTING_SCORE;
+      const roundStateHistory = Array.isArray((game.round_state as any)?.history)
+        ? ((game.round_state as any).history as unknown[])
+        : [];
+      const hasHistory = roundStateHistory.length > 0;
+
       const isChallengeForYou =
         game.guest_id === userId &&
         game.status === 'in_progress' &&
-        game.current_player_id === game.host_id &&
-        hostScore === STARTING_SCORE &&
-        guestScore === STARTING_SCORE;
+        !hasHistory;
 
       if (isChallengeForYou) {
         buckets.challenges.push(game);
