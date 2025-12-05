@@ -218,50 +218,51 @@ export default function OnlineLobbyScreen() {
         return;
       }
 
-      let guestId: string | null = null;
-      let friendlyName: string | null = null;
       const trimmed = friendCode.trim();
-      if (trimmed) {
-        if (!isValidFriendUsername(trimmed)) {
-          Alert.alert(
-            'Invalid username',
-            'Usernames can only contain letters, spaces, and hyphens, up to 40 characters.'
-          );
-          return;
-        }
-
-        const normalized = normalizeColorAnimalName(trimmed);
-        if (!normalized) {
-          Alert.alert(
-            'Invalid username',
-            'Could not parse that username. Double-check the spelling and try again.'
-          );
-          return;
-        }
-        const { data: friend, error: friendError } = await supabase
-          .from('users')
-          .select('id, username')
-          .ilike('username', normalized)
-          .single();
-        if (friendError || !friend) {
-          Alert.alert(
-            'User not found',
-            'Could not find a player with that color-animal code. Double-check the spelling and try again.'
-          );
-          return;
-        }
-        if (friend.id === userId) {
-          Alert.alert('Invalid opponent', 'You cannot start a match against yourself.');
-          return;
-        }
-        guestId = friend.id;
-        friendlyName = friend.username ?? normalized;
+      if (!trimmed) {
+        Alert.alert('Friend required', 'Enter your friend’s username before starting a match.');
+        return;
       }
+
+      if (!isValidFriendUsername(trimmed)) {
+        Alert.alert(
+          'Invalid username',
+          'Usernames can only contain letters, spaces, and hyphens, up to 40 characters.'
+        );
+        return;
+      }
+
+      const normalized = normalizeColorAnimalName(trimmed);
+      if (!normalized) {
+        Alert.alert(
+          'Invalid username',
+          'Could not parse that username. Double-check the spelling and try again.'
+        );
+        return;
+      }
+      const { data: friend, error: friendError } = await supabase
+        .from('users')
+        .select('id, username')
+        .ilike('username', normalized)
+        .single();
+      if (friendError || !friend) {
+        Alert.alert(
+          'User not found',
+          'Could not find a player with that color-animal code. Double-check the spelling and try again.'
+        );
+        return;
+      }
+      if (friend.id === userId) {
+        Alert.alert('Invalid opponent', 'You cannot start a match against yourself.');
+        return;
+      }
+      const guestId = friend.id;
+      const friendlyName = friend.username ?? normalized;
 
       const payload: Record<string, any> = {
         host_id: userId,
         guest_id: guestId,
-        status: guestId ? 'in_progress' : 'waiting',
+        status: 'in_progress',
         current_player_id: userId,
         host_score: STARTING_SCORE,
         guest_score: STARTING_SCORE,
@@ -277,16 +278,9 @@ export default function OnlineLobbyScreen() {
       }
 
       setFriendCode('');
-      setCreateMessage(
-        guestId
-          ? `Match started with ${friendlyName ?? 'your friend'}.`
-          : 'Match created! Invite a friend to join whenever they are ready.'
-      );
+      setCreateMessage(`Match started with ${friendlyName ?? 'your friend'}.`);
       await loadGames();
-
-      if (guestId) {
-        router.push(`/online/game-v2/${data.id}` as const);
-      }
+      router.push(`/online/game-v2/${data.id}` as const);
     } catch (err: any) {
       console.error('[OnlineLobby] Create match failed', err);
       Alert.alert('Could not start match', err?.message ?? 'Please try again.');
