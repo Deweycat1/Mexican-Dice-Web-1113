@@ -1034,7 +1034,7 @@ export default function OnlineGameV2Screen() {
         <FeltBackground>
           <SafeAreaView style={styles.safe}>
             <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#E0B50C" />
+              <ActivityIndicator size="large" color="#FE9902" />
               <Text style={styles.loadingText}>Loading match...</Text>
             </View>
           </SafeAreaView>
@@ -1143,7 +1143,7 @@ export default function OnlineGameV2Screen() {
               >
                 {banner.type === 'wink' ? (
                   <LinearGradient
-                    colors={['#E0B50C', '#F1D96B']}
+                    colors={['#FE9902', '#FE9902']}
                     start={{ x: 0, y: 0.5 }}
                     end={{ x: 1, y: 0.5 }}
                     style={styles.winkBanner}
@@ -1475,7 +1475,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   claimText: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontSize: 18,
     fontWeight: '800',
     textAlign: 'center',
@@ -1618,18 +1618,18 @@ const styles = StyleSheet.create({
   },
   goldOutlineButton: {
     borderWidth: 2,
-    borderColor: '#E0B50C',
+    borderColor: '#B26B01',
   },
   winkButton: {
     borderWidth: 2,
-    borderColor: '#E0B50C',
+    borderColor: '#B26B01',
     backgroundColor: 'transparent',
   },
   winkButtonActive: {
     backgroundColor: '#0B8A42',
   },
   rematchButton: {
-    backgroundColor: '#E0B50C',
+    backgroundColor: '#FE9902',
     borderColor: '#000',
     borderWidth: 2,
     paddingVertical: 8,
@@ -1676,7 +1676,7 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: '70%',
     width: '85%',
-    borderColor: '#e0b50c',
+    borderColor: '#B26B01',
     borderWidth: 2,
   },
   modalHeader: {
@@ -1738,7 +1738,7 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '85%',
     maxHeight: '75%',
-    borderColor: '#e0b50c',
+    borderColor: '#B26B01',
     borderWidth: 2,
   },
   rulesHeader: {

@@ -1198,7 +1198,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: '#E0B50C',
+    borderColor: '#B26B01',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1247,7 +1247,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   claimHeaderLine: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontSize: 18,
     fontWeight: '800',
     textAlign: 'center',
@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
   },
   newGameBtn: {
     borderWidth: 2,
-    borderColor: '#e0b50c',
+    borderColor: '#B26B01',
   },
   menuBtn: {
     borderWidth: 2,
@@ -1348,7 +1348,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   newGamePrimaryButton: {
-    backgroundColor: '#E0B50C',
+    backgroundColor: '#FE9902',
     borderColor: '#FFEA70',
     borderWidth: 2,
   },
@@ -1459,7 +1459,7 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: '70%',
     width: '85%',
-    borderColor: '#e0b50c',
+    borderColor: '#B26B01',
     borderWidth: 2,
     zIndex: 1001,
   },
@@ -1537,7 +1537,7 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '85%',
     maxHeight: '75%',
-    borderColor: '#e0b50c',
+    borderColor: '#B26B01',
     borderWidth: 2,
   },
   rulesHeader: {

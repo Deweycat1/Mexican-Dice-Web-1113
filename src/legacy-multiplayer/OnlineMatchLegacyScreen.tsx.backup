@@ -540,7 +540,7 @@ export default function OnlineMatchScreen() {
     return (
       <FeltBackground>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#E0B50C" />
+          <ActivityIndicator size="large" color="#FE9902" />
           <Text style={styles.loadingText}>Connecting to your match...</Text>
         </View>
       </FeltBackground>
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: '#E0B50C',
+    borderColor: '#B26B01',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -910,7 +910,7 @@ const styles = StyleSheet.create({
     marginTop: 75,
   },
   subtle: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontWeight: '800',
     fontSize: 18,
     marginBottom: 6,
@@ -982,7 +982,7 @@ const styles = StyleSheet.create({
   },
   btn: { flex: 1 },
   btnWide: { flex: 1 },
-  ghostBtn: { borderWidth: 2, borderColor: '#e0b50c' },
+  ghostBtn: { borderWidth: 2, borderColor: '#B26B01' },
   modalBackdrop: {
     position: 'absolute',
     top: 0,
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: '70%',
     width: '85%',
-    borderColor: '#e0b50c',
+    borderColor: '#B26B01',
     borderWidth: 2,
     zIndex: 1001,
   },
@@ -1055,11 +1055,11 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E0B50C',
+    borderColor: '#B26B01',
     zIndex: 9999,
   },
   debugText: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontSize: 9,
     fontFamily: 'monospace',
     marginVertical: 0.5,

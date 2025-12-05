@@ -71,9 +71,9 @@ const styles = StyleSheet.create({
     borderColor: '#8B0000',
   },
   menuButtonGold: {
-    backgroundColor: '#D4AF37',
+    backgroundColor: '#FE9902',
     borderWidth: 2,
-    borderColor: '#B8860B',
+    borderColor: '#B26B01',
   },
   menuButtonGreen: {
     backgroundColor: '#53A7F3',

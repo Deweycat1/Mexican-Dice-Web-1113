@@ -271,7 +271,7 @@ export default function IncomingChallengesList({ myUserId, onJoinGame }: Incomin
 
   if (loading) {
     console.log('[IncomingChallengesList] Rendering loading state');
-    return <ActivityIndicator size="small" color="#E0B50C" />;
+    return <ActivityIndicator size="small" color="#FE9902" />;
   }
 
   if (!challenges.length) {
@@ -283,7 +283,7 @@ export default function IncomingChallengesList({ myUserId, onJoinGame }: Incomin
 
   return (
     <View style={{ marginTop: 18 }}>
-      <Text style={{ color: '#E0B50C', fontWeight: '700', fontSize: 16, marginBottom: 8 }}>Incoming Challenges</Text>
+      <Text style={{ color: '#FE9902', fontWeight: '700', fontSize: 16, marginBottom: 8 }}>Incoming Challenges</Text>
       {challenges.map(challenge => (
         <TouchableOpacity
           key={challenge.id}
@@ -294,7 +294,7 @@ export default function IncomingChallengesList({ myUserId, onJoinGame }: Incomin
             Join game with {challenge.challenger_username}
           </Text>
           {!challenge.game_id && (
-            <Text style={{ color: '#E0B50C', fontSize: 13, marginTop: 4 }}>
+            <Text style={{ color: '#FE9902', fontSize: 13, marginTop: 4 }}>
               Tap to accept and create game
             </Text>
           )}

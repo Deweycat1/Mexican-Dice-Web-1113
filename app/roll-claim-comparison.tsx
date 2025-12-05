@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: '700',
-    color: '#E0B50C',
+    color: '#FE9902',
     textAlign: 'center',
   },
   tableRow: {
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   cellTextClaimed: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontWeight: '600',
   },
   miniBar: {
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     minWidth: 2,
   },
   miniBarClaim: {
-    backgroundColor: '#E0B50C',
+    backgroundColor: '#FE9902',
   },
   diffCell: {
     flex: 1,

@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     borderColor: '#30363D',
   },
   heading: { 
-    color: '#E0B50C', 
+    color: '#FE9902', 
     fontWeight: '800', 
     fontSize: 20,
     marginBottom: 8,

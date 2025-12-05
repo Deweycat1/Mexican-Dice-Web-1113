@@ -580,7 +580,7 @@ export default function OnlineLobbyScreen() {
   if (loadingUser) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#E0B50C" />
+        <ActivityIndicator size="large" color="#FE9902" />
         <Text style={styles.loadingText}>Loading online play…</Text>
       </View>
     );
@@ -632,7 +632,7 @@ export default function OnlineLobbyScreen() {
 
           {loadingGames ? (
             <View style={styles.loadingMatches}>
-              <ActivityIndicator size="small" color="#E0B50C" />
+              <ActivityIndicator size="small" color="#FE9902" />
               <Text style={styles.loadingText}>Loading matches…</Text>
             </View>
           ) : (
@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   breadcrumbText: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
     borderColor: '#30363D',
   },
   cardTitle: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontWeight: '800',
     fontSize: 18,
     marginBottom: 4,
@@ -742,14 +742,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   yourCodeValue: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontWeight: '800',
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontWeight: '800',
     fontSize: 18,
     marginBottom: 10,

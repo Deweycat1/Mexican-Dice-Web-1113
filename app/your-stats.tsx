@@ -51,7 +51,7 @@ export default function YourStatsScreen() {
           <View style={styles.content}>
             <Text style={styles.title}>Your Stats</Text>
             {!stats ? (
-              <ActivityIndicator color="#E0B50C" />
+              <ActivityIndicator color="#FE9902" />
             ) : (
               <>
                 <View style={styles.card}>

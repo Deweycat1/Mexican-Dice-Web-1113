@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   modalWin: {
     backgroundColor: '#1a4d2e',
     borderWidth: 3,
-    borderColor: '#E0B50C',
+    borderColor: '#B26B01',
   },
   modalLose: {
     backgroundColor: '#3d1a1a',
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonPrimary: {
-    backgroundColor: '#E0B50C',
+    backgroundColor: '#FE9902',
   },
   buttonText: {
     fontSize: 18,

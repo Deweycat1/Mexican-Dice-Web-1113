@@ -1651,7 +1651,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtle: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontWeight: '800',
     fontSize: 18,
     marginBottom: 6,
@@ -1782,14 +1782,14 @@ const styles = StyleSheet.create({
     borderColor: '#1E8AC4',
   },
   survivalPrimaryNewGame: {
-    backgroundColor: '#E0B50C',
+    backgroundColor: '#FE9902',
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#A87F00',
   },
   newGameBtn: {
     borderWidth: 2,
-    borderColor: '#e0b50c',
+    borderColor: '#B26B01',
   },
   menuBtnBlueOutline: {
     borderWidth: 2,
@@ -1848,7 +1848,7 @@ const styles = StyleSheet.create({
   plusOneText: {
     fontSize: 64,
     fontWeight: '900',
-    color: '#E0B50C',
+    color: '#FE9902',
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,

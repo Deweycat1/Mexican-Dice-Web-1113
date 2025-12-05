@@ -634,7 +634,7 @@ export default function OnlineMatchScreen() {
         <FeltBackground>
           <SafeAreaView style={styles.safe}>
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#E0B50C" />
+              <ActivityIndicator size="large" color="#FE9902" />
               <Text style={styles.loadingText}>Connecting to your match...</Text>
             </View>
           </SafeAreaView>
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 2,
-    borderColor: '#E0B50C',
+    borderColor: '#B26B01',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -986,7 +986,7 @@ const styles = StyleSheet.create({
     marginTop: 75,
   },
   subtle: {
-    color: '#E0B50C',
+    color: '#FE9902',
     fontWeight: '800',
     fontSize: 18,
     marginBottom: 6,
@@ -1079,7 +1079,7 @@ const styles = StyleSheet.create({
     padding: 20,
     maxHeight: '70%',
     width: '85%',
-    borderColor: '#e0b50c',
+    borderColor: '#B26B01',
     borderWidth: 2,
   },
   modalHeader: {

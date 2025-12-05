@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderColor: '#8B0000',
   },
   buttonStats: { 
-    backgroundColor: '#D4AF37',
+    backgroundColor: '#FE9902',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 28,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
     borderWidth: 2,
     borderStyle: 'solid',
-    borderColor: '#B8860B',
+    borderColor: '#B26B01',
   },
   buttonRules: { 
     backgroundColor: '#42C6FF',
@@ -185,8 +185,8 @@ const styles = StyleSheet.create({
     borderColor: '#1E8AC4',
   },
   infernoButton: {
-    backgroundColor: '#FFD93B',
-    borderColor: '#FFC107',
+    backgroundColor: '#FE9902',
+    borderColor: '#B26B01',
   },
   infernoButtonText: {
     color: '#FF6A00',

@@ -9,7 +9,7 @@ type FlameEmojiIconProps = {
 };
 
 export const FlameEmojiIcon: React.FC<FlameEmojiIconProps> = ({ size, style }) => {
-  const scaledSize = size * 1.25;
+  const scaledSize = size * 0.75;
   return (
     <Image source={flameSource} style={[{ width: scaledSize, height: scaledSize, resizeMode: 'contain' }, style]} />
   );
