@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
 import { Link } from 'expo-router';
+import React, { useCallback, useEffect } from 'react';
 import { Image, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -54,8 +54,8 @@ export default function HomeScreen() {
               <Text style={styles.buttonText}>Quick Play</Text>
             </Link>
 
-            <Link href="/survival" style={styles.buttonStats}>
-              <Text style={styles.buttonText}>Inferno🔥Mode</Text>
+            <Link href="/survival" style={[styles.buttonStats, styles.infernoButton]}>
+              <Text style={[styles.buttonText, styles.infernoButtonText]}>Inferno🔥Mode</Text>
             </Link>
             <Link href="/online" style={styles.button}>
               <Text style={styles.buttonText}>Online Multiplayer</Text>
@@ -182,6 +182,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: 'solid',
     borderColor: '#1E8AC4',
+  },
+  infernoButton: {
+    backgroundColor: '#FFD93B',
+    borderColor: '#FFC107',
+  },
+  infernoButtonText: {
+    color: '#FF6A00',
   },
   buttonText: { 
     color: '#fff', 
