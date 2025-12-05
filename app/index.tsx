@@ -67,8 +67,8 @@ export default function HomeScreen() {
                 value={hapticsEnabled}
                 onValueChange={handleToggleHaptics}
                 disabled={!hasHydrated}
-                thumbColor={hapticsEnabled ? '#ffffff' : '#FFCDD2'}
-                trackColor={{ false: '#B00020', true: '#13C36B' }}
+                thumbColor={hapticsEnabled ? '#1C75BC' : '#FFCDD2'}
+                trackColor={{ false: '#B00020', true: '#53A7F3' }}
               />
             </View>
             <View style={styles.prefRow}> 
@@ -77,8 +77,8 @@ export default function HomeScreen() {
                 value={soundEnabled}
                 onValueChange={handleToggleSound}
                 disabled={!hasHydrated}
-                thumbColor={soundEnabled ? '#ffffff' : '#FFCDD2'}
-                trackColor={{ false: '#B00020', true: '#13C36B' }}
+                thumbColor={soundEnabled ? '#1C75BC' : '#FFCDD2'}
+                trackColor={{ false: '#B00020', true: '#53A7F3' }}
               />
             </View>
           </View>
