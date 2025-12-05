@@ -39,7 +39,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     const onSurvivalScreen = pathname?.startsWith('/survival');
-    if (!musicEnabled || onSurvivalScreen) {
+    const onInfernoScreen = pathname?.startsWith('/game');
+    if (!musicEnabled || onSurvivalScreen || onInfernoScreen) {
       void stopRollingMusic();
     } else {
       void startRollingMusic();

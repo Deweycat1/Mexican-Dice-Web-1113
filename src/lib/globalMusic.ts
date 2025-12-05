@@ -1,25 +1,38 @@
 import { Audio } from 'expo-av';
 
 let rollingMusic: Audio.Sound | null = null;
-let isLoaded = false;
-let isPlaying = false;
+let infernoMusic: Audio.Sound | null = null;
+let rollingLoaded = false;
+let rollingPlaying = false;
+let infernoLoaded = false;
+let infernoPlaying = false;
 
 async function loadRollingMusic() {
-  if (isLoaded) return;
+  if (rollingLoaded) return;
   const { sound } = await Audio.Sound.createAsync(
     require('../../assets/audio/RollingDice.mp3'),
     { isLooping: true, shouldPlay: false }
   );
   rollingMusic = sound;
-  isLoaded = true;
+  rollingLoaded = true;
+}
+
+async function loadInfernoMusic() {
+  if (infernoLoaded) return;
+  const { sound } = await Audio.Sound.createAsync(
+    require('../../assets/audio/InfernoDice.mp3'),
+    { isLooping: true, shouldPlay: false }
+  );
+  infernoMusic = sound;
+  infernoLoaded = true;
 }
 
 export async function startRollingMusic() {
   await loadRollingMusic();
   if (!rollingMusic) return;
-  if (!isPlaying) {
+  if (!rollingPlaying) {
     await rollingMusic.playAsync();
-    isPlaying = true;
+    rollingPlaying = true;
   }
 }
 
@@ -30,13 +43,40 @@ export async function stopRollingMusic() {
   } catch (error) {
     console.warn('Failed to stop rolling music', error);
   }
-  isPlaying = false;
+  rollingPlaying = false;
 }
 
 export async function unloadRollingMusic() {
   if (!rollingMusic) return;
   await rollingMusic.unloadAsync();
   rollingMusic = null;
-  isLoaded = false;
-  isPlaying = false;
+  rollingLoaded = false;
+  rollingPlaying = false;
+}
+
+export async function startInfernoMusic() {
+  await loadInfernoMusic();
+  if (!infernoMusic) return;
+  if (!infernoPlaying) {
+    await infernoMusic.playAsync();
+    infernoPlaying = true;
+  }
+}
+
+export async function stopInfernoMusic() {
+  if (!infernoMusic) return;
+  try {
+    await infernoMusic.stopAsync();
+  } catch (error) {
+    console.warn('Failed to stop inferno music', error);
+  }
+  infernoPlaying = false;
+}
+
+export async function unloadInfernoMusic() {
+  if (!infernoMusic) return;
+  await infernoMusic.unloadAsync();
+  infernoMusic = null;
+  infernoLoaded = false;
+  infernoPlaying = false;
 }
