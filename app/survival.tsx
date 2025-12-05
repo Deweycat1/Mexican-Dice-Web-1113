@@ -78,10 +78,9 @@ type StreakMeterProps = {
   compact?: boolean;
 };
 
-const COLOR_LIGHT_GREEN = '#8EF6A0';
-const COLOR_GREEN = '#2ECC71';
-const COLOR_GOLD = '#E0B50C';
-const COLOR_DARK_GOLD = '#B8860B';
+const COLOR_LIGHT_BLUE = '#42C6FF';
+const COLOR_BLUE = '#1E8AC4';
+const COLOR_MAGENTA = '#A020F0';
 const COLOR_RED = '#C21807';
 
 const StreakMeter: React.FC<StreakMeterProps> = ({
@@ -98,9 +97,6 @@ const StreakMeter: React.FC<StreakMeterProps> = ({
   const rainbowAnim = useRef(new Animated.Value(0)).current;
   const rainbowLoopRef = useRef<Animated.CompositeAnimation | null>(null);
   const rainbowActiveRef = useRef(false);
-
-  const hasRecord = safeGlobalBest > 0;
-  const shouldHide = targetToBeat <= 1 && currentStreak <= 0;
 
   useEffect(() => {
     if (!hasBrokenRecord) {
@@ -136,55 +132,57 @@ const StreakMeter: React.FC<StreakMeterProps> = ({
     };
   }, [hasBrokenRecord, rainbowAnim]);
 
-  if (shouldHide) {
-    return null;
-  }
-
   const rainbowColor = rainbowAnim.interpolate({
     inputRange: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1],
     outputRange: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF', '#FF0000'],
   });
 
   const progress = clampedProgress;
-  let gradientColors: string[];
-  if (progress <= 0.2) {
-    gradientColors = [COLOR_LIGHT_GREEN, COLOR_GREEN];
-  } else if (progress <= 0.4) {
-    gradientColors = [COLOR_LIGHT_GREEN, COLOR_GREEN, COLOR_GOLD];
-  } else if (progress <= 0.7) {
-    gradientColors = [COLOR_LIGHT_GREEN, COLOR_GREEN, COLOR_GOLD, COLOR_DARK_GOLD];
-  } else {
-    gradientColors = [COLOR_LIGHT_GREEN, COLOR_GREEN, COLOR_GOLD, COLOR_DARK_GOLD, COLOR_RED];
-  }
+  const gradientColors =
+    progress <= 0.2
+      ? [COLOR_LIGHT_BLUE, COLOR_BLUE]
+      : progress <= 0.4
+        ? [COLOR_LIGHT_BLUE, COLOR_BLUE, COLOR_MAGENTA]
+        : [COLOR_LIGHT_BLUE, COLOR_BLUE, COLOR_MAGENTA, COLOR_RED];
 
   return (
     <View
       style={[styles.streakMeterContainer, compact && styles.streakMeterContainerCompact]}
       pointerEvents="none"
     >
-      <View style={styles.streakMeterOuter}>
-        {hasBrokenRecord ? (
+      <View style={styles.streakMeterThermoRow}>
+        <View style={styles.streakMeterBulbWrapper}>
           <Animated.View
             style={[
-              styles.streakMeterFill,
-              { width: `${clampedProgress * 100}%`, backgroundColor: rainbowColor },
+              styles.streakMeterBulb,
+              { backgroundColor: hasBrokenRecord ? rainbowColor : gradientColors[0] },
             ]}
           />
-        ) : (
-          <Animated.View
-            style={[
-              styles.streakMeterFill,
-              { width: `${clampedProgress * 100}%` },
-            ]}
-          >
-            <LinearGradient
-              colors={gradientColors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.streakGradient}
+        </View>
+        <View style={styles.streakMeterOuter}>
+          {hasBrokenRecord ? (
+            <Animated.View
+              style={[
+                styles.streakMeterFill,
+                { width: `${clampedProgress * 100}%`, backgroundColor: rainbowColor },
+              ]}
             />
-          </Animated.View>
-        )}
+          ) : (
+            <Animated.View
+              style={[
+                styles.streakMeterFill,
+                { width: `${clampedProgress * 100}%` },
+              ]}
+            >
+              <LinearGradient
+                colors={gradientColors}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.streakGradient}
+              />
+            </Animated.View>
+          )}
+        </View>
       </View>
       <View style={styles.streakMeterLabels}>
         <Text style={styles.streakMeterLabelText}>Streak: {currentStreak}</Text>
@@ -1618,13 +1616,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   streakMeterOuter: {
-    width: '100%',
+    flex: 1,
     height: 16,
-    borderRadius: 6,
+    borderRadius: 999,
     borderWidth: 2,
     borderColor: '#30363D',
     overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingLeft: 2,
   },
   streakMeterFill: {
     height: '100%',
@@ -1634,6 +1633,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  streakMeterThermoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  streakMeterBulbWrapper: {
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -6,
+    zIndex: 2,
+  },
+  streakMeterBulb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 3,
+    borderColor: '#30363D',
   },
   streakMeterLabelText: {
     color: '#8B949E',
