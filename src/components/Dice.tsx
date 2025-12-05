@@ -11,6 +11,7 @@ import Animated, {
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { DIE_SIZE } from '../theme/dice';
+import { FlameEmojiIcon } from './FlameEmojiIcon';
 
 type DiceProps = {
   value: number | null;
@@ -133,7 +134,6 @@ export default function Dice({
   const overlayLabel = displayMode === 'question' ? '?' : overlayText ?? '';
   const showOverlay = thinkingOverlay != null || displayMode !== 'values';
   const thinkingImageSource = angryThinking ? ANGRY_RIVAL : THINKING_RIVAL;
-  const thinkingEmoji = angryThinking ? '🔥' : '💭';
   const faceGradientId = useMemo(
     () => `dice-face-${Math.random().toString(36).slice(2, 9)}`,
     []
@@ -197,6 +197,8 @@ export default function Dice({
                   resizeMode: 'contain',
                 }}
               />
+            ) : angryThinking ? (
+              <FlameEmojiIcon size={size * 0.6} />
             ) : (
               <Text
                 style={[
@@ -206,7 +208,7 @@ export default function Dice({
                   },
                 ]}
               >
-                {thinkingEmoji}
+                💭
               </Text>
             )}
           </View>

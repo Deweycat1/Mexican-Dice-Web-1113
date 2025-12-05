@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -20,19 +20,22 @@ import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
+import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+import { InlineFlameText } from '../src/components/InlineFlameText';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
 import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
+import { MEXICAN_ICON } from '../src/lib/constants';
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DICE_SPACING, DIE_SIZE } from '../src/theme/dice';
 
 function formatClaimDetailed(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  if (value === 21) return '21 (Inferno🔥)';
+  if (value === 21) return '21 (Inferno)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
   const [hi, lo] = splitClaim(value);
@@ -238,7 +241,7 @@ export default function Survival() {
 
   // Celebration overlay state
   const [celebrationVisible, setCelebrationVisible] = useState(false);
-  const [celebrationTitle, setCelebrationTitle] = useState('');
+  const [celebrationTitle, setCelebrationTitle] = useState<ReactNode>('');
   const [celebrationMode, setCelebrationMode] = useState<'5' | '10' | '15' | '20' | '25' | '30' | '35' | '40' | 'newLeader'>('5');
 
   // Micro + streak overlay state
@@ -525,7 +528,7 @@ export default function Survival() {
       ]).start();
 
       // Show celebration overlay
-      setCelebrationTitle('🔥 5 in a row?! Okay RELAX.');
+      setCelebrationTitle(buildFlameCelebrationTitle('5 in a row?! Okay RELAX.', '#FF6B6B'));
       setCelebrationMode('5');
       setCelebrationVisible(true);
     }
@@ -638,7 +641,7 @@ export default function Survival() {
       ]).start();
 
       // Show celebration overlay
-      setCelebrationTitle('🔥 TWENTY-FIVE! This is statistically irresponsible.');
+      setCelebrationTitle(buildFlameCelebrationTitle('TWENTY-FIVE! This is statistically irresponsible.', '#FF6600'));
       setCelebrationMode('25');
       setCelebrationVisible(true);
     }
@@ -765,14 +768,12 @@ export default function Survival() {
   const narration = (buildBanner?.() || message || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
 
-  // Helper component to render claim with inline logo for Inferno
-  const renderClaim = (value: number | null | undefined) => {
-    const text = formatClaimDetailed(value);
-    if (value === 21) {
-      return '21 (Inferno🔥)';
-    }
-    return text;
-  };
+  const buildFlameCelebrationTitle = (text: string, color: string) => (
+    <View style={styles.celebrationTitleRow}>
+      <FlameEmojiIcon size={32} style={styles.celebrationTitleIcon} />
+      <Text style={[styles.celebrationTitleText, { color }]}>{text}</Text>
+    </View>
+  );
 
   const claimText = useMemo(() => {
     const hasClaim = lastClaimValue != null || lastPlayerRoll != null;
@@ -1139,9 +1140,11 @@ export default function Survival() {
           <View style={[styles.content, layoutTweaks.contentPadding]}>
             {/* HEADER */}
             <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
-              <View style={styles.titleRow}>
-                <Animated.Text style={[styles.title, { transform: [{ scale: pulseAnim }] }]}>Inferno🔥Mode</Animated.Text>
-              </View>
+              <Animated.View style={[styles.titleRow, { transform: [{ scale: pulseAnim }] }]}>
+                <Text style={[styles.title, styles.titleSegment]}>Inferno</Text>
+                <FlameEmojiIcon size={30} style={styles.titleFlameIcon} />
+                <Text style={[styles.title, styles.titleSegment]}>Mode</Text>
+              </Animated.View>
               <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
               {claimText ? (
                 <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall]}>{claimText}</Text>
@@ -1149,13 +1152,13 @@ export default function Survival() {
                 <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall]}>No active claim yet.</Text>
               )}
               <View style={[styles.narrationContainer, layoutTweaks.narrationHeight]}>
-                <Text
+                <InlineFlameText
+                  text={narration || 'Ready to roll.'}
                   style={[styles.status, isSmallScreen && styles.statusSmall]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
-                >
-                  {narration || 'Ready to roll.'}
-                </Text>
+                  iconSize={18}
+                />
               </View>
             </View>
 
@@ -1177,15 +1180,33 @@ export default function Survival() {
             >
               <Animated.View style={{ opacity: fadeAnim }}>
                 {survivalClaims && survivalClaims.length > 0 ? (
-                  [...survivalClaims.slice(-2)].reverse().map((h, i) => (
-                    <Text key={i} style={styles.historyText} numberOfLines={1}>
-                      {h.type === 'event' ? h.text : (
-                        <>
-                          {h.who === 'player' ? 'You' : 'The Rival'} {h.claim === 41 ? 'rolled' : 'claimed'} {renderClaim(h.claim)}
-                        </>
-                      )}
-                    </Text>
-                  ))
+                  [...survivalClaims.slice(-2)].reverse().map((h, i) => {
+                    if (h.type === 'event') {
+                      return (
+                        <InlineFlameText
+                          key={i}
+                          text={h.text}
+                          style={styles.historyText}
+                          numberOfLines={1}
+                          iconSize={14}
+                        />
+                      );
+                    }
+                    const actor = h.who === 'player' ? 'You' : 'The Rival';
+                    const verb = h.claim === 41 ? 'rolled' : 'claimed';
+                    const claimText =
+                      h.claim === 21 ? `21 (Inferno${MEXICAN_ICON})` : formatClaimDetailed(h.claim);
+                    return (
+                      <InlineFlameText
+                        key={i}
+                        text={`${actor} ${verb} ${claimText}`}
+                        style={styles.historyText}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        iconSize={16}
+                      />
+                    );
+                  })
                 ) : (
                   <Text style={styles.historyText}>No recent events.</Text>
                 )}
@@ -1358,17 +1379,28 @@ export default function Survival() {
                 </View>
                 <View style={styles.modalHistoryList}>
                   {survivalClaims && survivalClaims.length > 0 ? (
-                    [...survivalClaims].reverse().map((h, i) => (
-                      <View key={i} style={styles.historyItem}>
-                        <Text style={styles.historyItemText}>
-                          {h.type === 'event' ? h.text : (
-                            <>
-                              {h.who === 'player' ? 'You' : 'The Rival'} {h.claim === 41 ? 'rolled' : 'claimed'} {renderClaim(h.claim)}
-                            </>
-                          )}
-                        </Text>
-                      </View>
-                    ))
+                    [...survivalClaims].reverse().map((h, i) => {
+                      if (h.type === 'event') {
+                        return (
+                          <View key={i} style={styles.historyItem}>
+                            <InlineFlameText text={h.text} style={styles.historyItemText} iconSize={16} />
+                          </View>
+                        );
+                      }
+                      const actor = h.who === 'player' ? 'You' : 'The Rival';
+                      const verb = h.claim === 41 ? 'rolled' : 'claimed';
+                      const claimText =
+                        h.claim === 21 ? `21 (Inferno${MEXICAN_ICON})` : formatClaimDetailed(h.claim);
+                      return (
+                        <View key={i} style={styles.historyItem}>
+                          <InlineFlameText
+                            text={`${actor} ${verb} ${claimText}`}
+                            style={styles.historyItemText}
+                            iconSize={18}
+                          />
+                        </View>
+                      );
+                    })
                   ) : (
                     <Text style={styles.noHistoryText}>No history yet.</Text>
                   )}
@@ -1600,11 +1632,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
   },
+  titleSegment: {
+    marginHorizontal: 4,
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+  },
+  titleFlameIcon: {
+    marginLeft: 8,
   },
   scoreLine: {
     color: '#F0F6FC',
@@ -1943,6 +1981,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 14,
     marginVertical: 20,
+  },
+  celebrationTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  celebrationTitleIcon: {
+    marginRight: 10,
+  },
+  celebrationTitleText: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   rulesBackdrop: {
     position: 'absolute',

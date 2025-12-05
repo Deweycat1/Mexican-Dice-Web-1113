@@ -21,7 +21,10 @@ import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import StyledButton from '../src/components/StyledButton';
+import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+import { InlineFlameText } from '../src/components/InlineFlameText';
 import RulesContent from '../src/components/RulesContent';
+import { MEXICAN_ICON } from '../src/lib/constants';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
@@ -32,7 +35,7 @@ import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
 // ---------- helpers ----------
 function formatClaimDetailed(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  if (value === 21) return '21 (Inferno🔥)';
+  if (value === 21) return '21 (Inferno)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
   const [hi, lo] = splitClaim(value);
@@ -200,15 +203,6 @@ export default function Game() {
     // stopSurvival reference from Zustand is stable; run once on mount only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Helper component to render claim with inline logo for Inferno
-  const renderClaim = (value: number | null | undefined) => {
-    const text = formatClaimDetailed(value);
-    if (value === 21) {
-      return '21 (Inferno🔥)';
-    }
-    return text;
-  };
 
   const [playerHi, playerLo] = facesFromRoll(lastPlayerRoll);
   const [cpuHi, cpuLo] = facesFromRoll(lastCpuRoll);
@@ -832,13 +826,13 @@ export default function Game() {
 
               {/* Status text below */}
               <View style={[styles.narrationContainer, layoutTweaks.narrationHeight]}>
-                <Text
+                <InlineFlameText
+                  text={narration || 'Ready to roll.'}
                   style={[styles.status, isSmallScreen && styles.statusSmall]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
-                >
-                  {narration || 'Ready to roll.'}
-                </Text>
+                  iconSize={18}
+                />
               </View>
             </View>
 
@@ -853,15 +847,33 @@ export default function Game() {
             >
               <Animated.View style={{ opacity: fadeAnim }}>
                 {claims && claims.length > 0 ? (
-                  [...claims.slice(-2)].reverse().map((h, i) => (
-                    <Text key={i} style={styles.historyText} numberOfLines={1}>
-                      {h.type === 'event' ? h.text : (
-                        <>
-                          {h.who === 'player' ? 'You' : 'The Rival'} {h.claim === 41 ? 'rolled' : 'claimed'} {renderClaim(h.claim)}
-                        </>
-                      )}
-                    </Text>
-                  ))
+                  [...claims.slice(-2)].reverse().map((h, i) => {
+                    if (h.type === 'event') {
+                      return (
+                        <InlineFlameText
+                          key={i}
+                          text={h.text}
+                          style={styles.historyText}
+                          numberOfLines={1}
+                          iconSize={14}
+                        />
+                      );
+                    }
+                    const actor = h.who === 'player' ? 'You' : 'The Rival';
+                    const verb = h.claim === 41 ? 'rolled' : 'claimed';
+                    const claimText =
+                      h.claim === 21 ? `21 (Inferno${MEXICAN_ICON})` : formatClaimDetailed(h.claim);
+                    return (
+                      <InlineFlameText
+                        key={i}
+                        text={`${actor} ${verb} ${claimText}`}
+                        style={styles.historyText}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        iconSize={16}
+                      />
+                    );
+                  })
                 ) : (
                   <Text style={styles.historyText}>No recent events.</Text>
                 )}
@@ -1024,17 +1036,28 @@ export default function Game() {
                 </View>
                 <View style={styles.modalHistoryList}>
                   {claims && claims.length > 0 ? (
-                    [...claims].reverse().map((h, i) => (
-                      <View key={i} style={styles.historyItem}>
-                        <Text style={styles.historyItemText}>
-                          {h.type === 'event' ? h.text : (
-                            <>
-                              {h.who === 'player' ? 'You' : 'The Rival'} {h.claim === 41 ? 'rolled' : 'claimed'} {renderClaim(h.claim)}
-                            </>
-                          )}
-                        </Text>
-                      </View>
-                    ))
+                    [...claims].reverse().map((h, i) => {
+                      if (h.type === 'event') {
+                        return (
+                          <View key={i} style={styles.historyItem}>
+                            <InlineFlameText text={h.text} style={styles.historyItemText} iconSize={16} />
+                          </View>
+                        );
+                      }
+                      const actor = h.who === 'player' ? 'You' : 'The Rival';
+                      const verb = h.claim === 41 ? 'rolled' : 'claimed';
+                      const claimText =
+                        h.claim === 21 ? `21 (Inferno${MEXICAN_ICON})` : formatClaimDetailed(h.claim);
+                      return (
+                        <View key={i} style={styles.historyItem}>
+                          <InlineFlameText
+                            text={`${actor} ${verb} ${claimText}`}
+                            style={styles.historyItemText}
+                            iconSize={18}
+                          />
+                        </View>
+                      );
+                    })
                   ) : (
                     <Text style={styles.noHistoryText}>No history yet.</Text>
                   )}

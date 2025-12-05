@@ -9,6 +9,7 @@ import {
     View,
 } from 'react-native';
 
+import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 interface RollStatsData {
   rolls: Record<string, number>;
 }
@@ -128,7 +129,7 @@ export default function RollClaimComparisonScreen() {
   const getRollLabel = (roll: string): string => {
     switch (roll) {
       case '21':
-        return '21 (Inferno🔥)';
+        return '21 (Inferno)';
       case '31':
         return '31 (Reverse)';
       case '41':
@@ -147,7 +148,7 @@ export default function RollClaimComparisonScreen() {
   const getCategoryEmoji = (category: BluffCategory): string => {
     switch (category) {
       case 'over':
-        return '🔥';
+        return '';
       case 'under':
         return '🧊';
       case 'balanced':
@@ -208,8 +209,8 @@ export default function RollClaimComparisonScreen() {
 
   const renderRow = ({ item }: { item: RollClaimRow }) => {
     const category = getBluffCategory(item.bluffBias);
-    const emoji = getCategoryEmoji(category);
     const categoryLabel = getCategoryLabel(category);
+    const categoryEmoji = category === 'over' ? null : getCategoryEmoji(category);
 
     return (
       <View style={styles.tableRow}>
@@ -233,9 +234,14 @@ export default function RollClaimComparisonScreen() {
           {item.bluffBias > 0 ? '+' : ''}{item.bluffBias.toFixed(2)}%
         </Text>
         
-        <Text style={styles.insightCell}>
-          {emoji} {categoryLabel}
-        </Text>
+        <View style={styles.insightCell}>
+          {category === 'over' ? (
+            <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
+          ) : (
+            <Text style={styles.insightText}>{categoryEmoji}</Text>
+          )}
+          <Text style={styles.insightText}>{categoryLabel}</Text>
+        </View>
       </View>
     );
   };
@@ -268,7 +274,9 @@ export default function RollClaimComparisonScreen() {
         <View style={styles.highlightRow}>
           {mostOverhyped && mostOverhyped.bluffBias > 3 && (
             <View style={[styles.highlightCard, styles.highlightCardWide]}>
-              <Text style={styles.highlightIcon}>🔥</Text>
+              <View style={styles.highlightIconWrapper}>
+                <FlameEmojiIcon size={32} />
+              </View>
               <Text style={styles.highlightValue}>{mostOverhyped.label}</Text>
               <Text style={styles.highlightLabel}>Most Overhyped</Text>
               <Text style={styles.highlightDetail}>
@@ -384,6 +392,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
+  highlightIconWrapper: {
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   highlightValue: {
     fontSize: 24,
     fontWeight: '800',
@@ -479,9 +492,18 @@ const styles = StyleSheet.create({
   },
   insightCell: {
     flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  insightText: {
     fontSize: 11,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
+  },
+  inlineFlameIcon: {
+    marginRight: 4,
   },
   loadingContainer: {
     flex: 1,

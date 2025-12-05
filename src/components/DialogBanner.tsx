@@ -1,5 +1,7 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
+
+import { InlineFlameText } from './InlineFlameText';
 
 type Speaker = 'user' | 'rival';
 
@@ -31,13 +33,13 @@ export default function DialogBanner({ speaker, text }: DialogBannerProps) {
       </View>
 
       <View style={styles.dialogTextWrapper}>
-        <Text
+        <InlineFlameText
+          text={text}
           numberOfLines={3}
           ellipsizeMode="tail"
           style={styles.dialogText}
-        >
-          {text}
-        </Text>
+          iconSize={16}
+        />
       </View>
     </View>
   );

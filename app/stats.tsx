@@ -9,6 +9,7 @@ import {
     View,
 } from 'react-native';
 
+import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 interface RollStatsData {
   rolls: Record<string, number>;
 }
@@ -152,7 +153,7 @@ export default function StatsScreen() {
   const getRollLabel = (roll: string): string => {
     switch (roll) {
       case '21':
-        return '21 (Inferno🔥)';
+        return '21 (Inferno)';
       case '31':
         return '31 (Reverse)';
       case '41':
@@ -373,11 +374,17 @@ export default function StatsScreen() {
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
           {randomStats === null ? (
             <View style={styles.card}>
-              <Text style={styles.noDataText}>
-                {survivalAverage
-                  ? 'Play Inferno🔥Mode to unlock player tendency stats!'
-                  : 'Play a few games to unlock your Random Stats!'}
-              </Text>
+              {survivalAverage ? (
+                <View style={styles.noDataRow}>
+                  <Text style={[styles.noDataText, styles.noDataTextSegment]}>Play Inferno</Text>
+                  <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
+                  <Text style={[styles.noDataText, styles.noDataTextSegment]}>
+                    Mode to unlock player tendency stats!
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.noDataText}>Play a few games to unlock your Random Stats!</Text>
+              )}
             </View>
           ) : (
             <>
@@ -585,6 +592,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 8,
+  },
+  noDataTextSegment: {
+    marginTop: 0,
+  },
+  noDataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  inlineFlameIcon: {
+    marginHorizontal: 4,
   },
   backButton: {
     backgroundColor: '#C21807',

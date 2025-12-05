@@ -2,12 +2,15 @@ import React from 'react';
 import { Animated, Text } from 'react-native';
 
 type ParticleProps = {
-  emoji: string;
+  content: React.ReactNode;
   size?: number;
   animatedStyle?: any;
 };
 
-export function Particle({ emoji, size = 100, animatedStyle }: ParticleProps) {
+export function Particle({ content, size = 100, animatedStyle }: ParticleProps) {
+  const renderContent =
+    typeof content === 'string' ? <Text style={{ fontSize: size * 1.0 }}>{content}</Text> : content;
+
   return (
     <Animated.View
       style={[
@@ -20,7 +23,7 @@ export function Particle({ emoji, size = 100, animatedStyle }: ParticleProps) {
         animatedStyle,
       ]}
     >
-      <Text style={{ fontSize: size * 1.0 }}>{emoji}</Text>
+      {renderContent}
     </Animated.View>
   );
 }

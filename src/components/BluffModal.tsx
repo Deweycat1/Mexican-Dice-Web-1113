@@ -1,5 +1,7 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { FlameEmojiIcon } from './FlameEmojiIcon';
 
 type Props = {
   visible: boolean;
@@ -11,7 +13,7 @@ type Props = {
 };
 
 const formatClaim = (value: number) => {
-  if (value === 21) return '21 (Inferno🔥)';
+  if (value === 21) return '21 (Inferno)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
   const hi = Math.floor(value / 10);
@@ -45,7 +47,15 @@ export default function BluffModal({ visible, options, onCancel, onSelect, canSh
                 }
                 onPress={() => onSelect(value)}
               >
-                <Text style={styles.optionLabel}>{renderClaim(value)}</Text>
+                {value === 21 ? (
+                  <View style={styles.optionLabelRow}>
+                    <Text style={[styles.optionLabel, styles.optionLabelSegment]}>21 (Inferno</Text>
+                    <FlameEmojiIcon size={20} style={styles.inlineFlameIcon} />
+                    <Text style={[styles.optionLabel, styles.optionLabelSegment]}>)</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.optionLabel}>{renderClaim(value)}</Text>
+                )}
               </Pressable>
             ))}
 
@@ -131,6 +141,17 @@ const styles = StyleSheet.create({
     fontWeight: '700', 
     fontSize: 18, 
     textAlign: 'center' 
+  },
+  optionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionLabelSegment: {
+    marginBottom: 0,
+  },
+  inlineFlameIcon: {
+    marginHorizontal: 6,
   },
   socialOption: {
     backgroundColor: '#2B333B',

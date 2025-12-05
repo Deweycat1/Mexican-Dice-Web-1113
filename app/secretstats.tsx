@@ -9,6 +9,8 @@ import {
     View,
 } from 'react-native';
 
+import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+
 interface SurvivalBestData {
   streak: number;
   updatedAt: string;
@@ -289,7 +291,7 @@ export default function SecretStatsScreen() {
   const getRollLabel = (roll: string): string => {
     switch (roll) {
       case '21':
-        return '21 (Inferno🔥)';
+        return '21 (Inferno)';
       case '31':
         return '31 (Reverse)';
       case '41':
@@ -343,7 +345,11 @@ export default function SecretStatsScreen() {
         <Text style={styles.backButtonTopText}>← Back</Text>
       </Pressable>
       
-      <Text style={styles.title}>Win & Inferno🔥Mode Stats</Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, styles.titleSegment]}>Win & Inferno</Text>
+        <FlameEmojiIcon size={28} style={styles.inlineFlameIcon} />
+        <Text style={[styles.title, styles.titleSegment]}>Mode Stats</Text>
+      </View>
       <Text style={styles.subtitle}>🔒 Hidden Analytics</Text>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -406,7 +412,12 @@ export default function SecretStatsScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔥 Inferno🔥Mode</Text>
+          <View style={styles.cardTitleRow}>
+            <FlameEmojiIcon size={20} style={styles.inlineFlameIcon} />
+            <Text style={[styles.cardTitle, styles.cardTitleSegment]}>Inferno</Text>
+            <FlameEmojiIcon size={20} style={styles.inlineFlameIcon} />
+            <Text style={[styles.cardTitle, styles.cardTitleSegment]}>Mode</Text>
+          </View>
           <View style={styles.statsTable}>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>Global Best Streak</Text>
@@ -444,7 +455,11 @@ export default function SecretStatsScreen() {
 
         {survivalAverage && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏔️ Average Inferno🔥Mode Streak</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={[styles.cardTitle, styles.cardTitleSegment]}>🏔️ Average Inferno</Text>
+              <FlameEmojiIcon size={20} style={styles.inlineFlameIcon} />
+              <Text style={[styles.cardTitle, styles.cardTitleSegment]}>Mode Streak</Text>
+            </View>
             <Text style={styles.bigNumber}>{survivalAverage.averageSurvivalStreak.toFixed(2)}</Text>
             <Text style={styles.cardSubtext}>
               Based on {survivalAverage.sampleSize.toLocaleString()} completed runs
@@ -544,7 +559,12 @@ export default function SecretStatsScreen() {
         {/* Survival: Percent of users scoring >10 */}
         {survivalOver10 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🔥 Inferno🔥Mode</Text>
+            <View style={styles.cardTitleRow}>
+              <FlameEmojiIcon size={20} style={styles.inlineFlameIcon} />
+              <Text style={[styles.cardTitle, styles.cardTitleSegment]}>Inferno</Text>
+              <FlameEmojiIcon size={20} style={styles.inlineFlameIcon} />
+              <Text style={[styles.cardTitle, styles.cardTitleSegment]}>Mode</Text>
+            </View>
             <View style={styles.statsTable}>
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>% of users scoring &gt; 10</Text>
@@ -553,7 +573,11 @@ export default function SecretStatsScreen() {
                 </Text>
               </View>
               <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Total Inferno🔥Mode Players</Text>
+                <View style={styles.statLabelRow}>
+                  <Text style={[styles.statLabel, styles.statLabelSegment]}>Total Inferno</Text>
+                  <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
+                  <Text style={[styles.statLabel, styles.statLabelSegment]}>Mode Players</Text>
+                </View>
                 <Text style={styles.statCountLarge}>{survivalOver10.totalSurvivalUsers ?? 0}</Text>
               </View>
               <View style={styles.statRow}>
@@ -625,6 +649,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 4,
+  },
+  titleSegment: {
+    marginBottom: 0,
+  },
   subtitle: {
     fontSize: 16,
     fontWeight: '600',
@@ -659,6 +693,19 @@ const styles = StyleSheet.create({
     color: '#E6FFE6',
     marginBottom: 12,
     textAlign: 'center',
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  cardTitleSegment: {
+    marginBottom: 0,
+  },
+  inlineFlameIcon: {
+    marginHorizontal: 6,
   },
   cardSubtitle: {
     fontSize: 14,
@@ -701,6 +748,15 @@ const styles = StyleSheet.create({
     color: '#E6FFE6',
     fontWeight: '600',
     flex: 1,
+  },
+  statLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    flexWrap: 'wrap',
+  },
+  statLabelSegment: {
+    flex: 0,
   },
   statValues: {
     flexDirection: 'row',

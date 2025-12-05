@@ -4,6 +4,7 @@ import { Image, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';
+import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 
 export default function HomeScreen() {
@@ -55,7 +56,10 @@ export default function HomeScreen() {
             </Link>
 
             <Link href="/survival" style={[styles.buttonStats, styles.infernoButton]}>
-              <Text style={[styles.buttonText, styles.infernoButtonText]}>Inferno🔥Mode</Text>
+              <View style={styles.buttonLabelRow}>
+                <Text style={[styles.buttonText, styles.infernoButtonText]}>Inferno Mode</Text>
+                <FlameEmojiIcon size={20} style={styles.infernoIcon} />
+              </View>
             </Link>
             <Link href="/online" style={styles.button}>
               <Text style={styles.buttonText}>Online Multiplayer</Text>
@@ -195,6 +199,14 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontWeight: '700',
     textAlign: 'center',
+  },
+  buttonLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infernoIcon: {
+    marginLeft: 6,
   },
   simplePrefs: {
     width: '100%',

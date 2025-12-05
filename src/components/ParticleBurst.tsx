@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, DimensionValue, StyleSheet, View } from 'react-native';
+import { FlameEmojiIcon } from './FlameEmojiIcon';
 import { Particle } from './Particle';
 
 type Props = {
@@ -12,8 +13,9 @@ type Props = {
   centerY?: DimensionValue;
 };
 
+const FLAME_SYMBOL = '__FLAME_ICON__' as const;
 const STREAK_FLASH_EMOJIS = [
-  '🔥',
+  FLAME_SYMBOL,
   '⚡',
   '💥',
   '🚀',
@@ -136,10 +138,18 @@ export default function ParticleBurst({
           outputRange: [slot.offsetY, slot.offsetY],
         });
 
+        const symbol = emojiPair[index] ?? emojiPair[emojiPair.length - 1];
+        const content =
+          symbol === FLAME_SYMBOL ? (
+            <FlameEmojiIcon size={particleSize} />
+          ) : (
+            symbol
+          );
+
         return (
           <Particle
             key={index}
-            emoji={emojiPair[index] ?? emojiPair[emojiPair.length - 1]}
+            content={content}
             size={particleSize}
             animatedStyle={[
               styles.particle,

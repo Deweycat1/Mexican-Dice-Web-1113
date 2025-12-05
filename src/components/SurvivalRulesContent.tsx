@@ -1,17 +1,31 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { FlameEmojiIcon } from './FlameEmojiIcon';
+
 export default function SurvivalRulesContent() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Inferno🔥Mode Rules</Text>
+      <View style={[styles.inlineRow, styles.titleRow]}>
+        <Text style={[styles.title, styles.inlineTextSegment]}>Inferno</Text>
+        <FlameEmojiIcon size={22} style={styles.inlineFlameIcon} />
+        <Text style={[styles.title, styles.inlineTextSegment]}>Mode Rules</Text>
+      </View>
       <Text style={styles.subtitle}>(A streamlined, single player twist on Inferno Dice)</Text>
 
-      <Text style={styles.heading}>How Inferno🔥Mode Works</Text>
+      <View style={[styles.inlineRow, styles.headingRow]}>
+        <Text style={[styles.heading, styles.inlineTextSegment]}>How Inferno</Text>
+        <FlameEmojiIcon size={18} style={styles.inlineFlameIcon} />
+        <Text style={[styles.heading, styles.inlineTextSegment]}>Mode Works</Text>
+      </View>
       <Text style={styles.paragraph}>You face off against the Rival in an endless series of rounds.</Text>
       <Text style={styles.paragraph}>Each time you win a round, your streak increases.</Text>
       <Text style={styles.paragraph}>If you lose a round, your streak ends immediately.</Text>
-      <Text style={styles.paragraph}>There are no points or scorekeeper dice in Inferno🔥Mode.</Text>
+      <View style={styles.inlineRow}>
+        <Text style={[styles.paragraph, styles.inlineTextSegment]}>There are no points or scorekeeper dice in Inferno</Text>
+        <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
+        <Text style={[styles.paragraph, styles.inlineTextSegment]}>Mode.</Text>
+      </View>
       <Text style={styles.paragraph}>Your only objective is simple: survive as long as possible.</Text>
 
       <Text style={styles.heading}>Rolling and Claims</Text>
@@ -78,7 +92,11 @@ export default function SurvivalRulesContent() {
       <Text style={styles.paragraph}>Every win increases your streak except 41 Social resets, which give no streak.</Text>
 
       <Text style={styles.heading}>Losing a Round</Text>
-      <Text style={styles.paragraph}>Your Inferno🔥Mode run ends immediately if:</Text>
+      <View style={[styles.inlineRow, styles.paragraphSpacing]}>
+        <Text style={[styles.paragraph, styles.inlineTextSegment]}>Your Inferno</Text>
+        <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
+        <Text style={[styles.paragraph, styles.inlineTextSegment]}>Mode run ends immediately if:</Text>
+      </View>
       <Text style={styles.bullet}>• You fail to match or beat the active claim</Text>
       <Text style={styles.bullet}>• You are caught bluffing</Text>
       <Text style={styles.bullet}>• You incorrectly call a bluff</Text>
@@ -98,11 +116,29 @@ const styles = StyleSheet.create({
   container: {
     rowGap: 6,
   },
+  inlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  inlineTextSegment: {
+    marginBottom: 0,
+  },
+  inlineFlameIcon: {
+    marginHorizontal: 4,
+  },
+  titleRow: {
+    marginBottom: 4,
+  },
   title: {
     fontSize: 22,
     fontWeight: '800',
     marginBottom: 4,
     color: '#E6FFE6',
+  },
+  headingRow: {
+    marginTop: 10,
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
@@ -127,6 +163,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#E6FFE6',
+  },
+  paragraphSpacing: {
+    marginTop: 4,
   },
   bullet: {
     fontSize: 14,
