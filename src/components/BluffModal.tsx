@@ -91,20 +91,20 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxHeight: '80%',
-    backgroundColor: '#113b2b',
+    backgroundColor: '#2A3136',
     borderRadius: 18,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#30363D',
   },
   heading: { 
-    color: '#fff', 
+    color: '#E0B50C', 
     fontWeight: '800', 
     fontSize: 20,
     marginBottom: 8,
   },
   subtle: { 
-    color: '#cfeee2', 
+    color: '#8B949E', 
     marginBottom: 16,
     fontSize: 14,
   },
@@ -115,25 +115,25 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   option: {
-    backgroundColor: '#1a5a40',
+    backgroundColor: '#22272E',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#30363D',
   },
   optionPressed: {
-    backgroundColor: '#236f51',
+    backgroundColor: '#2B333B',
   },
   optionLabel: { 
-    color: '#fff', 
+    color: '#F0F6FC', 
     fontWeight: '700', 
     fontSize: 18, 
     textAlign: 'center' 
   },
   socialOption: {
-    backgroundColor: '#26775a',
+    backgroundColor: '#2B333B',
   },
   cancel: {
     marginTop: 16,
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignSelf: 'stretch',
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: '#5A0000',
   },
   cancelPressed: {
     backgroundColor: '#A52A2A',
