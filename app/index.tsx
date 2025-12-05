@@ -4,7 +4,7 @@ import { Image, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';
-import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+import { InfernoModeButton } from '../src/components/InfernoModeButton';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 
 export default function HomeScreen() {
@@ -55,11 +55,8 @@ export default function HomeScreen() {
               <Text style={styles.buttonText}>Quick Play</Text>
             </Link>
 
-            <Link href="/survival" style={[styles.buttonStats, styles.infernoButton]}>
-              <View style={styles.buttonLabelRow}>
-                <Text style={[styles.buttonText, styles.infernoButtonText]}>Inferno Mode</Text>
-                <FlameEmojiIcon size={20} style={styles.infernoIcon} />
-              </View>
+            <Link href="/survival" asChild>
+              <InfernoModeButton />
             </Link>
             <Link href="/online" style={styles.button}>
               <Text style={styles.buttonText}>Online Multiplayer</Text>
