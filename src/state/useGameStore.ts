@@ -101,7 +101,6 @@ export type Store = {
   gameOver: Turn | null;
 
   newGame(): void;
-  resetRound(): void;
 
   playerRoll(): void;
   playerClaim(claim: number): void;
@@ -506,7 +505,7 @@ export const useGameStore = create<Store>((set, get) => {
     return { gameOver: finished };
   };
 
-  const resetRound = () => {
+  const resetRoundState = () => {
     roundIndexCounter += 1;
     pendingCpuRaise = null;
     set({
@@ -697,7 +696,7 @@ export const useGameStore = create<Store>((set, get) => {
     pendingCpuRaise = null;
 
     if (!result.gameOver) {
-      resetRound();
+      resetRoundState();
       set({ turn: caller });
     }
 
@@ -745,7 +744,7 @@ export const useGameStore = create<Store>((set, get) => {
           Math.max(dicePair[0], dicePair[1]),
           Math.min(dicePair[0], dicePair[1]),
         ];
-        resetRound();
+        resetRoundState();
         set((prevState) => ({
           cpuSocialDice: socialDice,
           cpuSocialRevealNonce: prevState.cpuSocialRevealNonce + 1,
@@ -952,8 +951,6 @@ export const useGameStore = create<Store>((set, get) => {
       });
     },
 
-    resetRound,
-
     playerRoll: () => {
       const state = get();
       if (state.gameOver || state.turn !== 'player' || state.turnLock) return;
@@ -1034,7 +1031,7 @@ export const useGameStore = create<Store>((set, get) => {
         aiOpponent.observeRoundOutcome(true);
         persistAiState();
         if (!result.gameOver) {
-          resetRound();
+          resetRoundState();
           set({ turn: 'cpu' });
           endTurnLock();
           set({ isBusy: false });
@@ -1076,7 +1073,7 @@ export const useGameStore = create<Store>((set, get) => {
         // record player's Social show in normal mode
         pushClaim('player', 41, state.lastPlayerRoll);
 
-        resetRound();
+        resetRoundState();
         set((prevState) => ({
           turn: 'cpu',
           message: 'Social (41) shown. Round resets.',

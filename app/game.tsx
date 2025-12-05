@@ -8,10 +8,9 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     View,
-    Alert,
-    Platform,
     useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -115,6 +114,9 @@ export default function Game() {
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
+  const soundEnabled = useSettingsStore((state) => state.soundEnabled);
+  const setHapticsEnabled = useSettingsStore((state) => state.setHapticsEnabled);
+  const setSoundEnabled = useSettingsStore((state) => state.setSoundEnabled);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -127,6 +129,7 @@ export default function Game() {
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
@@ -609,28 +612,13 @@ export default function Game() {
   }, [newGame, setHasRolledThisGame, setScoreDiceAnimKey, showDialog]);
 
   const handleNewGamePress = useCallback(() => {
-    if (Platform.OS === 'web') {
-      // eslint-disable-next-line no-alert
-      const confirmed = window.confirm('Start a new game? Your current round will be lost.');
-      if (confirmed) {
-        startFreshGame();
-      }
-      return;
-    }
-
-    Alert.alert(
-      'Start a new game?',
-      'Your current round will be lost.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes, start over',
-          style: 'destructive',
-          onPress: () => startFreshGame(),
-        },
-      ]
-    );
+    startFreshGame();
   }, [startFreshGame]);
+
+  const handleResetGamePress = useCallback(() => {
+    startFreshGame();
+    setSettingsOpen(false);
+  }, [startFreshGame, setSettingsOpen]);
 
   const handleCpuRevealComplete = useCallback(() => {
     setIsRevealAnimating(false);
@@ -923,12 +911,24 @@ export default function Game() {
             <View style={[styles.controls, layoutTweaks.controlsSpacing]}>
               <View style={styles.actionRow}>
                 <StyledButton
-                  label={hasRolled && !mustBluff ? 'Claim Roll' : 'Roll'}
-                  variant="success"
-                  onPress={handleRollOrClaim}
-                  style={[styles.btn, styles.menuActionButtonSuccess]}
+                  label={
+                    isGameOver
+                      ? 'New Game'
+                      : hasRolled && !mustBluff
+                        ? 'Claim Roll'
+                        : 'Roll'
+                  }
+                  variant={isGameOver ? 'primary' : 'success'}
+                  onPress={isGameOver ? handleNewGamePress : handleRollOrClaim}
+                  style={[
+                    styles.btn,
+                    isGameOver ? styles.newGamePrimaryButton : styles.menuActionButtonSuccess,
+                  ]}
+                  textStyle={isGameOver ? styles.newGamePrimaryButtonText : undefined}
                   disabled={
-                    controlsDisabled || isRevealAnimating || (hasRolled && !rolledCanClaim)
+                    isGameOver
+                      ? false
+                      : controlsDisabled || isRevealAnimating || (hasRolled && !rolledCanClaim)
                   }
                 />
                 <StyledButton
@@ -952,16 +952,16 @@ export default function Game() {
 
               <View style={styles.bottomRow}>
                 <StyledButton
-                  label="New Game"
+                  label="Settings"
                   variant="ghost"
-                  onPress={handleNewGamePress}
+                  onPress={() => setSettingsOpen(true)}
                   style={[styles.btn, styles.newGameBtn]}
                 />
                 <StyledButton
                   label="Menu"
                   variant="ghost"
                   onPress={() => router.push('/')}
-                  style={[styles.btn, styles.menuBtn]}
+                  style={[styles.btn, styles.menuBtnBlueOutline]}
                 />
                 <StyledButton
                   label="View Rules"
@@ -1049,6 +1049,60 @@ export default function Game() {
                 <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
                   <RulesContent />
                 </ScrollView>
+              </View>
+            </View>
+          </Modal>
+
+          <Modal
+            visible={settingsOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setSettingsOpen(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setSettingsOpen(false)} />
+            <View style={styles.modalCenter}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Settings</Text>
+                  <Pressable onPress={() => setSettingsOpen(false)} style={styles.closeButton}>
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.settingsRow}>
+                  <Text style={styles.settingsLabel}>Vibration</Text>
+                  <Switch
+                    value={hapticsEnabled}
+                    onValueChange={(value) => {
+                      void setHapticsEnabled(value);
+                    }}
+                    trackColor={{ false: '#4A4E54', true: '#53A7F3' }}
+                    thumbColor={hapticsEnabled ? '#1C75BC' : '#9BA1A6'}
+                    ios_backgroundColor="#4A4E54"
+                  />
+                </View>
+
+                <View style={styles.settingsRow}>
+                  <Text style={styles.settingsLabel}>Sound</Text>
+                  <Switch
+                    value={soundEnabled}
+                    onValueChange={(value) => {
+                      void setSoundEnabled(value);
+                    }}
+                    trackColor={{ false: '#4A4E54', true: '#53A7F3' }}
+                    thumbColor={soundEnabled ? '#1C75BC' : '#9BA1A6'}
+                    ios_backgroundColor="#4A4E54"
+                  />
+                </View>
+
+                <View style={styles.settingsActions}>
+                  <StyledButton
+                    label="Reset Game"
+                    variant="primary"
+                    onPress={handleResetGamePress}
+                    style={styles.resetGameButton}
+                  />
+                </View>
               </View>
             </View>
           </Modal>
@@ -1232,12 +1286,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#063a25',
   },
+  menuBtnBlueOutline: {
+    borderWidth: 2,
+    borderColor: '#1E8AC4',
+    borderRadius: 12,
+  },
   btnWide: { flex: 1 },
   rollHelper: {
     color: '#F8E9A1',
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 6,
+  },
+  newGamePrimaryButton: {
+    backgroundColor: '#E0B50C',
+    borderColor: '#FFEA70',
+    borderWidth: 2,
+  },
+  newGamePrimaryButtonText: {
+    color: '#1B1D1F',
+    fontWeight: '800',
   },
   historyBox: {
     alignSelf: 'center',
@@ -1444,6 +1512,32 @@ const styles = StyleSheet.create({
   },
   rulesScroll: {
     maxHeight: '100%',
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  settingsLabel: {
+    color: '#F0F6FC',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  settingsActions: {
+    marginTop: 16,
+  },
+  resetGameButton: {
+    alignSelf: 'stretch',
+    backgroundColor: '#C21807',
+    borderColor: '#8B0000',
+    borderWidth: 2,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  settingsBtn: {
+    borderWidth: 2,
+    borderColor: '#53A7F3',
   },
   // End-of-game banner styles
   endBannerContainer: {

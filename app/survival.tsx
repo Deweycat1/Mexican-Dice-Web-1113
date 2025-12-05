@@ -8,6 +8,7 @@ import {
     Pressable,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     View,
     useWindowDimensions,
@@ -200,6 +201,9 @@ export default function Survival() {
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
+  const soundEnabled = useSettingsStore((state) => state.soundEnabled);
+  const setHapticsEnabled = useSettingsStore((state) => state.setHapticsEnabled);
+  const setSoundEnabled = useSettingsStore((state) => state.setSoundEnabled);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -217,6 +221,7 @@ export default function Survival() {
   const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Milestone tracking state
   const [hasShown5, setHasShown5] = useState(false);
@@ -1271,10 +1276,16 @@ export default function Survival() {
 
               <View style={styles.bottomRow}>
                 <StyledButton
+                  label="Settings"
+                  variant="ghost"
+                  onPress={() => setSettingsOpen(true)}
+                  style={[styles.btn, styles.newGameBtn]}
+                />
+                <StyledButton
                   label="Menu"
                   variant="ghost"
                   onPress={() => router.push('/')}
-                  style={[styles.btn, styles.menuBtn]}
+                  style={[styles.btn, styles.menuBtnBlueOutline]}
                 />
                 <StyledButton
                   label="View Rules"
@@ -1361,6 +1372,51 @@ export default function Survival() {
                 <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
                   <SurvivalRulesContent />
                 </ScrollView>
+              </View>
+            </View>
+          </Modal>
+
+          <Modal
+            visible={settingsOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setSettingsOpen(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setSettingsOpen(false)} />
+            <View style={styles.modalCenter}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Settings</Text>
+                  <Pressable onPress={() => setSettingsOpen(false)} style={styles.closeButton}>
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.settingsRow}>
+                  <Text style={styles.settingsLabel}>Vibration</Text>
+                  <Switch
+                    value={hapticsEnabled}
+                    onValueChange={(value) => {
+                      void setHapticsEnabled(value);
+                    }}
+                    trackColor={{ false: '#4A4E54', true: '#53A7F3' }}
+                    thumbColor={hapticsEnabled ? '#1C75BC' : '#9BA1A6'}
+                    ios_backgroundColor="#4A4E54"
+                  />
+                </View>
+
+                <View style={styles.settingsRow}>
+                  <Text style={styles.settingsLabel}>Sound</Text>
+                  <Switch
+                    value={soundEnabled}
+                    onValueChange={(value) => {
+                      void setSoundEnabled(value);
+                    }}
+                    trackColor={{ false: '#4A4E54', true: '#53A7F3' }}
+                    thumbColor={soundEnabled ? '#1C75BC' : '#9BA1A6'}
+                    ios_backgroundColor="#4A4E54"
+                  />
+                </View>
               </View>
             </View>
           </Modal>
@@ -1645,9 +1701,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#e0b50c',
   },
-  menuBtn: {
+  menuBtnBlueOutline: {
     borderWidth: 2,
-    borderColor: '#e0b50c',
+    borderColor: '#1E8AC4',
+    borderRadius: 12,
   },
   btnWide: { flex: 1 },
   rollHelper: {
@@ -1878,6 +1935,17 @@ const styles = StyleSheet.create({
   },
   rulesScroll: {
     maxHeight: '100%',
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  settingsLabel: {
+    color: '#F0F6FC',
+    fontSize: 16,
+    fontWeight: '600',
   },
   screenOverlay: {
     position: 'absolute',
