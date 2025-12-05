@@ -25,7 +25,11 @@ export default function FeltBackground({ children }: { children?: React.ReactNod
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, position: 'relative' },
+  container: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: '#1B1D1F', // ensure no light patch shows behind felt
+  },
   childrenContainer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
