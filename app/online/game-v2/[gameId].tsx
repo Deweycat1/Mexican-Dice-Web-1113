@@ -43,7 +43,7 @@ import {
   splitClaim
 } from '../../../src/engine/mexican';
 import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
-import { getCurrentUser } from '../../../src/lib/auth';
+import { ensureUserProfile, getCurrentUser } from '../../../src/lib/auth';
 import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
@@ -276,10 +276,24 @@ export default function OnlineGameV2Screen() {
   const historyInitializedRef = useRef(false);
 
   useEffect(() => {
+    let isMounted = true;
     (async () => {
-      const user = await getCurrentUser();
-      setUserId(user?.id ?? null);
+      try {
+        const profile = await ensureUserProfile();
+        if (isMounted) {
+          setUserId(profile.id);
+        }
+      } catch (error) {
+        console.error('[OnlineGame] Failed to ensure profile', error);
+        const fallback = await getCurrentUser();
+        if (isMounted) {
+          setUserId(fallback?.id ?? null);
+        }
+      }
     })();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {

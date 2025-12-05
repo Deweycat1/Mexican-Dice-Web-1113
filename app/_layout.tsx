@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { startRollingMusic, stopRollingMusic } from '../src/lib/globalMusic';
+import { ensureUserProfile } from '../src/lib/auth';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 
 export default function RootLayout() {
@@ -44,6 +45,18 @@ export default function RootLayout() {
       void startRollingMusic();
     }
   }, [pathname, musicEnabled]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await ensureUserProfile();
+      } catch (error) {
+        if (__DEV__) {
+          console.warn('[RootLayout] Failed to ensure user profile on startup', error);
+        }
+      }
+    })();
+  }, []);
 
   return (
     <>
