@@ -91,14 +91,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#1F262A',
   },
   scrollContent: {
     flexGrow: 1,
   },
   container: {
     flex: 1,
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#1F262A',
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: 24,
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     borderColor: '#B8860B',
   },
   buttonRules: { 
-    backgroundColor: '#0FA958',
+    backgroundColor: '#42C6FF',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 28,
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
     borderWidth: 2,
     borderStyle: 'solid',
-    borderColor: '#006400',
+    borderColor: '#1E8AC4',
   },
   buttonText: { 
     color: '#fff', 

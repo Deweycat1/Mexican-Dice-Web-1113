@@ -39,16 +39,17 @@ export default function StatisticsMenuScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#1F262A',
   },
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
+    backgroundColor: '#1F262A',
   },
   title: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 16,
@@ -75,7 +76,8 @@ const styles = StyleSheet.create({
     borderColor: '#B8860B',
   },
   menuButtonGreen: {
+    backgroundColor: '#53A7F3',
     borderWidth: 2,
-    borderColor: '#006400',
+    borderColor: '#1C75BC',
   },
 });

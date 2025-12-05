@@ -162,23 +162,6 @@ export default function StatsScreen() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0FA958" />
-          <Text style={styles.loadingText}>Loading statistics...</Text>
-        </View>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-        >
-          <Text style={styles.backButtonText}>Back to Menu</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   if (error) {
     return (
       <View style={styles.container}>
@@ -448,7 +431,7 @@ export default function StatsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0FA958" />
+          <ActivityIndicator size="large" color="#53A7F3" />
           <Text style={styles.loadingText}>Loading statistics...</Text>
         </View>
         <Pressable
@@ -497,7 +480,7 @@ export default function StatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#1F262A',
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 40,
@@ -506,7 +489,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -533,7 +516,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    backgroundColor: '#115E38',
+    backgroundColor: '#2A3136',
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
@@ -545,18 +528,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: '#30363D',
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     marginBottom: 12,
     textAlign: 'center',
   },
   bigNumber: {
     fontSize: 48,
     fontWeight: '700',
-    color: '#0FA958',
+    color: '#53A7F3',
     textAlign: 'center',
   },
   statsTable: {
@@ -568,11 +553,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(230, 255, 230, 0.1)',
+    borderBottomColor: '#30363D',
   },
   statLabel: {
     fontSize: 16,
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontWeight: '600',
     flex: 1,
   },
@@ -583,14 +568,14 @@ const styles = StyleSheet.create({
   },
   statCount: {
     fontSize: 16,
-    color: '#0FA958',
+    color: '#53A7F3',
     fontWeight: '700',
     minWidth: 50,
     textAlign: 'right',
   },
   statPercent: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: '#8B949E',
     minWidth: 70,
     textAlign: 'right',
   },
@@ -628,7 +613,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     marginTop: 16,
   },
   errorContainer: {
@@ -646,7 +631,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -658,11 +643,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#0FA958',
+    backgroundColor: '#53A7F3',
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 24,
     marginTop: 16,
+    borderWidth: 2,
+    borderColor: '#1C75BC',
   },
   retryButtonPressed: {
     opacity: 0.7,
@@ -674,7 +661,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuButton: {
-    backgroundColor: '#115E38',
+    backgroundColor: '#2A3136',
     borderRadius: 12,
     padding: 24,
     marginBottom: 16,
@@ -687,6 +674,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: '#30363D',
   },
   menuButtonPressed: {
     opacity: 0.7,
@@ -699,7 +688,7 @@ const styles = StyleSheet.create({
   menuButtonTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -718,12 +707,12 @@ const styles = StyleSheet.create({
   },
   backButtonTopText: {
     fontSize: 16,
-    color: '#0FA958',
+    color: '#53A7F3',
     fontWeight: '600',
   },
   statCountLarge: {
     fontSize: 24,
-    color: '#0FA958',
+    color: '#53A7F3',
     fontWeight: '700',
   },
   tendencyDescription: {

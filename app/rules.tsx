@@ -43,7 +43,7 @@ export default function RulesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#1F262A',
     paddingHorizontal: 20,
     paddingTop: 32,
     paddingBottom: 20,
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   rulesCard: {
-    backgroundColor: 'rgba(0,0,0,0.18)',
+    backgroundColor: '#2A3136',
     borderRadius: 18,
     padding: 18,
     rowGap: 12,

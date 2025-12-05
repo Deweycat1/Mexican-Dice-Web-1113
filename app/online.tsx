@@ -630,7 +630,7 @@ export default function OnlineLobbyScreen() {
         <TextInput
           style={styles.input}
           placeholder="Friend’s Username"
-              placeholderTextColor="#9FBBA6"
+              placeholderTextColor="#8B949E"
               value={friendCode}
               onChangeText={setFriendCode}
               autoCapitalize="words"
@@ -675,7 +675,7 @@ export default function OnlineLobbyScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#1F262A',
   },
   content: {
     padding: 20,
@@ -685,11 +685,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0B3A26',
+    backgroundColor: '#1F262A',
   },
   loadingText: {
     marginTop: 12,
-    color: '#fff',
+    color: '#F0F6FC',
     fontSize: 16,
   },
   banner: {
@@ -702,17 +702,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   bannerText: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     textAlign: 'center',
     fontSize: 13,
   },
   card: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: '#2A3136',
     borderRadius: 16,
     padding: 16,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#30363D',
   },
   cardTitle: {
     color: '#E0B50C',
@@ -721,13 +721,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardSubtitle: {
-    color: '#C9F0D6',
+    color: '#8B949E',
     fontSize: 13,
     marginBottom: 12,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#2F6B4A',
+    borderColor: '#30363D',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -738,21 +738,21 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   startMatchGreen: {
-    backgroundColor: '#2ECC71',
-    borderColor: '#27AE60',
+    backgroundColor: '#53A7F3',
+    borderColor: '#1C75BC',
     borderWidth: 2,
   },
   startMatchGreenText: {
-    color: '#003B1F',
+    color: '#F0F6FC',
     fontWeight: '800',
   },
   shareHint: {
-    color: '#C9F0D6',
+    color: '#8B949E',
     fontSize: 13,
     marginTop: 6,
   },
   yourCode: {
-    color: '#C9F0D6',
+    color: '#8B949E',
     fontSize: 13,
     marginBottom: 8,
   },
@@ -770,17 +770,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   emptyTextSmall: {
-    color: '#C9F0D6',
+    color: '#8B949E',
     textAlign: 'center',
     fontSize: 13,
   },
   gameCard: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: '#2A3136',
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#30363D',
   },
   gameCardHeader: {
     flexDirection: 'row',
@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   currentClaimLabel: {
-    color: '#9FBBA6',
+    color: '#8B949E',
     fontSize: 11,
     marginBottom: 2,
   },
@@ -803,16 +803,16 @@ const styles = StyleSheet.create({
     transform: [{ scale: CURRENT_CLAIM_DIE_SCALE }],
   },
   gameOpponent: {
-    color: '#fff',
+    color: '#F0F6FC',
     fontWeight: '700',
     fontSize: 16,
   },
   gameStatus: {
-    color: '#9FBBA6',
+    color: '#8B949E',
     fontSize: 13,
   },
   gameScore: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     marginBottom: 10,
   },
   cardActions: {
@@ -825,7 +825,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   completedOutcomeText: {
-    color: '#E6FFE6',
+    color: '#F0F6FC',
     fontSize: 14,
     fontWeight: '700',
   },
