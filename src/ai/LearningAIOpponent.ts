@@ -414,7 +414,14 @@ export class LearningAIDiceOpponent {
         }
       }
       
-      if (pBluffSample >= pThreshold) {
+      let shouldCall = pBluffSample >= pThreshold;
+
+      if (category === 'mexican' && !shouldCall) {
+        // Floor: even if suspicion is low, call at least 50% of Mexican claims
+        shouldCall = Math.random() < 0.5;
+      }
+
+      if (shouldCall) {
         this.lastContext = { opponentId, action: 'CALL', context: callContext };
         return { type: 'call_bluff' };
       }

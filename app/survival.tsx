@@ -2,15 +2,15 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    View,
-    useWindowDimensions,
+  Animated,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,14 +19,14 @@ import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
-import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
+import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
 import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
-import { DIE_SIZE, DICE_SPACING } from '../src/theme/dice';
+import { DICE_SPACING, DIE_SIZE } from '../src/theme/dice';
 
 function formatClaimDetailed(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
