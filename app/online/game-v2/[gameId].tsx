@@ -472,6 +472,12 @@ export default function OnlineGameV2Screen() {
     if (isMyTurn) return myRoll == null ? 'prompt' : 'values';
     return 'values';
   }, [isOpponentClaimPhase, isMyTurn, myRoll]);
+  const angryRivalThinking = useMemo(() => {
+    if (isMyTurn) return false;
+    if (!myRole) return false;
+    if (roundState.lastClaimer !== myRole) return false;
+    return lastClaim === 21;
+  }, [isMyTurn, myRole, roundState.lastClaimer, lastClaim]);
   const myWinksUsed =
     myRole === 'host'
       ? roundState.hostWinksUsed ?? 0
@@ -1095,9 +1101,19 @@ export default function OnlineGameV2Screen() {
               </>
             ) : (
               <>
-                <Dice value={null} size={100} thinkingOverlay="rival" />
+                <Dice
+                  value={null}
+                  size={100}
+                  thinkingOverlay="rival"
+                  angryThinking={angryRivalThinking}
+                />
                 <View style={{ width: 24 }} />
-                <Dice value={null} size={100} thinkingOverlay="thought" />
+                <Dice
+                  value={null}
+                  size={100}
+                  thinkingOverlay="thought"
+                  angryThinking={angryRivalThinking}
+                />
               </>
             )}
           </View>

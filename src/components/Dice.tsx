@@ -19,6 +19,7 @@ type DiceProps = {
   displayMode?: 'prompt' | 'question' | 'values';
   overlayText?: string;
   thinkingOverlay?: 'rival' | 'thought';
+  angryThinking?: boolean;
 };
 
 const VEGAS_RED = '#B80F15';
@@ -26,6 +27,7 @@ const EDGE = '#70090C';
 const PIP = '#fcfafaff';
 const BASE_RED = '#C81D25';
 const THINKING_RIVAL = require('../../assets/images/thinkingrival.png');
+const ANGRY_RIVAL = require('../../assets/images/angryrival.png');
 
 const pipsFor: Record<number, { x: number; y: number }[]> = {
   1: [{ x: 0.5, y: 0.5 }],
@@ -68,6 +70,7 @@ export default function Dice({
   displayMode = 'values',
   overlayText,
   thinkingOverlay,
+  angryThinking = false,
 }: DiceProps) {
   const rotate = useSharedValue(0);
   const tilt = useSharedValue(0);
@@ -129,6 +132,8 @@ export default function Dice({
   const pipRadius = size * 0.07;
   const overlayLabel = displayMode === 'question' ? '?' : overlayText ?? '';
   const showOverlay = thinkingOverlay != null || displayMode !== 'values';
+  const thinkingImageSource = angryThinking ? ANGRY_RIVAL : THINKING_RIVAL;
+  const thinkingEmoji = angryThinking ? '🔥' : '💭';
   const faceGradientId = useMemo(
     () => `dice-face-${Math.random().toString(36).slice(2, 9)}`,
     []
@@ -185,7 +190,7 @@ export default function Dice({
           <View pointerEvents="none" style={styles.overlay}>
             {thinkingOverlay === 'rival' ? (
               <Image
-                source={THINKING_RIVAL}
+                source={thinkingImageSource}
                 style={{
                   width: size * 0.975,
                   height: size * 0.975,
@@ -201,7 +206,7 @@ export default function Dice({
                   },
                 ]}
               >
-                💭
+                {thinkingEmoji}
               </Text>
             )}
           </View>

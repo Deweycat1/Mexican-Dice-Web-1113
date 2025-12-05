@@ -774,6 +774,19 @@ export default function Survival() {
   const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock || isSurvivalOver;
   const streakEnded = isSurvivalOver;
   const showCpuThinking = turn !== 'player' && !isGameOver;
+  const lastSurvivalClaim = useMemo(() => {
+    if (!survivalClaims || survivalClaims.length === 0) return null;
+    for (let i = survivalClaims.length - 1; i >= 0; i -= 1) {
+      const entry = survivalClaims[i];
+      if (entry?.type === 'claim') return entry;
+    }
+    return null;
+  }, [survivalClaims]);
+  const angryRivalThinking =
+    showCpuThinking &&
+    lastSurvivalClaim?.type === 'claim' &&
+    lastSurvivalClaim.who === 'player' &&
+    lastSurvivalClaim.claim === 21;
   const hasRolled = turn === 'player' && lastPlayerRoll !== null;
   const rolledValue = hasRolled ? lastPlayerRoll : null;
   const rolledCanClaim =
@@ -1194,9 +1207,19 @@ export default function Survival() {
               <View style={styles.diceRow}>
                 {showCpuThinking ? (
                   <>
-                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="rival" />
+                    <Dice
+                      value={null}
+                      size={DIE_SIZE}
+                      thinkingOverlay="rival"
+                      angryThinking={angryRivalThinking}
+                    />
                     <View style={{ width: DICE_SPACING }} />
-                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="thought" />
+                    <Dice
+                      value={null}
+                      size={DIE_SIZE}
+                      thinkingOverlay="thought"
+                      angryThinking={angryRivalThinking}
+                    />
                   </>
                 ) : showSocialReveal ? (
                   <AnimatedDiceReveal

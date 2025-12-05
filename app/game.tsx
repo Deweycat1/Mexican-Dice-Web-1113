@@ -216,6 +216,19 @@ export default function Game() {
   const isGameOver = gameOver !== null;
   const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock;
   const showCpuThinking = turn !== 'player' && !isGameOver;
+  const lastPlayerClaim = useMemo(() => {
+    if (!claims || claims.length === 0) return null;
+    for (let i = claims.length - 1; i >= 0; i -= 1) {
+      const entry = claims[i];
+      if (entry?.type === 'claim') return entry;
+    }
+    return null;
+  }, [claims]);
+  const angryRivalThinking =
+    showCpuThinking &&
+    lastPlayerClaim?.type === 'claim' &&
+    lastPlayerClaim.who === 'player' &&
+    lastPlayerClaim.claim === 21;
   const hasRolled = turn === 'player' && lastPlayerRoll !== null;
   const rolledValue = hasRolled ? lastPlayerRoll : null;
   const rolledCanClaim =
@@ -871,9 +884,19 @@ export default function Game() {
               <View style={styles.diceRow}>
                 {showCpuThinking ? (
                   <>
-                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="rival" />
+                    <Dice
+                      value={null}
+                      size={DIE_SIZE}
+                      thinkingOverlay="rival"
+                      angryThinking={angryRivalThinking}
+                    />
                     <View style={{ width: DICE_SPACING }} />
-                    <Dice value={null} size={DIE_SIZE} thinkingOverlay="thought" />
+                    <Dice
+                      value={null}
+                      size={DIE_SIZE}
+                      thinkingOverlay="thought"
+                      angryThinking={angryRivalThinking}
+                    />
                   </>
                 ) : showSocialReveal ? (
                   <AnimatedDiceReveal
