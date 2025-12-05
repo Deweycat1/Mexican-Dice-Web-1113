@@ -457,6 +457,9 @@ export default function OnlineLobbyScreen() {
 
     const showCurrentClaim =
       !isCompleted && Array.isArray(claimDicePoints) && claimDicePoints.length === 2;
+    const isYourTurnButton =
+      (game.status === 'in_progress' && game.current_player_id === userId) ||
+      (game.status === 'waiting' && game.host_id === userId && !game.guest_id);
 
     // Derive outcome for completed games
     let outcomeLabel: string | null = null;
@@ -554,7 +557,8 @@ export default function OnlineLobbyScreen() {
                 label="Open Match"
                 variant="outline"
                 onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
-                style={styles.openMatchButton}
+                style={[styles.openMatchButton, isYourTurnButton && styles.openMatchYourTurn]}
+                textStyle={isYourTurnButton ? styles.openMatchYourTurnText : undefined}
               />
             )}
           </View>
@@ -844,6 +848,15 @@ const styles = StyleSheet.create({
   openMatchButton: {
     flex: 1,
     marginRight: 12,
+  },
+  openMatchYourTurn: {
+    backgroundColor: '#FE9902',
+    borderColor: '#C76E00',
+    borderWidth: 2,
+  },
+  openMatchYourTurnText: {
+    color: '#1B1D1F',
+    fontWeight: '800',
   },
   swipeDeleteContainer: {
     width: 64,
