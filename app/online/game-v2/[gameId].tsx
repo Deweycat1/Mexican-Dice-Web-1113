@@ -13,7 +13,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,7 +39,7 @@ import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStat
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  if (value === 21) return '21 (Inferno🔥)';
+  if (value === 21) return '21 (Mexican)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
   const [hi, lo] = splitClaim(value);
@@ -236,8 +235,6 @@ export default function OnlineGameV2Screen() {
     if (Array.isArray(raw)) return raw[0];
     return raw ?? null;
   }, [params.gameId]);
-  const { height } = useWindowDimensions();
-  const isShortScreen = height < 720;
 
   const [game, setGame] = useState<OnlineGameV2 | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -516,8 +513,6 @@ export default function OnlineGameV2Screen() {
         ? 'Accept Rematch'
         : 'Rematch?';
   const showRematchButton = isGameFinished && !!myRole;
-  const MAIN_DICE_SIZE = isShortScreen ? 84 : 100;
-  const REVEAL_DICE_SIZE = isShortScreen ? 84 : 100;
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
@@ -697,7 +692,7 @@ export default function OnlineGameV2Screen() {
       const prev = lastClaim;
       const activeChallenge = resolveActiveChallenge(roundState.baselineClaim, prev);
       if (activeChallenge === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
-        Alert.alert('Invalid claim', 'After Inferno (21), only 21, 31, or 41 are legal.');
+        Alert.alert('Invalid claim', 'After Mexican (21), only 21, 31, or 41 are legal.');
         return;
       }
       const baseline = activeChallenge;
@@ -1035,7 +1030,6 @@ export default function OnlineGameV2Screen() {
                   banner.type === 'womp-womp' && styles.bannerFail,
                   banner.type === 'social' && styles.bannerSocial,
                   banner.type === 'wink' && glowStyle,
-                  isShortScreen && styles.bannerContainerCompact,
                 ]}
               >
                 {banner.type === 'wink' ? (
@@ -1071,7 +1065,7 @@ export default function OnlineGameV2Screen() {
               </Animated.View>
             </Pressable>
 
-            <View style={[styles.diceArea, isShortScreen && styles.diceAreaCompact]}>
+            <View style={styles.diceArea}>
               <View style={styles.diceRow}>
             {showSocialReveal ? (
               <AnimatedDiceReveal
@@ -1080,7 +1074,7 @@ export default function OnlineGameV2Screen() {
                 onRevealComplete={handleSocialRevealComplete}
               />
             ) : isRevealingBluff && revealDiceValues ? (
-              <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={REVEAL_DICE_SIZE} />
+              <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={100} />
             ) : isMyTurn ? (
               <>
                 <Dice
@@ -1088,7 +1082,7 @@ export default function OnlineGameV2Screen() {
                   rolling={isMyTurn && rolling && myRoll == null}
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
-                  size={MAIN_DICE_SIZE}
+                  size={100}
                 />
                 <View style={{ width: 24 }} />
                 <Dice
@@ -1096,20 +1090,20 @@ export default function OnlineGameV2Screen() {
                   rolling={isMyTurn && rolling && myRoll == null}
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
-                  size={MAIN_DICE_SIZE}
+                  size={100}
                 />
               </>
             ) : (
               <>
-                <Dice value={null} size={MAIN_DICE_SIZE} thinkingOverlay="rival" />
+                <Dice value={null} size={100} thinkingOverlay="rival" />
                 <View style={{ width: 24 }} />
-                <Dice value={null} size={MAIN_DICE_SIZE} thinkingOverlay="thought" />
+                <Dice value={null} size={100} thinkingOverlay="thought" />
               </>
             )}
           </View>
         </View>
 
-            <View style={[styles.controls, isShortScreen && styles.controlsCompact]}>
+            <View style={styles.controls}>
               <View style={styles.actionRow}>
                 <StyledButton
                   label={canRoll ? 'Roll' : 'Claim'}
@@ -1280,12 +1274,12 @@ export default function OnlineGameV2Screen() {
   );
 }
 
-const BAR_BG = '#161B22';
+const BAR_BG = '#115E38';
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0D1117',
+    backgroundColor: '#0B3A26',
   },
   safe: {
     flex: 1,
@@ -1303,23 +1297,21 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#F0F6FC',
+    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },
   errorText: {
-    color: '#F0F6FC',
+    color: '#fff',
     fontSize: 18,
     textAlign: 'center',
   },
   headerCard: {
     position: 'relative',
-    backgroundColor: '#161B22',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 22,
     padding: 14,
     marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#30363D',
   },
   headerRow: {
     flexDirection: 'row',
@@ -1346,7 +1338,7 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   playerLabel: {
-    color: '#F0F6FC',
+    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 4,
@@ -1365,7 +1357,7 @@ const styles = StyleSheet.create({
   },
   status: {
     marginTop: 12,
-    color: '#F0F6FC',
+    color: '#fff',
     fontSize: 16,
     textAlign: 'center',
   },
@@ -1396,9 +1388,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 30,
-  },
-  bannerContainerCompact: {
-    top: 230,
   },
   bannerSuccess: {
     backgroundColor: '#0F5132',
@@ -1431,10 +1420,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '70%',
     minHeight: 72,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.32)',
+    borderColor: '#000',
+    borderWidth: 2,
+    borderRadius: 6,
     padding: 10,
     marginTop: 12,
     marginBottom: 10,
@@ -1443,7 +1432,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   historyText: {
-    color: '#8B949E',
+    color: '#E6FFE6',
     textAlign: 'center',
     fontSize: 13,
     marginVertical: 2,
@@ -1452,14 +1441,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 220,
-    marginTop: -120,
-    marginBottom: 18,
-  },
-  diceAreaCompact: {
-    minHeight: 200,
-    marginTop: -90,
-    marginBottom: 14,
+    minHeight: 260,
+    marginTop: -134,
+    marginBottom: 20,
   },
   diceRow: {
     flexDirection: 'row',
@@ -1471,14 +1455,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -130,
+    marginTop: -150,
     position: 'relative',
     zIndex: 10,
-    marginBottom: -6,
-  },
-  controlsCompact: {
-    marginTop: -110,
-    marginBottom: 0,
+    marginBottom: -10,
   },
   actionRow: {
     flexDirection: 'row',
@@ -1505,10 +1485,10 @@ const styles = StyleSheet.create({
     borderColor: '#8B0000',
   },
   menuActionButtonSuccess: {
-    backgroundColor: '#42C6FF',
+    backgroundColor: '#2ECC71',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#1E8AC4',
+    borderColor: '#1E8E4E',
   },
   goldOutlineButton: {
     borderWidth: 2,
@@ -1535,19 +1515,19 @@ const styles = StyleSheet.create({
   rematchStatusText: {
     marginTop: 4,
     fontSize: 11,
-    color: '#8B949E',
+    color: '#E6FFE6',
     textAlign: 'center',
   },
   finishedBox: {
     marginTop: 24,
-    backgroundColor: '#161B22',
+    backgroundColor: 'rgba(0,0,0,0.25)',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#30363D',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   finishedText: {
-    color: '#F0F6FC',
+    color: '#fff',
     fontSize: 18,
     textAlign: 'center',
   },
@@ -1565,13 +1545,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#161B22',
+    backgroundColor: '#1a4d2e',
     borderRadius: 12,
     padding: 20,
     maxHeight: '70%',
     width: '85%',
-    borderColor: '#30363D',
-    borderWidth: 1,
+    borderColor: '#e0b50c',
+    borderWidth: 2,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1580,7 +1560,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   modalTitle: {
-    color: '#F0F6FC',
+    color: '#fff',
     fontWeight: '800',
     fontSize: 18,
   },
@@ -1588,7 +1568,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   closeButtonText: {
-    color: '#F0F6FC',
+    color: '#E6FFE6',
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -1602,13 +1582,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   historyItemText: {
-    color: '#F0F6FC',
+    color: '#E6FFE6',
     fontSize: 14,
     flex: 1,
     lineHeight: 20,
   },
   noHistoryText: {
-    color: '#8B949E',
+    color: '#C9F0D6',
     textAlign: 'center',
     fontSize: 14,
     marginVertical: 20,
@@ -1627,13 +1607,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rulesContent: {
-    backgroundColor: '#161B22',
+    backgroundColor: '#1a4d2e',
     borderRadius: 12,
     padding: 20,
     width: '85%',
     maxHeight: '75%',
-    borderColor: '#30363D',
-    borderWidth: 1,
+    borderColor: '#e0b50c',
+    borderWidth: 2,
   },
   rulesHeader: {
     flexDirection: 'row',
@@ -1642,7 +1622,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   rulesTitle: {
-    color: '#F0F6FC',
+    color: '#fff',
     fontWeight: '800',
     fontSize: 20,
   },
@@ -1650,7 +1630,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   rulesClose: {
-    color: '#F0F6FC',
+    color: '#fff',
     fontSize: 22,
     fontWeight: '700',
   },

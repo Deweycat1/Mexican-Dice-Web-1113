@@ -102,29 +102,29 @@ export default function OnlineLobbyScreen() {
   useEffect(() => {
     let isMounted = true;
     (async () => {
-      try {
-        await ensureUserProfile();
-        const user = await getCurrentUser();
-        if (isMounted) {
-          setUserId(user?.id ?? null);
-        }
+    try {
+      await ensureUserProfile();
+      const user = await getCurrentUser();
+      if (isMounted) {
+        setUserId(user?.id ?? null);
+      }
 
-        if (user?.id) {
-          const { data, error } = await supabase
-            .from('users')
-            .select('username')
-            .eq('id', user.id)
-            .single();
-          if (!error && isMounted) {
-            setMyUsername(data?.username ?? null);
-          }
+      if (user?.id) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        if (!error && isMounted) {
+          setMyUsername(data?.username ?? null);
         }
-      } catch (err) {
-        console.error('[OnlineLobby] Failed to load user', err);
-        Alert.alert('Unable to load account', 'Please try again.');
-      } finally {
-        if (isMounted) {
-          setLoadingUser(false);
+      }
+    } catch (err) {
+      console.error('[OnlineLobby] Failed to load user', err);
+      Alert.alert('Unable to load account', 'Please try again.');
+    } finally {
+      if (isMounted) {
+        setLoadingUser(false);
         }
       }
     })();
@@ -221,106 +221,99 @@ export default function OnlineLobbyScreen() {
     }, [loadGames])
   );
 
-  const handleCreateMatch = useCallback(
-    async () => {
-      if (!userId) {
-        Alert.alert('Account missing', 'Please wait for your account to load.');
+  const handleCreateMatch = useCallback(async () => {
+    if (!userId) {
+      Alert.alert('Account missing', 'Please wait for your account to load.');
+      return;
+    }
+    setCreateMessage(null);
+    setCreatingMatch(true);
+    try {
+      const activeCount = await getActiveGameCount(userId);
+      if (activeCount >= MAX_ACTIVE_GAMES) {
+        Alert.alert(
+          'Too many matches',
+          'You already have 5 active matches. Finish or delete one before starting a new one.'
+        );
         return;
       }
-      setCreateMessage(null);
-      setCreatingMatch(true);
-      try {
-        const activeCount = await getActiveGameCount(userId);
-        if (activeCount >= MAX_ACTIVE_GAMES) {
+
+      let guestId: string | null = null;
+      let friendlyName: string | null = null;
+      const trimmed = friendCode.trim();
+      if (trimmed) {
+        if (!isValidFriendUsername(trimmed)) {
           Alert.alert(
-            'Too many matches',
-            'You already have 5 active matches. Finish or delete one before starting a new one.'
+            'Invalid username',
+            'Usernames can only contain letters, spaces, and hyphens, up to 40 characters.'
           );
           return;
         }
 
-        let guestId: string | null = null;
-        let friendlyName: string | null = null;
-        const trimmed = friendCode.trim();
-        if (trimmed) {
-          if (!isValidFriendUsername(trimmed)) {
-            Alert.alert(
-              'Invalid username',
-              'Usernames can only contain letters, spaces, and hyphens, up to 40 characters.'
-            );
-            return;
-          }
-
-          const normalized = normalizeColorAnimal(trimmed);
-          if (!normalized) {
-            Alert.alert(
-              'Invalid username',
-              'Could not parse that username. Double-check the spelling and try again.'
-            );
-            return;
-          }
-          const { data: friend, error: friendError } = await supabase
-            .from('users')
-            .select('id, username')
-            .ilike('username', normalized)
-            .single();
-          if (friendError || !friend) {
-            Alert.alert(
-              'User not found',
-              'Could not find a player with that color-animal code. Double-check the spelling and try again.'
-            );
-            return;
-          }
-          if (friend.id === userId) {
-            Alert.alert('Invalid opponent', 'You cannot start a match against yourself.');
-            return;
-          }
-          guestId = friend.id;
-          friendlyName = friend.username ?? normalized;
+        const normalized = normalizeColorAnimal(trimmed);
+        if (!normalized) {
+          Alert.alert(
+            'Invalid username',
+            'Could not parse that username. Double-check the spelling and try again.'
+          );
+          return;
         }
-
-        const payload: Record<string, any> = {
-          host_id: userId,
-          guest_id: guestId,
-          status: guestId ? 'in_progress' : 'waiting',
-          current_player_id: userId,
-          host_score: STARTING_SCORE,
-          guest_score: STARTING_SCORE,
-          last_roll_1: null,
-          last_roll_2: null,
-          last_claim: null,
-          round_state: INITIAL_ROUND_STATE,
-        };
-
-        const { data, error } = await supabase
-          .from('games_v2')
-          .insert(payload)
-          .select('id')
+        const { data: friend, error: friendError } = await supabase
+          .from('users')
+          .select('id, username')
+          .ilike('username', normalized)
           .single();
-        if (error || !data) {
-          throw error ?? new Error('Unable to create match');
+        if (friendError || !friend) {
+          Alert.alert(
+            'User not found',
+            'Could not find a player with that color-animal code. Double-check the spelling and try again.'
+          );
+          return;
         }
-
-        setFriendCode('');
-        setCreateMessage(
-          guestId
-            ? `Match started with ${friendlyName ?? 'your friend'}.`
-            : 'Match created! Invite a friend to join whenever they are ready.'
-        );
-        await loadGames();
-
-        if (guestId) {
-          router.push(`/online/game-v2/${data.id}` as const);
+        if (friend.id === userId) {
+          Alert.alert('Invalid opponent', 'You cannot start a match against yourself.');
+          return;
         }
-      } catch (err: any) {
-        console.error('[OnlineLobby] Create match failed', err);
-        Alert.alert('Could not start match', err?.message ?? 'Please try again.');
-      } finally {
-        setCreatingMatch(false);
+        guestId = friend.id;
+        friendlyName = friend.username ?? normalized;
       }
-    },
-    [friendCode, getActiveGameCount, loadGames, router, userId]
-  );
+
+      const payload: Record<string, any> = {
+        host_id: userId,
+        guest_id: guestId,
+        status: guestId ? 'in_progress' : 'waiting',
+        current_player_id: userId,
+        host_score: STARTING_SCORE,
+        guest_score: STARTING_SCORE,
+        last_roll_1: null,
+        last_roll_2: null,
+        last_claim: null,
+        round_state: INITIAL_ROUND_STATE,
+      };
+
+      const { data, error } = await supabase.from('games_v2').insert(payload).select('id').single();
+      if (error || !data) {
+        throw error ?? new Error('Unable to create match');
+      }
+
+      setFriendCode('');
+      setCreateMessage(
+        guestId
+          ? `Match started with ${friendlyName ?? 'your friend'}.`
+          : 'Match created! Invite a friend to join whenever they are ready.'
+      );
+      await loadGames();
+
+      if (guestId) {
+        router.push(`/online/game-v2/${data.id}` as const);
+      }
+    } catch (err: any) {
+      console.error('[OnlineLobby] Create match failed', err);
+      Alert.alert('Could not start match', err?.message ?? 'Please try again.');
+    } finally {
+      setCreatingMatch(false);
+    }
+  }, [friendCode, getActiveGameCount, loadGames, router, userId]);
 
   const handleDeleteWaiting = useCallback(
     (game: LobbyGame) => {
@@ -458,11 +451,8 @@ export default function OnlineLobbyScreen() {
 
     const roundState = (game.round_state ?? null) as { lastClaimRoll?: number | null } | null;
     const lastClaimValue =
-      roundState && typeof roundState.lastClaimRoll === 'number'
-        ? roundState.lastClaimRoll
-        : null;
-    const lastClaimDice =
-      typeof lastClaimValue === 'number' ? splitClaim(lastClaimValue) : null;
+      roundState && typeof roundState.lastClaimRoll === 'number' ? roundState.lastClaimRoll : null;
+    const lastClaimDice = typeof lastClaimValue === 'number' ? splitClaim(lastClaimValue) : null;
     const claimDicePoints = lastClaimDice
       ? lastClaimDice.map((pip) => Math.max(0, Math.min(5, 6 - pip)))
       : null;
@@ -525,10 +515,8 @@ export default function OnlineLobbyScreen() {
 
     const canDelete =
       (game.status === 'waiting' && !game.guest_id && game.host_id === userId) ||
-      (game.status === 'in_progress' &&
-        (game.host_id === userId || game.guest_id === userId)) ||
-      (game.status === 'finished' &&
-        (game.host_id === userId || game.guest_id === userId));
+      (game.status === 'in_progress' && (game.host_id === userId || game.guest_id === userId)) ||
+      (game.status === 'finished' && (game.host_id === userId || game.guest_id === userId));
 
     const cardContent = (
       <View style={styles.gameCard}>
@@ -557,25 +545,21 @@ export default function OnlineLobbyScreen() {
             )}
           </View>
         </View>
-        <Text
-          style={styles.gameScore}
-        >{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
-        <View style={styles.cardActions}>
-          {isCompleted ? (
-            <View style={styles.completedOutcomeContainer}>
-              <Text style={styles.completedOutcomeText}>
-                {outcomeLabel ?? 'Game over'}
-              </Text>
-            </View>
-          ) : (
-            <StyledButton
-              label="Open Match"
-              variant="outline"
-              onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
-              style={styles.openMatchButton}
-            />
-          )}
-        </View>
+        <Text style={styles.gameScore}>{`Your Score: ${youScore} • Their Score: ${themScore}`}</Text>
+          <View style={styles.cardActions}>
+            {isCompleted ? (
+              <View style={styles.completedOutcomeContainer}>
+                <Text style={styles.completedOutcomeText}>{outcomeLabel ?? 'Game over'}</Text>
+              </View>
+            ) : (
+              <StyledButton
+                label="Open Match"
+                variant="outline"
+                onPress={() => router.push(`/online/game-v2/${game.id}` as const)}
+                style={styles.openMatchButton}
+              />
+            )}
+          </View>
       </View>
     );
 
@@ -637,21 +621,21 @@ export default function OnlineLobbyScreen() {
             <Text style={styles.bannerText}>{friendlyHint}</Text>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Start a new match</Text>
-            <Text style={styles.cardSubtitle}>
-              Invite a friend using their color-animal code (for example: "Blue-Panda").
-            </Text>
-            {myUsername && (
-              <Text style={styles.yourCode}>
-                Your Username:{' '}
-                <Text style={styles.yourCodeValue}>{myUsername}</Text>
-              </Text>
-            )}
-            <TextInput
-              style={styles.input}
-              placeholder="Friend’s Username"
-              placeholderTextColor="#8B949E"
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Start a new match</Text>
+        <Text style={styles.cardSubtitle}>
+          Invite a friend using their color-animal code (for example: "Blue-Panda").
+        </Text>
+        {myUsername && (
+          <Text style={styles.yourCode}>
+            Your Username:{' '}
+            <Text style={styles.yourCodeValue}>{myUsername}</Text>
+          </Text>
+        )}
+        <TextInput
+          style={styles.input}
+          placeholder="Friend’s Username"
+              placeholderTextColor="#9FBBA6"
               value={friendCode}
               onChangeText={setFriendCode}
               autoCapitalize="words"
@@ -664,9 +648,7 @@ export default function OnlineLobbyScreen() {
               style={[styles.primaryButton, styles.startMatchGreen]}
               textStyle={styles.startMatchGreenText}
             />
-            {createMessage && (
-              <Text style={styles.shareHint}>{createMessage}</Text>
-            )}
+            {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
           </View>
 
           {loadingGames ? (
@@ -676,26 +658,10 @@ export default function OnlineLobbyScreen() {
             </View>
           ) : (
             <>
-              {renderSection(
-                'Challenges',
-                sections.challenges,
-                'No new challenges yet.'
-              )}
-              {renderSection(
-                'Your Turn',
-                sections.yourTurn,
-                'No games where it’s your turn yet.'
-              )}
-              {renderSection(
-                'Their Turn',
-                sections.theirTurn,
-                'No games waiting on your friends.'
-              )}
-              {renderSection(
-                'Completed games',
-                sections.completed,
-                'No completed games yet.'
-              )}
+              {renderSection('Challenges', sections.challenges, 'No new challenges yet.')}
+              {renderSection('Your Turn', sections.yourTurn, 'No games where it’s your turn yet.')}
+              {renderSection('Their Turn', sections.theirTurn, 'No games waiting on your friends.')}
+              {renderSection('Completed games', sections.completed, 'No completed games yet.')}
             </>
           )}
         </ScrollView>
@@ -707,7 +673,7 @@ export default function OnlineLobbyScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#1F262A',
+    backgroundColor: '#0B3A26',
   },
   content: {
     padding: 20,
@@ -717,11 +683,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1F262A',
+    backgroundColor: '#0B3A26',
   },
   loadingText: {
     marginTop: 12,
-    color: '#F0F6FC',
+    color: '#fff',
     fontSize: 16,
   },
   banner: {
@@ -742,17 +708,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   bannerText: {
-    color: '#F0F6FC',
+    color: '#E6FFE6',
     textAlign: 'center',
     fontSize: 13,
   },
   card: {
-    backgroundColor: '#2A3136',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: '#30363D',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   cardTitle: {
     color: '#E0B50C',
@@ -761,13 +727,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardSubtitle: {
-    color: '#8B949E',
+    color: '#C9F0D6',
     fontSize: 13,
     marginBottom: 12,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#30363D',
+    borderColor: '#2F6B4A',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -778,21 +744,21 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   startMatchGreen: {
-    backgroundColor: '#53A7F3',
-    borderColor: '#1C75BC',
+    backgroundColor: '#2ECC71',
+    borderColor: '#27AE60',
     borderWidth: 2,
   },
   startMatchGreenText: {
-    color: '#F0F6FC',
+    color: '#003B1F',
     fontWeight: '800',
   },
   shareHint: {
-    color: '#8B949E',
+    color: '#C9F0D6',
     fontSize: 13,
     marginTop: 6,
   },
   yourCode: {
-    color: '#8B949E',
+    color: '#C9F0D6',
     fontSize: 13,
     marginBottom: 8,
   },
@@ -810,17 +776,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   emptyTextSmall: {
-    color: '#8B949E',
+    color: '#C9F0D6',
     textAlign: 'center',
     fontSize: 13,
   },
   gameCard: {
-    backgroundColor: '#2A3136',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#30363D',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   gameCardHeader: {
     flexDirection: 'row',
@@ -831,7 +797,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   currentClaimLabel: {
-    color: '#8B949E',
+    color: '#9FBBA6',
     fontSize: 11,
     marginBottom: 2,
   },
@@ -843,16 +809,16 @@ const styles = StyleSheet.create({
     transform: [{ scale: CURRENT_CLAIM_DIE_SCALE }],
   },
   gameOpponent: {
-    color: '#F0F6FC',
+    color: '#fff',
     fontWeight: '700',
     fontSize: 16,
   },
   gameStatus: {
-    color: '#8B949E',
+    color: '#9FBBA6',
     fontSize: 13,
   },
   gameScore: {
-    color: '#F0F6FC',
+    color: '#E6FFE6',
     marginBottom: 10,
   },
   cardActions: {
@@ -865,7 +831,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   completedOutcomeText: {
-    color: '#F0F6FC',
+    color: '#E6FFE6',
     fontSize: 14,
     fontWeight: '700',
   },
