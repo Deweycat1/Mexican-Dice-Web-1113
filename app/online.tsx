@@ -611,6 +611,7 @@ export default function OnlineLobbyScreen() {
             <View>
               <View style={styles.banner}>
                 <Text style={styles.bannerText}>{friendlyHint}</Text>
+                <Text style={styles.refreshHint}>Refresh to see new challenges</Text>
               </View>
 
               <View style={styles.card}>
@@ -715,6 +716,13 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     textAlign: 'center',
     fontSize: 13,
+  },
+  refreshHint: {
+    color: '#53A7F3',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 6,
   },
   card: {
     backgroundColor: '#2A3136',
