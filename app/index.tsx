@@ -1,9 +1,10 @@
 import { Link } from 'expo-router';
 import React, { useCallback, useEffect } from 'react';
-import { Image, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';
+import QuickPlayButton from '../assets/images/QuickPlay.png';
 import { InfernoModeButton } from '../src/components/InfernoModeButton';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 
@@ -51,8 +52,10 @@ export default function HomeScreen() {
           <View style={styles.menuSection}>
             <Image source={MexicanDiceLogo} style={styles.logo} />
 
-            <Link href="/game" style={styles.buttonRules}>
-              <Text style={styles.buttonText}>Quick Play</Text>
+            <Link href="/game" asChild>
+              <Pressable style={styles.quickPlayWrapper}>
+                <Image source={QuickPlayButton} style={styles.quickPlayImage} resizeMode="contain" />
+              </Pressable>
             </Link>
 
             <Link href="/survival" asChild>
@@ -183,6 +186,16 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: 'solid',
     borderColor: '#1E8AC4',
+  },
+  quickPlayWrapper: {
+    marginVertical: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  quickPlayImage: {
+    width: 190,
+    height: 46,
   },
   infernoButton: {
     backgroundColor: '#FE9902',

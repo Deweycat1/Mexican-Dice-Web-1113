@@ -367,72 +367,74 @@ export default function StatsScreen() {
         <Text style={styles.title}>Random Stats</Text>
         <Text style={styles.subtitle}>Little mysteries hiding in your dice rolls</Text>
 
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          {randomStats === null ? (
-            <View style={styles.card}>
-              {survivalAverage ? (
-                <View style={styles.noDataRow}>
-                  <Text style={[styles.noDataText, styles.noDataTextSegment]}>Play Inferno</Text>
-                  <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
-                  <Text style={[styles.noDataText, styles.noDataTextSegment]}>
-                    Mode to unlock player tendency stats!
+        <View style={styles.randomStatsContent}>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            {randomStats === null ? (
+              <View style={styles.card}>
+                {survivalAverage ? (
+                  <View style={styles.noDataRow}>
+                    <Text style={[styles.noDataText, styles.noDataTextSegment]}>Play Inferno</Text>
+                    <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
+                    <Text style={[styles.noDataText, styles.noDataTextSegment]}>
+                      Mode to unlock player tendency stats!
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.noDataText}>Play a few games to unlock your Random Stats!</Text>
+                )}
+              </View>
+            ) : (
+              <>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>🎭 Honesty Rating</Text>
+                  <Text style={styles.bigNumber}>{formatPercentage(randomStats.honestyRating)}</Text>
+                  <Text style={styles.tendencyDescription}>
+                    How often users tell the truth instead of bluffing
                   </Text>
                 </View>
-              ) : (
-                <Text style={styles.noDataText}>Play a few games to unlock your Random Stats!</Text>
-              )}
-            </View>
-          ) : (
-            <>
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>🎭 Honesty Rating</Text>
-                <Text style={styles.bigNumber}>{formatPercentage(randomStats.honestyRating)}</Text>
-                <Text style={styles.tendencyDescription}>
-                  How often users tell the truth instead of bluffing
-                </Text>
-              </View>
 
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>🎲 Most Common Roll</Text>
-                <Text style={styles.bigNumber}>{formatRoll(randomStats.mostCommonRoll)}</Text>
-                <Text style={styles.tendencyDescription}>
-                  Users' most frequently rolled combo
-                </Text>
-              </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>🎲 Most Common Roll</Text>
+                  <Text style={styles.bigNumber}>{formatRoll(randomStats.mostCommonRoll)}</Text>
+                  <Text style={styles.tendencyDescription}>
+                    Users' most frequently rolled combo
+                  </Text>
+                </View>
 
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>❄️ Coldest Roll</Text>
-                <Text style={styles.bigNumber}>{formatRoll(randomStats.coldestRoll)}</Text>
-                <Text style={styles.tendencyDescription}>
-                  The roll that almost never shows up for users
-                </Text>
-              </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>❄️ Coldest Roll</Text>
+                  <Text style={styles.bigNumber}>{formatRoll(randomStats.coldestRoll)}</Text>
+                  <Text style={styles.tendencyDescription}>
+                    The roll that almost never shows up for users
+                  </Text>
+                </View>
 
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>⏱️ Average Turn Length</Text>
-                <Text style={styles.bigNumber}>{formatTurnLength(randomStats.averageTurnLengthMs)}</Text>
-                <Text style={styles.tendencyDescription}>
-                  How long users typically take to make a move
-                </Text>
-              </View>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>⏱️ Average Turn Length</Text>
+                  <Text style={styles.bigNumber}>{formatTurnLength(randomStats.averageTurnLengthMs)}</Text>
+                  <Text style={styles.tendencyDescription}>
+                    How long users typically take to make a move
+                  </Text>
+                </View>
 
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>🃏 Low-Roll Lie Rate</Text>
-                <Text style={styles.bigNumber}>{formatPercentage(randomStats.lowRollLieRate)}</Text>
-                <Text style={styles.tendencyDescription}>
-                  How often users bluff when they roll below a 61
-                </Text>
-              </View>
-            </>
-          )}
-        </ScrollView>
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>🃏 Low-Roll Lie Rate</Text>
+                  <Text style={styles.bigNumber}>{formatPercentage(randomStats.lowRollLieRate)}</Text>
+                  <Text style={styles.tendencyDescription}>
+                    How often users bluff when they roll below a 61
+                  </Text>
+                </View>
+              </>
+            )}
+          </ScrollView>
 
-        <Pressable
-          onPress={() => setCurrentView('menu')}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-        >
-          <Text style={styles.backButtonText}>Main Menu</Text>
-        </Pressable>
+          <Pressable
+            onPress={() => setCurrentView('menu')}
+            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+          >
+            <Text style={styles.backButtonText}>Menu</Text>
+          </Pressable>
+        </View>
       </View>
     );
   };
@@ -518,6 +520,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20,
+  },
+  randomStatsContent: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'space-between',
   },
   menuScrollContent: {
     paddingHorizontal: 16,
