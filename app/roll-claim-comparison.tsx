@@ -271,10 +271,6 @@ export default function RollClaimComparisonScreen() {
         }}
       />
       <View style={styles.container}>
-        <Pressable onPress={() => router.back()} style={styles.backButtonTop}>
-          <Text style={styles.backButtonTopText}>← Back</Text>
-        </Pressable>
-        
         <Text style={styles.title}>Roll vs Claim</Text>
         <Text style={styles.subtitle}>See how honest the table really is</Text>
 
