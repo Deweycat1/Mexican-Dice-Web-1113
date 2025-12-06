@@ -1694,7 +1694,7 @@ const styles = StyleSheet.create({
   },
   streakMeterContainer: {
     alignSelf: 'center',
-    width: '70%',
+    width: '90%',
     marginTop: 8,
     marginBottom: 4,
   },
@@ -1706,7 +1706,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 20,
     marginTop: 4,
   },
   streakLabel: {
@@ -1726,7 +1725,7 @@ const styles = StyleSheet.create({
   },
   streakMeter: {
     flex: 1,
-    marginHorizontal: 8,
+    marginHorizontal: 4,
   },
   streakMeterOuter: {
     flex: 1,
