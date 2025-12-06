@@ -1254,7 +1254,7 @@ export default function OnlineGameV2Screen() {
               <>
                 <Dice
                   value={dieHi}
-                  rolling={isMyTurn && rolling && myRoll == null}
+                  rolling={isMyTurn && rolling}
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
                   size={100}
@@ -1262,7 +1262,7 @@ export default function OnlineGameV2Screen() {
                 <View style={{ width: 24 }} />
                 <Dice
                   value={dieLo}
-                  rolling={isMyTurn && rolling && myRoll == null}
+                  rolling={isMyTurn && rolling}
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
                   size={100}
