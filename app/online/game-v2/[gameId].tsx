@@ -320,6 +320,7 @@ export default function OnlineGameV2Screen() {
         setLoading(false);
         return;
       }
+      console.log('[ONLINE GAME] initial load', { gameId: normalizedGameId, payload: data });
       setGame(data as OnlineGameV2);
       setLoading(false);
     };
@@ -333,6 +334,10 @@ export default function OnlineGameV2Screen() {
         { event: '*', schema: 'public', table: 'games_v2', filter: `id=eq.${normalizedGameId}` },
         (payload) => {
           if (payload.new) {
+            console.log('[ONLINE GAME] realtime update', {
+              gameId: normalizedGameId,
+              payload: payload.new,
+            });
             setGame(payload.new as OnlineGameV2);
           }
         }
@@ -472,6 +477,24 @@ export default function OnlineGameV2Screen() {
   const opponentScore = myRole === 'host' ? game?.guest_score ?? 0 : game?.host_score ?? 0;
   const claimToCheck = resolveActiveChallenge(roundState.baselineClaim, lastClaim);
   const [dieHi, dieLo] = facesFromRoll(myRoll);
+
+  useEffect(() => {
+    console.log('[ONLINE GAME] current claim derived', {
+      gameId: normalizedGameId,
+      uiClaim: lastClaim,
+      roundState,
+    });
+  }, [normalizedGameId, lastClaim, roundState]);
+
+  useEffect(() => {
+    if (!normalizedGameId || !userId) return;
+    console.log('[ONLINE GAME] turn state', {
+      gameId: normalizedGameId,
+      currentPlayerId: game?.current_player_id ?? null,
+      myPlayerId: userId,
+      isMyTurn,
+    });
+  }, [normalizedGameId, userId, game?.current_player_id, isMyTurn]);
 
   useEffect(() => {
     if (!game || !myRole) return;
@@ -740,6 +763,21 @@ export default function OnlineGameV2Screen() {
       if (!normalizedGameId) throw new Error('Missing game id');
       const updatePayload = { ...payload };
       if (nextRound) updatePayload.round_state = nextRound;
+
+      console.log('[ONLINE GAME] submitting move', {
+        gameId: normalizedGameId,
+        payload: updatePayload,
+        hasRoundState: !!nextRound,
+      });
+
+      if (nextRound) {
+        setGame((prev) =>
+          prev && prev.id === normalizedGameId
+            ? ({ ...(prev as OnlineGameV2), ...updatePayload, round_state: nextRound } as OnlineGameV2)
+            : prev
+        );
+      }
+
       let query = supabase.from('games_v2').update(updatePayload).eq('id', normalizedGameId);
       if (options?.requireCurrentPlayerId) {
         query = query.eq('current_player_id', options.requireCurrentPlayerId);
@@ -749,6 +787,11 @@ export default function OnlineGameV2Screen() {
       if (!data || data.length === 0) {
         throw new Error(OUT_OF_TURN_ERROR);
       }
+
+      console.log('[ONLINE GAME] move persisted', {
+        gameId: normalizedGameId,
+        rows: data.length,
+      });
     },
     [normalizedGameId]
   );

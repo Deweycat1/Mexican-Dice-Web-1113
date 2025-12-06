@@ -54,6 +54,7 @@ type LobbyGame = {
   host_score: number | null;
   guest_score: number | null;
   current_player_id: string | null;
+   last_claim: number | string | null;
   updated_at: string;
   host?: { username: string | null };
   guest?: { username: string | null };
@@ -201,6 +202,38 @@ export default function OnlineLobbyScreen() {
       loadGames();
     }, [loadGames])
   );
+
+  useEffect(() => {
+    if (!userId) return;
+
+    console.log('[ONLINE LOBBY] setting up realtime subscription', { userId });
+
+    const channel = supabase
+      .channel(`lobby-games-v2-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'games_v2',
+          filter: `or(host_id.eq.${userId},guest_id.eq.${userId})`,
+        },
+        (payload) => {
+          console.log('[ONLINE LOBBY] realtime update', {
+            type: payload.eventType,
+            gameId: (payload.new as any)?.id ?? (payload.old as any)?.id ?? null,
+          });
+
+          void loadGames();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('[ONLINE LOBBY] tearing down realtime subscription', { userId });
+      supabase.removeChannel(channel);
+    };
+  }, [userId, loadGames]);
 
   const handleCreateMatch = useCallback(async () => {
     if (!userId) {
@@ -454,8 +487,18 @@ export default function OnlineLobbyScreen() {
     const isCompleted = game.status === 'finished';
 
     const roundState = (game.round_state ?? null) as { lastClaimRoll?: number | null } | null;
-    const lastClaimValue =
-      roundState && typeof roundState.lastClaimRoll === 'number' ? roundState.lastClaimRoll : null;
+
+    const rawLastClaim = game.last_claim;
+    const lastClaimValue: number | null =
+      rawLastClaim == null
+        ? null
+        : typeof rawLastClaim === 'number'
+          ? rawLastClaim
+          : (() => {
+              const parsed = parseInt(rawLastClaim, 10);
+              return Number.isNaN(parsed) ? null : parsed;
+            })();
+
     const lastClaimDice = typeof lastClaimValue === 'number' ? splitClaim(lastClaimValue) : null;
     const claimDicePoints = lastClaimDice
       ? lastClaimDice.map((pip) => Math.max(0, Math.min(5, 6 - pip)))
@@ -466,6 +509,13 @@ export default function OnlineLobbyScreen() {
     const isYourTurnButton =
       (game.status === 'in_progress' && game.current_player_id === userId) ||
       (game.status === 'waiting' && game.host_id === userId && !game.guest_id);
+
+    console.log('[ONLINE LOBBY] match preview', {
+      gameId: game.id,
+      lobbyClaim: lastClaimValue,
+      roundState: game.round_state ?? null,
+      last_claim: game.last_claim ?? null,
+    });
 
     // Derive outcome for completed games
     let outcomeLabel: string | null = null;
