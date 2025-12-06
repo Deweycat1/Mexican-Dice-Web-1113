@@ -104,6 +104,10 @@ export default function HomeScreen() {
                 trackColor={{ false: '#B00020', true: '#53A7F3' }}
               />
             </View>
+
+            <Link href="/privacy" style={styles.privacyButton}>
+              <Text style={styles.privacyButtonText}>Privacy Policy</Text>
+            </Link>
           </View>
         </View>
       </ScrollView>
@@ -237,5 +241,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  privacyButton: {
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: '#42C6FF',
+  },
+  privacyButtonText: {
+    color: '#C9D1D9',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
