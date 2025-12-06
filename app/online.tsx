@@ -290,6 +290,11 @@ export default function OnlineLobbyScreen() {
     }
   }, [friendCode, getActiveGameCount, loadGames, router, userId]);
 
+  const refreshChallenges = useCallback(() => {
+    console.log('[ONLINE] Refreshing challenges…');
+    void loadGames();
+  }, [loadGames]);
+
   const handleCopyUsername = useCallback(async () => {
     if (!myUsername) return;
     await Clipboard.setStringAsync(myUsername);
@@ -644,13 +649,21 @@ export default function OnlineLobbyScreen() {
                   autoCapitalize="words"
                   autoCorrect={false}
                 />
-                <StyledButton
-                  label={creatingMatch ? 'Starting…' : 'Start Match'}
-                  onPress={handleCreateMatch}
-                  disabled={creatingMatch || !userId}
-                  style={[styles.primaryButton, styles.startMatchGreen]}
-                  textStyle={styles.startMatchGreenText}
-                />
+                <View style={styles.startMatchRow}>
+                  <StyledButton
+                    label={creatingMatch ? 'Starting…' : 'Start Match'}
+                    onPress={handleCreateMatch}
+                    disabled={creatingMatch || !userId}
+                    style={[styles.primaryButton, styles.startMatchGreen]}
+                    textStyle={styles.startMatchGreenText}
+                  />
+                  <StyledButton
+                    label="Refresh Challenges"
+                    onPress={refreshChallenges}
+                    style={[styles.primaryButton, styles.refreshButton]}
+                    textStyle={styles.refreshButtonText}
+                  />
+                </View>
                 {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
               </View>
 
@@ -767,6 +780,13 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginBottom: 6,
   },
+  startMatchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    gap: 12,
+  },
   startMatchGreen: {
     backgroundColor: '#53A7F3',
     borderColor: '#1C75BC',
@@ -775,6 +795,17 @@ const styles = StyleSheet.create({
   startMatchGreenText: {
     color: '#F0F6FC',
     fontWeight: '800',
+  },
+  refreshButton: {
+    backgroundColor: '#B33636',
+    borderColor: '#7A2424',
+    borderWidth: 2,
+  },
+  refreshButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   shareHint: {
     color: '#8B949E',
