@@ -364,10 +364,6 @@ export default function StatsScreen() {
 
     return (
       <View style={styles.container}>
-        <Pressable onPress={() => setCurrentView('menu')} style={styles.backButtonTop}>
-          <Text style={styles.backButtonTopText}>← Back</Text>
-        </Pressable>
-        
         <Text style={styles.title}>Random Stats</Text>
         <Text style={styles.subtitle}>Little mysteries hiding in your dice rolls</Text>
 
@@ -430,6 +426,13 @@ export default function StatsScreen() {
             </>
           )}
         </ScrollView>
+
+        <Pressable
+          onPress={() => setCurrentView('menu')}
+          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+        >
+          <Text style={styles.backButtonText}>Main Menu</Text>
+        </Pressable>
       </View>
     );
   };
