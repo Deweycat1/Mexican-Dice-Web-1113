@@ -218,6 +218,7 @@ export default function Survival() {
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
   const socialRevealNonceRef = useRef<number | null>(null);
   const socialBannerNonceRef = useRef(0);
+  const socialBannerInitializedRef = useRef(false);
   const [showSocialReveal, setShowSocialReveal] = useState(false);
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
@@ -265,6 +266,8 @@ export default function Survival() {
   const electricJoltAnim = useRef(new Animated.Value(0)).current;
   const electricJoltOpacityAnim = useRef(new Animated.Value(0)).current;
   const vortexPulseAnim = useRef(new Animated.Value(0)).current;
+  const bluffResultNonceRef = useRef(0);
+  const bluffResultInitializedRef = useRef(false);
 
   const startPlusOneFlash = useCallback((increment: number) => {
     if (plusOneFlashTimerRef.current) {
@@ -810,10 +813,10 @@ export default function Survival() {
     lastSurvivalClaim.claim === 21;
   const hasRolled = turn === 'player' && lastPlayerRoll !== null;
   const rolledValue = hasRolled ? lastPlayerRoll : null;
-  const rolledCanClaim =
+  const canClaimTruthfully =
     hasRolled &&
     rolledValue !== null &&
-    (lastClaimValue == null || meetsOrBeats(rolledValue, lastClaimValue) || isAlwaysClaimable(rolledValue));
+    (lastClaimValue == null ? true : rankValue(rolledValue) > rankValue(lastClaimValue));
   const shouldHighlightBluff =
     hasRolled &&
     rolledValue !== null &&
@@ -907,6 +910,21 @@ export default function Survival() {
     ]).start();
   }, [survivalClaims, fadeAnim]);
 
+  useEffect(() => {
+    // Ensure bluff banner UI state starts clean whenever Survival mounts
+    setRivalBluffBannerVisible(false);
+    setRivalBluffBannerType(null);
+    rivalBluffBannerOpacity.setValue(0);
+    rivalBluffBannerScale.setValue(0.95);
+    console.log('[SURVIVAL] Resetting bluff banner state on mount');
+
+    return () => {
+      setRivalBluffBannerVisible(false);
+      setRivalBluffBannerType(null);
+      console.log('[SURVIVAL] Cleanup on unmount – cleared bluff banner state');
+    };
+  }, [rivalBluffBannerOpacity, rivalBluffBannerScale]);
+
   const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp' | 'social') => {
     setRivalBluffBannerType(type);
     setRivalBluffBannerVisible(true);
@@ -949,14 +967,27 @@ export default function Survival() {
   }, [rivalBluffBannerOpacity, rivalBluffBannerScale]);
 
   useEffect(() => {
-    if (socialBannerNonce > socialBannerNonceRef.current) {
+    const nonce = socialBannerNonce ?? 0;
+    if (!socialBannerInitializedRef.current) {
+      socialBannerInitializedRef.current = true;
+      socialBannerNonceRef.current = nonce;
+      return;
+    }
+    if (nonce > socialBannerNonceRef.current) {
       triggerRivalBluffBanner('social');
     }
-    socialBannerNonceRef.current = socialBannerNonce;
+    socialBannerNonceRef.current = nonce;
   }, [socialBannerNonce, triggerRivalBluffBanner]);
 
   useEffect(() => {
-    if (!bluffResultNonce) return;
+    const nonce = bluffResultNonce ?? 0;
+    if (!bluffResultInitializedRef.current) {
+      bluffResultInitializedRef.current = true;
+      bluffResultNonceRef.current = nonce;
+      return;
+    }
+    if (!nonce || nonce <= bluffResultNonceRef.current) return;
+    bluffResultNonceRef.current = nonce;
     if (lastBluffCaller !== 'cpu') return;
     if (typeof lastBluffDefenderTruth !== 'boolean') return;
     triggerRivalBluffBanner(lastBluffDefenderTruth ? 'got-em' : 'womp-womp');
@@ -1317,7 +1348,9 @@ export default function Survival() {
                   disabled={
                     streakEnded
                       ? false
-                      : controlsDisabled || isRevealAnimating || (hasRolled && !rolledCanClaim)
+                      : controlsDisabled ||
+                        isRevealAnimating ||
+                        (hasRolled && !canClaimTruthfully)
                   }
                 />
                 <StyledButton

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function PrivacyPolicyScreen() {
   const router = useRouter();
@@ -114,7 +114,7 @@ export default function PrivacyPolicyScreen() {
             If you have any questions or concerns about this Privacy Policy or how we handle data in
             InfernoDice, you can contact the developer team at:{'\n'}
             {'\n'}
-            infernodice.app@gmail.com
+            admin@infernodice.com
           </Text>
         </View>
       </ScrollView>

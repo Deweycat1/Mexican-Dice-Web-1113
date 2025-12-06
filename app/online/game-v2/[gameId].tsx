@@ -1687,10 +1687,10 @@ const styles = StyleSheet.create({
     borderColor: '#8B0000',
   },
   menuActionButtonSuccess: {
-    backgroundColor: '#2ECC71',
+    backgroundColor: '#53A7F3',
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#1E8E4E',
+    borderColor: '#1C75BC',
   },
   goldOutlineButton: {
     borderWidth: 2,
@@ -1698,11 +1698,11 @@ const styles = StyleSheet.create({
   },
   winkButton: {
     borderWidth: 2,
-    borderColor: '#B26B01',
+    borderColor: '#1C75BC',
     backgroundColor: 'transparent',
   },
   winkButtonActive: {
-    backgroundColor: '#0B8A42',
+    backgroundColor: '#53A7F3',
   },
   rematchButton: {
     backgroundColor: '#FE9902',

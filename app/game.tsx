@@ -58,32 +58,31 @@ function facesFromRoll(value: number | null | undefined): readonly [number | nul
   return [hi, lo] as const;
 }
 
-// Devil/demon themed Rival opening lines
 const rivalOpeningLines = [
-  "A new challenger! I love fresh chaos.",
-  "Welcome, traveler. Care to dance with chance?",
-  "Step into my playground of tricks.",
-  "Oh good, someone to out-roll.",
-  "I’ve been cooking up mischief just for you.",
-  "My goblins bet against you. Prove them wrong.",
-  "Careful — my dice have personality.",
-  "A brave soul! Or a confused one. Either works.",
-  "Hope you stretched. My imps roll fast.",
-  "Let’s spark some friendly mayhem.",
-  "Don't mind the giggling gremlin. He likes newbies.",
-  "You brought confidence? Adorable.",
-  "Come closer… I don’t bite. My dice might.",
-  "Ah! A worthy opponent… maybe.",
-  "Try to keep up. My tricks multiply quickly.",
-  "The shadows are watching. They’re rooting for me.",
-  "Ooo, you've got potential. Tiny potential, but still.",
-  "Did you hear that? My dice are whispering your fate.",
-  "Let’s tango with probability.",
-  "Warm up your fingers — this is a fast game.",
-  "If luck were a beast, I’d have it on a leash.",
-  "Roll boldly! The gremlins like confidence.",
-  "I hope you enjoy surprises.",
-  "Ready to play? My minions certainly are.",
+  "Fresh fuel for my fire.",
+  "Step into the heat.",
+  "Welcome to my inferno.",
+  "Perfect... something to scorch.",
+  "I’ve been warming up for you.",
+  "My embers bet against you.",
+  "Careful... my dice burn hot.",
+  "Brave or flammable... either works.",
+  "Warm up... I roll fast.",
+  "Let’s spark some chaos.",
+  "Ignore the cinder imp... he stares.",
+  "Confidence? Cute.",
+  "Come closer... feel the heat.",
+  "A worthy foe... maybe.",
+  "Keep up... flames move quick.",
+  "The fire spirits like me.",
+  "You've got potential... kindling-level.",
+  "Hear that crackle? That’s your fate.",
+  "Let’s ignite this round.",
+  "Stretch... things heat up fast.",
+  "If luck’s a flame, I hold the torch.",
+  "Roll boldly... flames enjoy courage.",
+  "Hope you enjoy heat.",
+  "Ready? My minions burn bright.",
 ];
 
 const pickRandomRivalLine = () => {
@@ -226,10 +225,10 @@ export default function Game() {
     lastPlayerClaim.claim === 21;
   const hasRolled = turn === 'player' && lastPlayerRoll !== null;
   const rolledValue = hasRolled ? lastPlayerRoll : null;
-  const rolledCanClaim =
+  const canClaimTruthfully =
     hasRolled &&
     rolledValue !== null &&
-    (lastClaimValue == null || meetsOrBeats(rolledValue, lastClaimValue) || isAlwaysClaimable(rolledValue));
+    (lastClaimValue == null ? true : rankValue(rolledValue) > rankValue(lastClaimValue));
   const shouldHighlightBluff =
     hasRolled &&
     rolledValue !== null &&
@@ -974,7 +973,9 @@ export default function Game() {
                   disabled={
                     isGameOver
                       ? false
-                      : controlsDisabled || isRevealAnimating || (hasRolled && !rolledCanClaim)
+                      : controlsDisabled ||
+                        isRevealAnimating ||
+                        (hasRolled && !canClaimTruthfully)
                   }
                 />
                 <StyledButton

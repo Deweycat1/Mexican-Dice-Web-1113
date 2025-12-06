@@ -29,18 +29,18 @@ export const userPointWinLines = [
 ];
 
 export const rivalPointWinLines = [
-  "Mmm, tasty victory!",
-  "Chaos favors me today!",
-  "Oh? Was that your plan? Bold.",
-  "You’re beginning to wobble.",
-  "My imps are celebrating already.",
-  "That point practically walked to me.",
-  "A delightful little win!",
-  "Need a moment to collect yourself?",
-  "Predictable. Charming, but predictable.",
-  "Luck winks at me again!",
-  "I expected more… but I’ll take this.",
-  "This is fun. For me, anyway.",
+  "Mmm... sizzling victory.",
+  "The flames pick me.",
+  "Ooh... scorched you.",
+  "Feeling the heat yet?",
+  "My imps are blazing.",
+  "That point combusted nicely.",
+  "A spicy little win.",
+  "Need to cool off?",
+  "Predictable... easy to burn.",
+  "Luck sparks for me again.",
+  "Expected... still satisfying.",
+  "Too hot for you?",
 ];
 
 export function pickRandomLine(lines: string[]): string {
