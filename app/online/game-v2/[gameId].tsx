@@ -1154,6 +1154,10 @@ export default function OnlineGameV2Screen() {
   const canShowSocial = canClaim && myRoll === 41;
   const canCallBluff = isMyTurn && lastClaim != null && roundState.lastClaimer && roundState.lastClaimer !== myRole;
 
+  const canClaimTruthfully =
+    !!myRoll &&
+    (claimToCheck == null ? true : rankValue(myRoll) > rankValue(claimToCheck));
+
   return (
     <View style={styles.root}>
       <FeltBackground>
@@ -1288,7 +1292,7 @@ export default function OnlineGameV2Screen() {
           </View>
         </View>
 
-            <View style={styles.controls}>
+              <View style={styles.controls}>
               <View style={styles.actionRow}>
                 <StyledButton
                   label={canRoll ? 'Roll' : 'Claim'}
@@ -1301,7 +1305,7 @@ export default function OnlineGameV2Screen() {
                           handleClaim(myRoll, winkArmed);
                         }
                   }
-                  disabled={isRevealAnimating || (canRoll ? !canRoll : !canClaim)}
+                  disabled={isRevealAnimating || (canRoll ? !canRoll : !canClaim || !canClaimTruthfully)}
                   style={[styles.btn, styles.menuActionButtonSuccess]}
                 />
                 <StyledButton
