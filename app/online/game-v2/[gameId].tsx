@@ -1298,8 +1298,8 @@ export default function OnlineGameV2Screen() {
                     {(waitingForRematch || opponentWantsRematch) && (
                       <Text style={styles.rematchStatusText}>
                         {waitingForRematch
-                          ? 'Waiting for rival to accept…'
-                          : 'Rival wants a rematch!'}
+                          ? 'Waiting for Infernoman to accept…'
+                          : 'Infernoman wants a rematch!'}
                       </Text>
                     )}
                   </View>
@@ -1539,8 +1539,8 @@ const styles = StyleSheet.create({
     zIndex: 30,
   },
   bannerSuccess: {
-    backgroundColor: '#0F5132',
-    borderColor: '#0C4128',
+    backgroundColor: '#53A7F3',
+    borderColor: '#1C75BC',
   },
   bannerFail: {
     backgroundColor: '#661313',

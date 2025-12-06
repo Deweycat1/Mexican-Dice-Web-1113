@@ -360,7 +360,7 @@ export default function SecretStatsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>🏆 Quick Play Wins</Text>
-          <View style={styles.statsTable}>
+            <View style={styles.statsTable}>
             <View style={styles.statRow}>
               <Text style={styles.statLabel}>You</Text>
               <View style={styles.statValues}>
@@ -369,7 +369,7 @@ export default function SecretStatsScreen() {
               </View>
             </View>
             <View style={styles.statRow}>
-              <Text style={styles.statLabel}>The Rival</Text>
+              <Text style={styles.statLabel}>Infernoman</Text>
               <View style={styles.statValues}>
                 <Text style={styles.statCount}>{cpuWins}</Text>
                 <Text style={styles.statPercent}>({cpuWinRate.toFixed(1)}%)</Text>
@@ -479,7 +479,7 @@ export default function SecretStatsScreen() {
                 </Text>
               </View>
               <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Rival Accuracy</Text>
+                <Text style={styles.statLabel}>Infernoman Accuracy</Text>
                 <Text style={styles.statCountLarge}>
                   {(behaviorStats.bluffCalls.rival.accuracy * 100).toFixed(1)}%
                 </Text>
@@ -488,10 +488,10 @@ export default function SecretStatsScreen() {
           </View>
         )}
 
-        {/* Rival Behavior */}
+        {/* Infernoman Behavior */}
         {behaviorStats?.rival && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🤖 The Rival&apos;s Behavior (Global)</Text>
+            <Text style={styles.cardTitle}>🤖 Infernoman&apos;s Behavior (Global)</Text>
             <View style={styles.statsTable}>
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Truth Rate</Text>
@@ -545,7 +545,7 @@ export default function SecretStatsScreen() {
                 </Text>
               </View>
               <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Rival Aggression Index</Text>
+                <Text style={styles.statLabel}>Infernoman Aggression Index</Text>
                 <Text style={styles.statCountLarge}>
                   {metaStats.aggression.rival.index.toFixed(1)}/100
                 </Text>

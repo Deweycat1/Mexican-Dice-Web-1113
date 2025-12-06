@@ -68,7 +68,7 @@ describe('turn lock and mustBluff behaviour', () => {
       lastClaim: 64,
       lastAction: 'normal',
       lastCpuRoll: 64,
-      message: 'The Rival claims 64. Your move — roll & claim or call bluff.',
+      message: 'Infernoman claims 64. Your move — roll & claim or call bluff.',
     }));
     useGameStore.getState().callBluff();
 
@@ -92,7 +92,7 @@ describe('turn lock and mustBluff behaviour', () => {
       lastClaim: 64,
       lastAction: 'normal',
       lastCpuRoll: 64,
-      message: 'The Rival claims 64. Your move — roll & claim or call bluff.',
+      message: 'Infernoman claims 64. Your move — roll & claim or call bluff.',
     }));
 
     useGameStore.getState().playerRoll();

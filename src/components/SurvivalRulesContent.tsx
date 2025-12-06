@@ -18,7 +18,7 @@ export default function SurvivalRulesContent() {
         <FlameEmojiIcon size={18} style={styles.inlineFlameIcon} />
         <Text style={[styles.heading, styles.inlineTextSegment]}>Mode Works</Text>
       </View>
-      <Text style={styles.paragraph}>You face off against the Rival in an endless series of rounds.</Text>
+      <Text style={styles.paragraph}>You face off against Infernoman in an endless series of rounds.</Text>
       <Text style={styles.paragraph}>Each time you win a round, your streak increases.</Text>
       <Text style={styles.paragraph}>If you lose a round, your streak ends immediately.</Text>
       <View style={styles.inlineRow}>
@@ -34,12 +34,12 @@ export default function SurvivalRulesContent() {
       </Text>
 
       <Text style={styles.heading}>Turn Structure</Text>
-      <Text style={styles.paragraph}>1. Rival makes the opening claim.</Text>
+      <Text style={styles.paragraph}>1. Infernoman makes the opening claim.</Text>
       <Text style={styles.paragraph}>2. You roll the dice.</Text>
       <Text style={styles.paragraph}>3. You must either:</Text>
       <Text style={styles.bullet}>• Claim your roll truthfully</Text>
       <Text style={styles.bullet}>• Bluff with a higher legal claim</Text>
-      <Text style={styles.bullet}>• Call Bluff if you think the Rival lied</Text>
+      <Text style={styles.bullet}>• Call Bluff if you think Infernoman lied</Text>
       <Text style={styles.paragraph}>
         A claim must match or beat the active challenge unless it is a Special Roll. You may never bluff a 41 Social.
       </Text>
@@ -64,7 +64,7 @@ export default function SurvivalRulesContent() {
       <Text style={styles.rollHeading}>31 Reverse</Text>
       <Text style={styles.paragraph}>A Reverse reflects the challenge back to the previous player.</Text>
       <Text style={styles.paragraph}>Example:</Text>
-      <Text style={styles.paragraph}>If the Rival reverses onto you, you must beat your own previous claim.</Text>
+      <Text style={styles.paragraph}>If Infernoman reverses onto you, you must beat your own previous claim.</Text>
       <Text style={styles.paragraph}>You may always claim a Reverse, truthfully or as a bluff.</Text>
       <Text style={styles.paragraph}>If an Inferno is reversed onto a player, the plus two streak value still applies.</Text>
 
@@ -74,19 +74,19 @@ export default function SurvivalRulesContent() {
       <Text style={styles.bullet}>• The round resets</Text>
       <Text style={styles.bullet}>• All claims clear</Text>
       <Text style={styles.bullet}>• No streak is added</Text>
-      <Text style={styles.bullet}>• A new round begins with a fresh Rival claim</Text>
+      <Text style={styles.bullet}>• A new round begins with a fresh Infernoman claim</Text>
 
       <Text style={styles.heading}>Bluffing and Calling Bluff</Text>
-      <Text style={styles.paragraph}>If you suspect the Rival lied, you may Call Bluff.</Text>
-      <Text style={styles.paragraph}>If the Rival told the truth: Your streak ends.</Text>
-      <Text style={styles.paragraph}>If the Rival was bluffing: You win the round and your streak increases.</Text>
+      <Text style={styles.paragraph}>If you suspect Infernoman lied, you may Call Bluff.</Text>
+      <Text style={styles.paragraph}>If Infernoman told the truth: Your streak ends.</Text>
+      <Text style={styles.paragraph}>If Infernoman was bluffing: You win the round and your streak increases.</Text>
       <Text style={styles.paragraph}>Streak increase amounts:</Text>
       <Text style={styles.bullet}>• Normal win → plus one</Text>
       <Text style={styles.bullet}>• Win involving an Inferno → plus two</Text>
 
       <Text style={styles.heading}>Winning a Round</Text>
       <Text style={styles.paragraph}>You win a round if:</Text>
-      <Text style={styles.bullet}>• You beat the Rival’s claim, truth or bluff</Text>
+      <Text style={styles.bullet}>• You beat Infernoman’s claim, truth or bluff</Text>
       <Text style={styles.bullet}>• You call a bluff correctly</Text>
       <Text style={styles.bullet}>• You win through special roll logic such as Inferno or Reverse</Text>
       <Text style={styles.paragraph}>Every win increases your streak except 41 Social resets, which give no streak.</Text>

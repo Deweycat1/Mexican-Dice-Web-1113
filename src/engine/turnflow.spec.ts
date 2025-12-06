@@ -33,7 +33,7 @@ describe('turn flow and scoring', () => {
       lastAction: 'normal',
       lastCpuRoll: 64,
       lastPlayerRoll: null,
-      message: 'The Rival claims 64. Your move — roll & claim or call bluff.',
+      message: 'Infernoman claims 64. Your move — roll & claim or call bluff.',
     }));
 
     useGameStore.getState().callBluff();
@@ -97,7 +97,7 @@ describe('turn flow and scoring', () => {
       lastClaim: 21,
       lastAction: 'normal',
       lastCpuRoll: 21,
-      message: `The Rival claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31 — otherwise call bluff.`,
+      message: `Infernoman claims 21 (Mexican ${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31 — otherwise call bluff.`,
     }));
 
     useGameStore.getState().playerClaim(65);
@@ -119,7 +119,7 @@ describe('turn flow and scoring', () => {
       lastAction: 'normal',
       lastCpuRoll: 51,
       lastPlayerRoll: 31,
-      message: 'The Rival claims 51. Your move — roll & claim or call bluff.',
+      message: 'Infernoman claims 51. Your move — roll & claim or call bluff.',
     }));
 
     useGameStore.getState().playerClaim(31);

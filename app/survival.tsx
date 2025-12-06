@@ -1213,7 +1213,7 @@ export default function Survival() {
                         />
                       );
                     }
-                    const actor = h.who === 'player' ? 'You' : 'The Rival';
+                    const actor = h.who === 'player' ? 'You' : 'Infernoman';
                     const verb = h.claim === 41 ? 'rolled' : 'claimed';
                     const claimText =
                       h.claim === 21 ? `21 (Inferno${MEXICAN_ICON})` : formatClaimDetailed(h.claim);
@@ -1408,7 +1408,7 @@ export default function Survival() {
                           </View>
                         );
                       }
-                      const actor = h.who === 'player' ? 'You' : 'The Rival';
+                      const actor = h.who === 'player' ? 'You' : 'Infernoman';
                       const verb = h.claim === 41 ? 'rolled' : 'claimed';
                       const claimText =
                         h.claim === 21 ? `21 (Inferno${MEXICAN_ICON})` : formatClaimDetailed(h.claim);
@@ -1925,8 +1925,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   bluffBannerSuccess: {
-    backgroundColor: '#16A34A',
-    borderColor: 'rgba(255, 255, 255, 0.35)',
+    backgroundColor: '#53A7F3',
+    borderColor: '#1C75BC',
   },
   bluffBannerFail: {
     backgroundColor: '#E63946',

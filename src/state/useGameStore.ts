@@ -413,14 +413,14 @@ export const useGameStore = create<Store>((set, get) => {
     }
     const finalMessage = finished
       ? who === 'player'
-        ? 'You hit 0 points. The Rival wins.'
-        : 'The Rival hit 0 points. You win!'
+        ? 'You hit 0 points. Infernoman wins.'
+        : 'Infernoman hit 0 points. You win!'
       : message;
 
     // Create a concise history entry object for scoreboard changes
     const entry = who === 'player'
-      ? { text: `${finalMessage} You: ${updatedPlayer} | The Rival: ${updatedCpu}`, who: 'player' as const }
-      : { text: `${finalMessage} You: ${updatedPlayer} | The Rival: ${updatedCpu}`, who: 'cpu' as const };
+      ? { text: `${finalMessage} You: ${updatedPlayer} | Infernoman: ${updatedCpu}`, who: 'player' as const }
+      : { text: `${finalMessage} You: ${updatedPlayer} | Infernoman: ${updatedCpu}`, who: 'cpu' as const };
 
     // Update the appropriate score bucket depending on mode
     if (state.mode === 'survival') {
@@ -684,8 +684,8 @@ export const useGameStore = create<Store>((set, get) => {
       correct: callerWasCorrect,
     });
 
-    const callerName = caller === 'player' ? 'You' : 'The Rival';
-    const defenderName = prevBy === 'player' ? 'You' : 'The Rival';
+    const callerName = caller === 'player' ? 'You' : 'Infernoman';
+    const defenderName = prevBy === 'player' ? 'You' : 'Infernoman';
     const defenderToldTruth = !liar;
     if (caller === 'player') {
       if (liar) {
@@ -712,12 +712,12 @@ export const useGameStore = create<Store>((set, get) => {
       bluffResultNonce: (prevState.bluffResultNonce ?? 0) + 1,
     }));
 
-    // Add history entry when Rival incorrectly calls player's bluff
+    // Add history entry when Infernoman incorrectly calls player's bluff
     if (caller === 'cpu' && prevBy === 'player' && defenderToldTruth) {
       if (state.mode === 'survival') {
-        pushSurvivalEvent('The Rival called your bluff incorrectly.');
+        pushSurvivalEvent('Infernoman called your bluff incorrectly.');
       } else if (state.mode === 'normal') {
-        pushEvent('The Rival called your bluff incorrectly.');
+        pushEvent('Infernoman called your bluff incorrectly.');
       }
     }
 
@@ -799,7 +799,7 @@ export const useGameStore = create<Store>((set, get) => {
           cpuSocialRevealNonce: prevState.cpuSocialRevealNonce + 1,
           socialBannerNonce: prevState.socialBannerNonce + 1,
           turn: 'player',
-          message: 'The Rival shows Social (41). Round resets.',
+          message: 'Infernoman shows Social (41). Round resets.',
         }));
         return;
       }
@@ -860,15 +860,15 @@ export const useGameStore = create<Store>((set, get) => {
 
       const message = (() => {
         if (previousClaim != null && isReverseOf(previousClaim, claim)) {
-          return `The Rival reversed ${previousClaim} with ${claim}. Your move...roll & claim or call bluff.`;
+          return `Infernoman reversed ${previousClaim} with ${claim}. Your move...roll & claim or call bluff.`;
         }
         if (claim === 21) {
-          return `The Rival claims 21 (Inferno${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31...otherwise call bluff.`;
+          return `Infernoman claims 21 (Inferno${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31...otherwise call bluff.`;
         }
         if (isAlwaysClaimable(claim)) {
-          return `The Rival claims ${claim}. Your move...roll & claim or call bluff.`;
+          return `Infernoman claims ${claim}. Your move...roll & claim or call bluff.`;
         }
-        return `The Rival claims ${claim}. Your move...roll & claim or call bluff.`;
+        return `Infernoman claims ${claim}. Your move...roll & claim or call bluff.`;
       })();
 
       // record CPU claim in survival mode (truth vs bluff)
@@ -1157,10 +1157,10 @@ export const useGameStore = create<Store>((set, get) => {
         return `You reversed ${prev} with ${claim}.`;
       }
       if (claim === 21) {
-        return `You claim 21 (Inferno${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
+        return `You claim 21 (Inferno${MEXICAN_ICON}). Infernoman must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
       }
       if (claim === 31 || claim === 41) {
-        return `You claim ${claim}. The Rival must roll a real 21 or bluff 21/31, otherwise call bluff.`;
+        return `You claim ${claim}. Infernoman must roll a real 21 or bluff 21/31, otherwise call bluff.`;
       }
       return `You claim ${claim}.`;
     })();
@@ -1290,8 +1290,8 @@ export const useGameStore = create<Store>((set, get) => {
       const state = get();
       if (isMexican(state.lastClaim)) {
         return state.turn === 'player'
-          ? `The Rival claims 21 (Inferno${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`
-          : `You claimed 21 (Inferno${MEXICAN_ICON}). The Rival must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
+          ? `Infernoman claims 21 (Inferno${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`
+          : `You claimed 21 (Inferno${MEXICAN_ICON}). Infernoman must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
       }
       return state.message;
     },
