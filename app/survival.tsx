@@ -25,7 +25,7 @@ import { InlineFlameText } from '../src/components/InlineFlameText';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
 import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
-import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
+import { isAlwaysClaimable, meetsOrBeats, rankValue, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
 import { MEXICAN_ICON } from '../src/lib/constants';
@@ -814,6 +814,11 @@ export default function Survival() {
     hasRolled &&
     rolledValue !== null &&
     (lastClaimValue == null || meetsOrBeats(rolledValue, lastClaimValue) || isAlwaysClaimable(rolledValue));
+  const shouldHighlightBluff =
+    hasRolled &&
+    rolledValue !== null &&
+    lastClaimValue != null &&
+    rankValue(rolledValue) <= rankValue(lastClaimValue);
 
   const isRivalClaimPhase = useMemo(() => {
     if (isGameOver) return false;
@@ -1313,7 +1318,7 @@ export default function Survival() {
                   label="Bluff Options"
                   variant="outline"
                   onPress={handleOpenBluff}
-                  style={styles.btnWide}
+                  style={[styles.btnWide, shouldHighlightBluff && styles.bluffOptionsHighlightButton]}
                   disabled={controlsDisabled || isRevealAnimating}
                 />
               </View>
@@ -1794,6 +1799,12 @@ const styles = StyleSheet.create({
   menuBtnBlueOutline: {
     borderWidth: 2,
     borderColor: '#1E8AC4',
+    borderRadius: 12,
+  },
+  bluffOptionsHighlightButton: {
+    backgroundColor: '#FE9902',
+    borderColor: '#C87400',
+    borderWidth: 2,
     borderRadius: 12,
   },
   btnWide: { flex: 1 },

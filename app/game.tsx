@@ -25,7 +25,7 @@ import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { InlineFlameText } from '../src/components/InlineFlameText';
 import RulesContent from '../src/components/RulesContent';
 import { MEXICAN_ICON } from '../src/lib/constants';
-import { isAlwaysClaimable, meetsOrBeats, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
+import { isAlwaysClaimable, meetsOrBeats, rankValue, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { useGameStore } from '../src/state/useGameStore';
@@ -230,6 +230,11 @@ export default function Game() {
     hasRolled &&
     rolledValue !== null &&
     (lastClaimValue == null || meetsOrBeats(rolledValue, lastClaimValue) || isAlwaysClaimable(rolledValue));
+  const shouldHighlightBluff =
+    hasRolled &&
+    rolledValue !== null &&
+    lastClaimValue != null &&
+    rankValue(rolledValue) <= rankValue(lastClaimValue);
   const layoutTweaks = useMemo(
     () => ({
       contentPadding: {
@@ -969,7 +974,7 @@ export default function Game() {
                   label="Bluff Options"
                   variant="outline"
                   onPress={handleOpenBluff}
-                  style={styles.btnWide}
+                  style={[styles.btnWide, shouldHighlightBluff && styles.bluffOptionsHighlightButton]}
                   disabled={controlsDisabled || isRevealAnimating}
                 />
               </View>
@@ -1338,6 +1343,12 @@ const styles = StyleSheet.create({
   menuBtnBlueOutline: {
     borderWidth: 2,
     borderColor: '#1E8AC4',
+    borderRadius: 12,
+  },
+  bluffOptionsHighlightButton: {
+    backgroundColor: '#FE9902',
+    borderColor: '#C87400',
+    borderWidth: 2,
     borderRadius: 12,
   },
   btnWide: { flex: 1 },

@@ -38,6 +38,7 @@ import {
   claimMatchesRoll,
   isChallengeClaim,
   isLegalRaise,
+  rankValue,
   resolveActiveChallenge,
   resolveBluff,
   splitClaim
@@ -707,6 +708,11 @@ export default function OnlineGameV2Screen() {
     const baseline = claimToCheck ?? null;
     return getOnlineClaimOptions(baseline, myRoll);
   }, [claimToCheck, myRoll]);
+  const shouldHighlightBluff =
+    isMyTurn &&
+    myRoll != null &&
+    claimToCheck != null &&
+    rankValue(myRoll) <= rankValue(claimToCheck);
 
   const handleUpdate = useCallback(
     async (
@@ -1252,7 +1258,7 @@ export default function OnlineGameV2Screen() {
                   variant="outline"
                   onPress={() => setClaimPickerOpen(true)}
                   disabled={!canClaim || isRevealAnimating}
-                  style={styles.btnWide}
+                  style={[styles.btnWide, shouldHighlightBluff && styles.bluffOptionsHighlightButton]}
                 />
               </View>
               <View style={styles.bottomRow}>
@@ -1603,6 +1609,12 @@ const styles = StyleSheet.create({
   },
   btnWide: {
     flex: 1,
+  },
+  bluffOptionsHighlightButton: {
+    backgroundColor: '#FE9902',
+    borderColor: '#C87400',
+    borderWidth: 2,
+    borderRadius: 12,
   },
   menuActionButton: {
     backgroundColor: '#C21807',
