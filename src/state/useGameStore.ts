@@ -524,7 +524,7 @@ export const useGameStore = create<Store>((set, get) => {
       // ignore survival persistence errors
     }
 
-    return { gameOver: finished };
+    return { gameOver: finished, loser: who, amount };
   };
 
   const resetRoundState = () => {
@@ -722,6 +722,17 @@ export const useGameStore = create<Store>((set, get) => {
     }
 
     const result = applyLoss(loser, lossAmount, message);
+
+    console.log('[INFERNO] processCallBluff resolved', {
+      mode: state.mode,
+      caller,
+      loser,
+      lossAmount,
+      gameOver: result.gameOver,
+      lastClaim,
+      lastPlayerRoll,
+      lastCpuRoll,
+    });
     aiOpponent.observeRoundOutcome(loser === 'player');
     persistAiState();
     pendingCpuRaise = null;
@@ -1238,10 +1249,33 @@ export const useGameStore = create<Store>((set, get) => {
       
       const result = processCallBluff(caller);
 
+      console.log('[INFERNO] callBluff result', {
+        mode: state.mode,
+        caller,
+        result,
+        turnAfter: get().turn,
+      });
+
       set({ isBusy: false });
       endTurnLock();
 
-      if (!result.gameOver && get().turn === 'cpu') {
+      const after = get();
+
+      // In Survival/Inferno, when the player correctly calls bluff (CPU loses),
+      // immediately advance to the next Rival challenge.
+      if (
+        !result.gameOver &&
+        after.mode === 'survival' &&
+        caller === 'player' &&
+        result.loser === 'cpu'
+      ) {
+        console.log('[INFERNO] player won point, starting next Rival turn');
+        set({ pendingInfernoDelay: false, turn: 'cpu' });
+        cpuTurn();
+        return;
+      }
+
+      if (!result.gameOver && after.turn === 'cpu') {
         set({ pendingInfernoDelay: false });
         cpuTurn();
       }
