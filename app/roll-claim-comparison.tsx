@@ -166,41 +166,57 @@ export default function RollClaimComparisonScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#53A7F3" />
-          <Text style={styles.loadingText}>Loading statistics...</Text>
+      <>
+        <Stack.Screen
+          options={{
+            headerBackVisible: false,
+            headerLeft: () => null,
+          }}
+        />
+        <View style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#53A7F3" />
+            <Text style={styles.loadingText}>Loading statistics...</Text>
+          </View>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+          >
+            <Text style={styles.backButtonText}>Back</Text>
+          </Pressable>
         </View>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-        >
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-      </View>
+      </>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Error Loading Stats</Text>
-          <Text style={styles.errorText}>{error}</Text>
+      <>
+        <Stack.Screen
+          options={{
+            headerBackVisible: false,
+            headerLeft: () => null,
+          }}
+        />
+        <View style={styles.container}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorTitle}>Error Loading Stats</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable
+              onPress={fetchStats}
+              style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          </View>
           <Pressable
-            onPress={fetchStats}
-            style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
           >
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.backButtonText}>Back</Text>
           </Pressable>
         </View>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-        >
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-      </View>
+      </>
     );
   }
 
@@ -247,90 +263,98 @@ export default function RollClaimComparisonScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Pressable onPress={() => router.back()} style={styles.backButtonTop}>
-        <Text style={styles.backButtonTopText}>← Back</Text>
-      </Pressable>
-      
-      <Text style={styles.title}>Roll vs Claim</Text>
-      <Text style={styles.subtitle}>See how honest the table really is</Text>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Highlight Cards */}
-        <View style={styles.highlightRow}>
-          <View style={styles.highlightCard}>
-            <Text style={styles.highlightIcon}>🎲</Text>
-            <Text style={styles.highlightValue}>{totalRolls.toLocaleString()}</Text>
-            <Text style={styles.highlightLabel}>Rolls Tracked</Text>
-          </View>
-
-          <View style={styles.highlightCard}>
-            <Text style={styles.highlightIcon}>🗣️</Text>
-            <Text style={styles.highlightValue}>{totalClaims.toLocaleString()}</Text>
-            <Text style={styles.highlightLabel}>Claims Made</Text>
-          </View>
-        </View>
-
-        <View style={styles.highlightRow}>
-          {mostOverhyped && mostOverhyped.bluffBias > 3 && (
-            <View style={[styles.highlightCard, styles.highlightCardWide]}>
-              <View style={styles.highlightIconWrapper}>
-                <FlameEmojiIcon size={32} />
-              </View>
-              <Text style={styles.highlightValue}>{mostOverhyped.label}</Text>
-              <Text style={styles.highlightLabel}>Most Overhyped</Text>
-              <Text style={styles.highlightDetail}>
-                Claimed {mostOverhyped.claimPercentage.toFixed(1)}% vs rolled {mostOverhyped.rollPercentage.toFixed(1)}%
-              </Text>
-            </View>
-          )}
-
-          {mostAvoided && mostAvoided.bluffBias < -3 && (
-            <View style={[styles.highlightCard, styles.highlightCardWide]}>
-              <IceEmojiIcon size={32} style={styles.highlightIceIcon} />
-              <Text style={styles.highlightValue}>{mostAvoided.label}</Text>
-              <Text style={styles.highlightLabel}>Most Avoided</Text>
-              <Text style={styles.highlightDetail}>
-                Claimed {mostAvoided.claimPercentage.toFixed(1)}% vs rolled {mostAvoided.rollPercentage.toFixed(1)}%
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* Table Header */}
-        <View style={styles.tableContainer}>
-          <View style={styles.tableHeader}>
-            <Text style={styles.headerCell}>Roll</Text>
-            <Text style={styles.headerCell}>Rolled</Text>
-            <Text style={styles.headerCell}>Claimed</Text>
-            <Text style={styles.headerCell}>Diff</Text>
-            <Text style={styles.headerCell}>Insight</Text>
-          </View>
-
-          {/* Table Body */}
-          {data.length > 0 ? (
-            data.map((item) => (
-              <View key={item.roll}>
-                {renderRow({ item })}
-              </View>
-            ))
-          ) : (
-            <Text style={styles.noDataText}>No data available yet</Text>
-          )}
-        </View>
-
-        {/* TODO: Claim Accuracy Section */}
-        {/* Add claim accuracy calculation when correct/incorrect claim data becomes available */}
-
-        {/* Bottom Menu Button */}
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.bottomMenuButton, pressed && styles.bottomMenuButtonPressed]}
-        >
-          <Text style={styles.bottomMenuButtonText}>← Back to Menu</Text>
+    <>
+      <Stack.Screen
+        options={{
+          headerBackVisible: false,
+          headerLeft: () => null,
+        }}
+      />
+      <View style={styles.container}>
+        <Pressable onPress={() => router.back()} style={styles.backButtonTop}>
+          <Text style={styles.backButtonTopText}>← Back</Text>
         </Pressable>
-      </ScrollView>
-    </View>
+        
+        <Text style={styles.title}>Roll vs Claim</Text>
+        <Text style={styles.subtitle}>See how honest the table really is</Text>
+
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {/* Highlight Cards */}
+          <View style={styles.highlightRow}>
+            <View style={styles.highlightCard}>
+              <Text style={styles.highlightIcon}>🎲</Text>
+              <Text style={styles.highlightValue}>{totalRolls.toLocaleString()}</Text>
+              <Text style={styles.highlightLabel}>Rolls Tracked</Text>
+            </View>
+
+            <View style={styles.highlightCard}>
+              <Text style={styles.highlightIcon}>🗣️</Text>
+              <Text style={styles.highlightValue}>{totalClaims.toLocaleString()}</Text>
+              <Text style={styles.highlightLabel}>Claims Made</Text>
+            </View>
+          </View>
+
+          <View style={styles.highlightRow}>
+            {mostOverhyped && mostOverhyped.bluffBias > 3 && (
+              <View style={[styles.highlightCard, styles.highlightCardWide]}>
+                <View style={styles.highlightIconWrapper}>
+                  <FlameEmojiIcon size={32} />
+                </View>
+                <Text style={styles.highlightValue}>{mostOverhyped.label}</Text>
+                <Text style={styles.highlightLabel}>Most Overhyped</Text>
+                <Text style={styles.highlightDetail}>
+                  Claimed {mostOverhyped.claimPercentage.toFixed(1)}% vs rolled {mostOverhyped.rollPercentage.toFixed(1)}%
+                </Text>
+              </View>
+            )}
+
+            {mostAvoided && mostAvoided.bluffBias < -3 && (
+              <View style={[styles.highlightCard, styles.highlightCardWide]}>
+                <IceEmojiIcon size={32} style={styles.highlightIceIcon} />
+                <Text style={styles.highlightValue}>{mostAvoided.label}</Text>
+                <Text style={styles.highlightLabel}>Most Avoided</Text>
+                <Text style={styles.highlightDetail}>
+                  Claimed {mostAvoided.claimPercentage.toFixed(1)}% vs rolled {mostAvoided.rollPercentage.toFixed(1)}%
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Table Header */}
+          <View style={styles.tableContainer}>
+            <View style={styles.tableHeader}>
+              <Text style={styles.headerCell}>Roll</Text>
+              <Text style={styles.headerCell}>Rolled</Text>
+              <Text style={styles.headerCell}>Claimed</Text>
+              <Text style={styles.headerCell}>Diff</Text>
+              <Text style={styles.headerCell}>Insight</Text>
+            </View>
+
+            {/* Table Body */}
+            {data.length > 0 ? (
+              data.map((item) => (
+                <View key={item.roll}>
+                  {renderRow({ item })}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.noDataText}>No data available yet</Text>
+            )}
+          </View>
+
+          {/* TODO: Claim Accuracy Section */}
+          {/* Add claim accuracy calculation when correct/incorrect claim data becomes available */}
+
+          {/* Bottom Menu Button */}
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.bottomMenuButton, pressed && styles.bottomMenuButtonPressed]}
+          >
+            <Text style={styles.bottomMenuButtonText}>← Back to Menu</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+    </>
   );
 }
 
