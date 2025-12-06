@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+import IceEmojiIcon from '../src/components/IceEmojiIcon';
 interface RollStatsData {
   rolls: Record<string, number>;
 }
@@ -146,14 +147,10 @@ export default function RollClaimComparisonScreen() {
   };
 
   const getCategoryEmoji = (category: BluffCategory): string => {
-    switch (category) {
-      case 'over':
-        return '';
-      case 'under':
-        return '🧊';
-      case 'balanced':
-        return '⚖️';
+    if (category === 'balanced') {
+      return '⚖️';
     }
+    return '';
   };
 
   const getCategoryLabel = (category: BluffCategory): string => {
@@ -210,7 +207,14 @@ export default function RollClaimComparisonScreen() {
   const renderRow = ({ item }: { item: RollClaimRow }) => {
     const category = getBluffCategory(item.bluffBias);
     const categoryLabel = getCategoryLabel(category);
-    const categoryEmoji = category === 'over' ? null : getCategoryEmoji(category);
+    let insightIcon: React.ReactNode = null;
+    if (category === 'over') {
+      insightIcon = <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />;
+    } else if (category === 'under') {
+      insightIcon = <IceEmojiIcon size={16} style={styles.inlineIceIcon} />;
+    } else {
+      insightIcon = <Text style={styles.insightText}>{getCategoryEmoji(category)}</Text>;
+    }
 
     return (
       <View style={styles.tableRow}>
@@ -235,11 +239,7 @@ export default function RollClaimComparisonScreen() {
         </Text>
         
         <View style={styles.insightCell}>
-          {category === 'over' ? (
-            <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
-          ) : (
-            <Text style={styles.insightText}>{categoryEmoji}</Text>
-          )}
+          {insightIcon}
           <Text style={styles.insightText}>{categoryLabel}</Text>
         </View>
       </View>
@@ -287,7 +287,7 @@ export default function RollClaimComparisonScreen() {
 
           {mostAvoided && mostAvoided.bluffBias < -3 && (
             <View style={[styles.highlightCard, styles.highlightCardWide]}>
-              <Text style={styles.highlightIcon}>🧊</Text>
+              <IceEmojiIcon size={32} style={styles.highlightIceIcon} />
               <Text style={styles.highlightValue}>{mostAvoided.label}</Text>
               <Text style={styles.highlightLabel}>Most Avoided</Text>
               <Text style={styles.highlightDetail}>
@@ -391,6 +391,9 @@ const styles = StyleSheet.create({
     fontSize: 32,
     marginBottom: 8,
     textAlign: 'center',
+  },
+  highlightIceIcon: {
+    marginBottom: 8,
   },
   highlightIconWrapper: {
     marginBottom: 8,
@@ -503,6 +506,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inlineFlameIcon: {
+    marginRight: 4,
+  },
+  inlineIceIcon: {
     marginRight: 4,
   },
   loadingContainer: {

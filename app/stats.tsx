@@ -237,7 +237,7 @@ export default function StatsScreen() {
 
   // Menu view
   const renderMenu = () => (
-    <View style={styles.container}>
+    <View style={[styles.container, styles.globalStatsContainer]}>
       <Text style={styles.title}>Global Statistics</Text>
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.menuScrollContent}>
@@ -497,6 +497,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingTop: 40,
     paddingHorizontal: 16,
+  },
+  globalStatsContainer: {
+    paddingTop: 55, // base 40 + 15px extra space for the heading
   },
   title: {
     fontSize: 28,
