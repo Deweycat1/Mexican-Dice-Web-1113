@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import * as Clipboard from 'expo-clipboard';
 
 import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
@@ -288,6 +289,12 @@ export default function OnlineLobbyScreen() {
       setCreatingMatch(false);
     }
   }, [friendCode, getActiveGameCount, loadGames, router, userId]);
+
+  const handleCopyUsername = useCallback(async () => {
+    if (!myUsername) return;
+    await Clipboard.setStringAsync(myUsername);
+    Alert.alert('Copied', 'Your username has been copied to the clipboard.');
+  }, [myUsername]);
 
   const handleDeleteWaiting = useCallback(
     (game: LobbyGame) => {
@@ -620,9 +627,13 @@ export default function OnlineLobbyScreen() {
                   Invite a friend using their color-animal code (for example: "Blue-Panda").
                 </Text>
                 {myUsername && (
-                  <Text style={styles.yourCode}>
-                    Your Username: <Text style={styles.yourCodeValue}>{myUsername}</Text>
-                  </Text>
+                  <View style={styles.usernameRow}>
+                    <Text style={styles.usernameLabel}>Your Username:</Text>
+                    <Pressable onPress={handleCopyUsername} style={styles.usernamePressable}>
+                      <Text style={styles.usernameValue}>{myUsername}</Text>
+                      <Text style={styles.usernameHint}>(Tap to copy)</Text>
+                    </Pressable>
+                  </View>
                 )}
                 <TextInput
                   style={styles.input}
@@ -680,6 +691,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#1F262A',
+    paddingTop: 15,
   },
   scrollContent: {
     flexGrow: 1,
@@ -777,6 +789,31 @@ const styles = StyleSheet.create({
   yourCodeValue: {
     color: '#FE9902',
     fontWeight: '800',
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  usernameLabel: {
+    fontSize: 14,
+    color: '#C9D1D9',
+    marginRight: 4,
+  },
+  usernamePressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  usernameValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FE9902',
+    marginRight: 6,
+  },
+  usernameHint: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   section: {
     marginBottom: 24,
