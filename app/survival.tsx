@@ -216,7 +216,7 @@ export default function Survival() {
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
   const [shouldRevealCpuDice, setShouldRevealCpuDice] = useState(false);
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
-  const socialRevealNonceRef = useRef(0);
+  const socialRevealNonceRef = useRef<number | null>(null);
   const socialBannerNonceRef = useRef(0);
   const [showSocialReveal, setShowSocialReveal] = useState(false);
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
@@ -1060,9 +1060,25 @@ export default function Survival() {
   }, []);
 
   useEffect(() => {
-    if (cpuSocialDice && cpuSocialRevealNonce > socialRevealNonceRef.current) {
-      socialRevealNonceRef.current = cpuSocialRevealNonce;
-      setSocialDiceValues(cpuSocialDice);
+    const nonce = cpuSocialRevealNonce;
+    const dice = cpuSocialDice;
+
+    console.log('[CPU SOCIAL REVEAL] effect', {
+      source: 'survival.tsx',
+      nonce,
+      refNonce: socialRevealNonceRef.current,
+      dice,
+    });
+
+    if (socialRevealNonceRef.current == null) {
+      socialRevealNonceRef.current = nonce ?? 0;
+      return;
+    }
+
+    if (nonce != null && dice && nonce > socialRevealNonceRef.current) {
+      console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
+      socialRevealNonceRef.current = nonce;
+      setSocialDiceValues(dice);
       setShowSocialReveal(true);
       setSocialRevealHidden(true);
       setIsRevealAnimating(true);

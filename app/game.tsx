@@ -127,7 +127,7 @@ export default function Game() {
   const [cpuDiceRevealed, setCpuDiceRevealed] = useState(false);
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
   const [scoreDiceAnimKey, setScoreDiceAnimKey] = useState(0);
-  const socialRevealNonceRef = useRef(0);
+  const socialRevealNonceRef = useRef<number | null>(null);
   const socialBannerNonceRef = useRef(0);
   const [showSocialReveal, setShowSocialReveal] = useState(false);
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
@@ -637,9 +637,26 @@ export default function Game() {
   }, []);
 
   useEffect(() => {
-    if (cpuSocialDice && cpuSocialRevealNonce > socialRevealNonceRef.current) {
-      socialRevealNonceRef.current = cpuSocialRevealNonce;
-      setSocialDiceValues(cpuSocialDice);
+    const nonce = cpuSocialRevealNonce;
+    const dice = cpuSocialDice;
+
+    console.log('[CPU SOCIAL REVEAL] effect', {
+      source: 'game.tsx',
+      nonce,
+      refNonce: socialRevealNonceRef.current,
+      dice,
+    });
+
+    // On first mount, just sync the ref to whatever nonce exists
+    if (socialRevealNonceRef.current == null) {
+      socialRevealNonceRef.current = nonce ?? 0;
+      return;
+    }
+
+    if (nonce != null && dice && nonce > socialRevealNonceRef.current) {
+      console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
+      socialRevealNonceRef.current = nonce;
+      setSocialDiceValues(dice);
       setShowSocialReveal(true);
       setSocialRevealHidden(true);
       setIsRevealAnimating(true);

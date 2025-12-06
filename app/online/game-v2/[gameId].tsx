@@ -447,13 +447,7 @@ export default function OnlineGameV2Screen() {
     }
     return defaultRoundState;
   }, [game?.round_state, game?.id]);
-  const socialRevealNonceRef = useRef(roundState.socialRevealNonce ?? 0);
-  useEffect(() => {
-    const nonce = roundState.socialRevealNonce ?? 0;
-    if (nonce < socialRevealNonceRef.current) {
-      socialRevealNonceRef.current = nonce;
-    }
-  }, [roundState.socialRevealNonce]);
+  const socialRevealNonceRef = useRef<number | null>(null);
 
   const lastClaim = useMemo(() => {
     if (game?.last_claim == null) return null;
@@ -619,13 +613,36 @@ export default function OnlineGameV2Screen() {
     setIsRevealAnimating(false);
   }, []);
   useEffect(() => {
-    const nonce = roundState.socialRevealNonce ?? 0;
-    if (!nonce || !roundState.socialRevealDice) return;
-    if (nonce > socialRevealNonceRef.current) {
-      socialRevealNonceRef.current = nonce;
-      startSocialReveal(roundState.socialRevealDice);
+    const nonce = roundState.socialRevealNonce ?? null;
+    const dice = roundState.socialRevealDice ?? null;
+
+    console.log('[SOCIAL REVEAL] effect', {
+      source: 'online/[gameId]',
+      nonce,
+      refNonce: socialRevealNonceRef.current,
+      dice,
+      lastAction: roundState.lastAction,
+      lastClaim: lastClaim,
+    });
+
+    // On first mount, just sync the ref to whatever nonce exists
+    if (socialRevealNonceRef.current == null) {
+      socialRevealNonceRef.current = nonce ?? 0;
+      return;
     }
-  }, [roundState.socialRevealNonce, roundState.socialRevealDice, startSocialReveal]);
+
+    // If nonce reset (e.g., new game), sync down without triggering
+    if (nonce != null && nonce < socialRevealNonceRef.current) {
+      socialRevealNonceRef.current = nonce;
+      return;
+    }
+
+    if (nonce != null && dice && nonce > socialRevealNonceRef.current) {
+      console.log('[SOCIAL REVEAL] starting reveal due to nonce bump');
+      socialRevealNonceRef.current = nonce;
+      startSocialReveal(dice);
+    }
+  }, [roundState.socialRevealNonce, roundState.socialRevealDice, roundState.lastAction, lastClaim, startSocialReveal]);
   const lastWinkNonceRef = useRef(roundState.lastWinkNonce ?? 0);
   const winkGlowAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
