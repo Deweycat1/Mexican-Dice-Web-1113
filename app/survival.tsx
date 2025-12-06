@@ -155,43 +155,43 @@ const StreakMeter: React.FC<StreakMeterProps> = ({
       style={[styles.streakMeterContainer, compact && styles.streakMeterContainerCompact]}
       pointerEvents="none"
     >
-      <View style={styles.streakMeterThermoRow}>
-        <View style={styles.streakMeterBulbWrapper}>
-          <Animated.View
-            style={[
-              styles.streakMeterBulb,
-              { backgroundColor: hasBrokenRecord ? rainbowColor : gradientColors[0] },
-            ]}
-          />
-        </View>
-        <View style={styles.streakMeterOuter}>
-          {hasBrokenRecord ? (
+      <View style={styles.streakRow}>
+        <Text style={styles.streakLabel}>Streak: {currentStreak}</Text>
+        <View style={[styles.streakMeterThermoRow, styles.streakMeter]}>
+          <View style={styles.streakMeterBulbWrapper}>
             <Animated.View
               style={[
-                styles.streakMeterFill,
-                { width: `${clampedProgress * 100}%`, backgroundColor: rainbowColor },
+                styles.streakMeterBulb,
+                { backgroundColor: hasBrokenRecord ? rainbowColor : gradientColors[0] },
               ]}
             />
-          ) : (
-            <Animated.View
-              style={[
-                styles.streakMeterFill,
-                { width: `${clampedProgress * 100}%` },
-              ]}
-            >
-              <LinearGradient
-                colors={gradientColors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.streakGradient}
+          </View>
+          <View style={styles.streakMeterOuter}>
+            {hasBrokenRecord ? (
+              <Animated.View
+                style={[
+                  styles.streakMeterFill,
+                  { width: `${clampedProgress * 100}%`, backgroundColor: rainbowColor },
+                ]}
               />
-            </Animated.View>
-          )}
+            ) : (
+              <Animated.View
+                style={[
+                  styles.streakMeterFill,
+                  { width: `${clampedProgress * 100}%` },
+                ]}
+              >
+                <LinearGradient
+                  colors={gradientColors}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.streakGradient}
+                />
+              </Animated.View>
+            )}
+          </View>
         </View>
-      </View>
-      <View style={styles.streakMeterLabels}>
-        <Text style={styles.streakMeterLabelText}>Streak: {currentStreak}</Text>
-        <Text style={styles.streakMeterLabelText}>Break record at: {targetToBeat}</Text>
+        <Text style={styles.recordLabel}>Record: {safeGlobalBest}</Text>
       </View>
     </View>
   );
@@ -1702,9 +1702,35 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 2,
   },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 20,
+    marginTop: 4,
+  },
+  streakLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 8,
+    minWidth: 70,
+  },
+  recordLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+    minWidth: 70,
+    textAlign: 'right',
+  },
+  streakMeter: {
+    flex: 1,
+    marginHorizontal: 8,
+  },
   streakMeterOuter: {
     flex: 1,
-    height: 16,
+    height: 20,
     borderRadius: 999,
     borderWidth: 2,
     borderColor: '#30363D',
