@@ -100,17 +100,27 @@ const pickRandomRivalLine = () => {
 
 // End-of-game banner lines
 const HEAVENLY_LINES = [
-  "You ascend victorious.",
-  "Heaven smiles on your rolls.",
-  "Saint of the six pips.",
-  "You just blessed those dice.",
+  "Iceman stands undefeated.",
+  "Frost crowns your victory.",
+  "You froze the flames.",
+  "Dice bow to Iceman.",
+  "Ice pips, perfect victory.",
+  "The table chills for you.",
+  "Iceman glides past defeat.",
+  "Cool nerves, hot streak.",
 ];
 
 const DEMONIC_LINES = [
-  "Dragged into dice hell.",
-  "The devil devoured your points.",
-  "Your luck just went up in smoke.",
-  "You gambled with demons and lost.",
+  "Infernoman roasted you.",
+  "Infernoman claimed your points.",
+  "Burned by Infernoman again.",
+  "Infernoman laughs at your loss.",
+  "You fueled Infernoman’s fire.",
+  "Infernoman turned up the heat on you.",
+  "Another win for Infernoman.",
+  "Infernoman cooked that round.",
+  "Infernoman snatched your points.",
+  "You stepped into Infernoman’s fire.",
 ];
 
 const pickRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
@@ -1652,9 +1662,9 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   endBannerWin: {
-    backgroundColor: '#f5f6ff',
+    backgroundColor: '#53A7F3',
     borderWidth: 2,
-    borderColor: '#ffd700',
+    borderColor: '#1C75BC',
   },
   endBannerLose: {
     backgroundColor: '#260000',
@@ -1668,7 +1678,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   endBannerTitleWin: {
-    color: '#2a2a2a',
+    color: '#F0F6FC',
   },
   endBannerTitleLose: {
     color: '#ffffff',
@@ -1679,7 +1689,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   endBannerSubtitleWin: {
-    color: '#444444',
+    color: '#E0F2FF',
   },
   endBannerSubtitleLose: {
     color: '#ffcccc',
