@@ -323,12 +323,12 @@ export default function RollClaimComparisonScreen() {
 
           {/* Table Header */}
           <View style={styles.tableContainer}>
-            <View style={styles.tableHeader}>
-              <Text style={styles.headerCell}>Roll</Text>
-              <Text style={styles.headerCell}>Rolled</Text>
-              <Text style={styles.headerCell}>Claimed</Text>
-              <Text style={styles.headerCell}>Diff</Text>
-              <Text style={styles.headerCell}>Insight</Text>
+          <View style={styles.tableHeader}>
+            <Text style={styles.headerCell}>Roll</Text>
+            <Text style={styles.headerCell}>Rolled</Text>
+            <Text style={styles.headerCell}>Claimed</Text>
+            <Text style={styles.headerCell}>Diff</Text>
+            <Text style={[styles.headerCell, styles.headerCellInsight]}>Insight</Text>
             </View>
 
             {/* Table Body */}
@@ -466,6 +466,9 @@ const styles = StyleSheet.create({
     color: '#FE9902',
     textAlign: 'center',
   },
+  headerCellInsight: {
+    textAlign: 'left',
+  },
   tableRow: {
     flexDirection: 'row',
     paddingVertical: 12,
@@ -523,7 +526,7 @@ const styles = StyleSheet.create({
     flex: 1.2,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   insightIcon: {
     width: 22,
@@ -534,7 +537,7 @@ const styles = StyleSheet.create({
   insightText: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   loadingContainer: {
     flex: 1,
