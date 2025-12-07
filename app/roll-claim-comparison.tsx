@@ -527,8 +527,9 @@ const styles = StyleSheet.create({
   },
   insightIcon: {
     width: 22,
-    textAlign: 'center',
     marginRight: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   insightText: {
     fontSize: 12,
