@@ -354,7 +354,7 @@ export default function RollClaimComparisonScreen() {
             onPress={() => router.back()}
             style={({ pressed }) => [styles.bottomMenuButton, pressed && styles.bottomMenuButtonPressed]}
           >
-            <Text style={styles.bottomMenuButtonText}>← Back to Menu</Text>
+            <Text style={styles.bottomMenuButtonText}>Back to Menu</Text>
           </Pressable>
         </ScrollView>
       </View>

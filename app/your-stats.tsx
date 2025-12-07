@@ -60,7 +60,7 @@ export default function YourStatsScreen() {
                   <StatRow label="Longest Daily Streak" value={formatDays(stats.longestDailyStreak)} />
                   <StatRow label="Total Days Played" value={stats.totalDaysPlayed} />
                 </View>
-                <Link href="/" style={styles.mainMenuButton}>
+                <Link href="/statistics" style={styles.mainMenuButton}>
                   <Text style={styles.buttonText}>Back to Menu</Text>
                 </Link>
               </>
