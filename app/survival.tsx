@@ -344,6 +344,21 @@ export default function Survival() {
   const amplitude = 1 + clamp(0.06 + currentStreak * 0.008, 0.06, 0.20); // scale
   const periodMs = Math.round(clamp(840 - currentStreak * 18, 480, 840)); // faster with streak
 
+  const HEARTBEAT_MIN_INTERVAL = 220; // ms, hard floor so it never gets absurdly fast
+
+  function computeHeartbeatInterval(streak: number, basePeriodMs: number): number {
+    // Each full chunk of 3 streak points increases the heartbeat speed
+    const tier = Math.floor(streak / 3); // 0 for 0–2, 1 for 3–5, 2 for 6–8, etc.
+
+    // Each tier makes the heartbeat ~15% faster than the previous one
+    const speedMultiplier = 1 + tier * 0.15;
+
+    const intervalMs = Math.round(basePeriodMs / speedMultiplier);
+
+    // Clamp so we never go below a minimum interval
+    return Math.max(HEARTBEAT_MIN_INTERVAL, intervalMs);
+  }
+
   // color shift: from green (#E6FFE6) to red (#FF6B6B) based on normalized streak
   const startCol = hexToRgb('#E6FFE6');
   const endCol = hexToRgb('#FF6B6B');
@@ -419,7 +434,7 @@ export default function Survival() {
       };
     }
 
-    const intervalMs = periodMs;
+    const intervalMs = computeHeartbeatInterval(currentStreak, periodMs);
 
     const fireHaptic = () => {
       if (isSurvivalOver) return;

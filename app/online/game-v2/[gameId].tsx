@@ -1786,7 +1786,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   rematchButtonText: {
-    fontSize: 13,
+    fontSize: 13, // ~20% smaller than default 16
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -1795,13 +1795,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rematchAcceptLine1: {
-    fontSize: 14,
+    fontSize: 13, // match 20% smaller size
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 18,
   },
   rematchAcceptLine2: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: -2,
