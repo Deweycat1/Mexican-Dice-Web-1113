@@ -432,7 +432,7 @@ export default function StatsScreen() {
             onPress={() => setCurrentView('menu')}
             style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
           >
-            <Text style={styles.backButtonText}>Menu</Text>
+            <Text style={styles.backButtonText}>Back to Menu</Text>
           </Pressable>
         </View>
       </View>
@@ -620,7 +620,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   backButton: {
-    backgroundColor: '#C21807',
+    backgroundColor: '#53A7F3',
+    borderColor: '#1C75BC',
+    borderWidth: 2,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 24,

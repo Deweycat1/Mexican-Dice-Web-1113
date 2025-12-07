@@ -61,7 +61,7 @@ export default function YourStatsScreen() {
                   <StatRow label="Total Days Played" value={stats.totalDaysPlayed} />
                 </View>
                 <Link href="/" style={styles.mainMenuButton}>
-                  <Text style={styles.buttonText}>Main Menu</Text>
+                  <Text style={styles.buttonText}>Back to Menu</Text>
                 </Link>
               </>
             )}
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   },
   mainMenuButton: {
     marginTop: 24,
-    backgroundColor: '#C21807',
+    backgroundColor: '#53A7F3',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 32,
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     // @ts-ignore
     boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
     borderWidth: 2,
-    borderColor: '#8B0000',
+    borderColor: '#1C75BC',
   },
   buttonText: {
     color: '#fff',
