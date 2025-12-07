@@ -695,16 +695,54 @@ export default function OnlineGameV2Screen() {
   useEffect(() => {
     const bluffNonce = roundState.bluffResultNonce ?? 0;
     const caller = roundState.lastBluffCaller ?? null;
-    const defenderTruth = typeof (roundState.lastBluffDefenderTruth) === 'boolean' ? roundState.lastBluffDefenderTruth : null;
+    const defenderTruth =
+      typeof roundState.lastBluffDefenderTruth === 'boolean'
+        ? roundState.lastBluffDefenderTruth
+        : null;
     if (!caller || defenderTruth === null) return;
+    if (!myRole) return;
     if (bluffNonce <= bluffResultNonceRef.current) return;
     bluffResultNonceRef.current = bluffNonce;
-    const defenderRole = caller === 'host' ? 'guest' : 'host';
-    if (defenderRole !== myRole) return;
-    if (game?.status !== 'in_progress') return;
     const liar = !defenderTruth;
-    setBanner(liar ? { type: 'got-em', text: "GOT 'EM!!!" } : { type: 'womp-womp', text: 'WOMP WOMP' });
-  }, [roundState.bluffResultNonce, roundState.lastBluffCaller, roundState.lastBluffDefenderTruth, myRole, game?.status]);
+    const iAmCaller = myRole === caller;
+
+    if (liar) {
+      // Defender lied
+      if (iAmCaller) {
+        // I caught their bluff
+        setBanner({
+          type: 'got-em',
+          text: "You caught their bluff.",
+        });
+      } else {
+        // They caught my bluff
+        setBanner({
+          type: 'womp-womp',
+          text: "They caught your bluff.",
+        });
+      }
+    } else {
+      // Defender told the truth
+      if (iAmCaller) {
+        // I was wrong to call
+        setBanner({
+          type: 'womp-womp',
+          text: "They told the truth.",
+        });
+      } else {
+        // I was truthful and they were wrong
+        setBanner({
+          type: 'got-em',
+          text: "You were right to stand firm.",
+        });
+      }
+    }
+  }, [
+    roundState.bluffResultNonce,
+    roundState.lastBluffCaller,
+    roundState.lastBluffDefenderTruth,
+    myRole,
+  ]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -999,7 +1037,11 @@ export default function OnlineGameV2Screen() {
       return;
     }
 
-    const { outcome, penalty } = resolveBluff(lastClaim, defenderRoll, roundState.lastAction === 'reverseVsMexican');
+    const { outcome, penalty } = resolveBluff(
+      lastClaim,
+      defenderRoll,
+      roundState.lastAction === 'reverseVsMexican'
+    );
     const liar = outcome === +1;
     const loserRole = liar ? defendingRole : myRole;
     if (liar) {
@@ -1061,7 +1103,6 @@ export default function OnlineGameV2Screen() {
 
     try {
       await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
-      setBanner(liar ? { type: 'got-em', text: "GOT 'EM!!!" } : { type: 'womp-womp', text: 'WOMP WOMP' });
     } catch (err: any) {
       if (err?.message === OUT_OF_TURN_ERROR) {
         Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
@@ -1699,17 +1740,11 @@ const styles = StyleSheet.create({
   },
   winkButton: {
     borderWidth: 2,
-    borderColor: '#1C75BC',
-    backgroundColor: 'transparent',
+    borderColor: '#C87400',
+    backgroundColor: '#FE9902',
   },
   winkButtonActive: {
-    backgroundColor: '#53A7F3',
-  },
-  rematchButton: {
     backgroundColor: '#FE9902',
-    borderColor: '#000',
-    borderWidth: 2,
-    paddingVertical: 8,
   },
   rematchWrapper: {
     flex: 1,

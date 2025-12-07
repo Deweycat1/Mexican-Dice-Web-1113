@@ -68,7 +68,11 @@ export default function StyledButton({
         ])
       }
     >
-      <Text style={[styles.label, v.label, disabled && styles.labelDisabled]}>
+      <Text
+        style={[styles.label, v.label, disabled && styles.labelDisabled]}
+        numberOfLines={1}
+        ellipsizeMode="clip"
+      >
         {label}
       </Text>
     </Pressable>
