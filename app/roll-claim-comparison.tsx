@@ -151,10 +151,7 @@ export default function RollClaimComparisonScreen() {
     if (category === 'balanced') {
       return '⚖️';
     }
-    if (category === 'over') {
-      return '🔥';
-    }
-    return '🧊';
+    return '';
   };
 
   const getCategoryLabel = (category: BluffCategory): string => {
@@ -169,16 +166,16 @@ export default function RollClaimComparisonScreen() {
   };
 
   const InsightCell: React.FC<{ kind: InsightKind }> = ({ kind }) => {
-    const config =
+    const config: { icon: React.ReactNode; label: string } =
       kind === 'balanced'
-        ? { icon: getCategoryEmoji('balanced'), label: getCategoryLabel('balanced') }
+        ? { icon: <Text>⚖️</Text>, label: getCategoryLabel('balanced') }
         : kind === 'over'
-        ? { icon: getCategoryEmoji('over'), label: getCategoryLabel('over') }
-        : { icon: getCategoryEmoji('under'), label: getCategoryLabel('under') };
+        ? { icon: <FlameEmojiIcon size={16} />, label: getCategoryLabel('over') }
+        : { icon: <IceEmojiIcon size={16} />, label: getCategoryLabel('under') };
 
     return (
       <View style={styles.insightCell}>
-        <Text style={styles.insightIcon}>{config.icon}</Text>
+        <View style={styles.insightIcon}>{config.icon}</View>
         <Text style={styles.insightText}>{config.label}</Text>
       </View>
     );
