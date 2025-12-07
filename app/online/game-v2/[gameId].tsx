@@ -619,7 +619,7 @@ export default function OnlineGameV2Screen() {
       ? 'Waiting…'
       : opponentWantsRematch
         ? 'Accept Rematch'
-        : 'Rematch?';
+        : 'Rematch';
   const showRematchButton = isGameFinished && !!myRole;
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
@@ -1394,8 +1394,34 @@ export default function OnlineGameV2Screen() {
                           ? styles.winkButtonDisabled
                           : styles.winkButtonActive,
                       ]}
-                      textStyle={styles.rematchButtonLabel}
-                    />
+                    >
+                      {opponentWantsRematch && !hasRequestedRematch ? (
+                        <View style={styles.rematchAcceptLabelContainer}>
+                          <Text
+                            style={styles.rematchAcceptLine1}
+                            numberOfLines={1}
+                            ellipsizeMode="clip"
+                          >
+                            Accept
+                          </Text>
+                          <Text
+                            style={styles.rematchAcceptLine2}
+                            numberOfLines={1}
+                            ellipsizeMode="clip"
+                          >
+                            Rematch
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text
+                          style={styles.rematchButtonText}
+                          numberOfLines={1}
+                          ellipsizeMode="clip"
+                        >
+                          {waitingForRematch || isRequestingRematch ? 'Waiting…' : 'Rematch'}
+                        </Text>
+                      )}
+                    </StyledButton>
                   </View>
                 ) : (
                   <StyledButton
@@ -1759,8 +1785,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'stretch',
   },
-  rematchButtonLabel: {
+  rematchButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  rematchAcceptLabelContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rematchAcceptLine1: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  rematchAcceptLine2: {
     fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: -2,
+    lineHeight: 14,
   },
   finishedBox: {
     marginTop: 24,

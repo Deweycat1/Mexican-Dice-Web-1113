@@ -36,6 +36,7 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   testID?: string;
+  children?: React.ReactNode;
 };
 
 export default function StyledButton({
@@ -46,6 +47,7 @@ export default function StyledButton({
   style,
   textStyle,
   testID,
+  children,
 }: Props) {
   const v = getVariant(variant);
 
@@ -71,13 +73,17 @@ export default function StyledButton({
         ])
       }
     >
-      <Text
-        style={[styles.label, v.label, disabled && styles.labelDisabled, textStyle]}
-        numberOfLines={1}
-        ellipsizeMode="clip"
-      >
-        {label}
-      </Text>
+      {typeof children !== 'undefined' ? (
+        children
+      ) : (
+        <Text
+          style={[styles.label, v.label, disabled && styles.labelDisabled, textStyle]}
+          numberOfLines={1}
+          ellipsizeMode="clip"
+        >
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }
