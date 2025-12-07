@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function FeltBackground({ children }: { children?: React.ReactNode }) {
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none', zIndex: 0 }]}>
         <Svg style={StyleSheet.absoluteFill}>
           <Defs>
@@ -17,10 +18,8 @@ export default function FeltBackground({ children }: { children?: React.ReactNod
           <Rect x="0" y="0" width="100%" height="100%" fill="url(#felt)" />
         </Svg>
       </View>
-      <View style={styles.childrenContainer}>
-        {children}
-      </View>
-    </View>
+      <View style={styles.childrenContainer}>{children}</View>
+    </GestureHandlerRootView>
   );
 }
 
