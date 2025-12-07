@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+import IceEmojiIcon from '../src/components/IceEmojiIcon';
 interface RollStatsData {
   rolls: Record<string, number>;
 }
@@ -245,7 +246,7 @@ export default function StatsScreen() {
           onPress={() => router.push('/roll-claim-comparison')}
           style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}
         >
-          <Text style={styles.menuButtonIcon}>🎲</Text>
+          <IceEmojiIcon size={48} style={styles.menuButtonIconImage} />
           <Text style={styles.menuButtonTitle}>Roll vs Claim</Text>
           <Text style={styles.menuButtonDesc}>See how honest the table really is</Text>
         </Pressable>
@@ -718,6 +719,9 @@ const styles = StyleSheet.create({
   },
   menuButtonIcon: {
     fontSize: 48,
+    marginBottom: 12,
+  },
+  menuButtonIconImage: {
     marginBottom: 12,
   },
   menuButtonTitle: {
