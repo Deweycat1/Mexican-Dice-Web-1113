@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
   mainMenuButton: {
     backgroundColor: '#C21807',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 20,
     paddingHorizontal: 28,
     alignItems: 'center',
     justifyContent: 'center',
