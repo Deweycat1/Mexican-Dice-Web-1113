@@ -36,12 +36,15 @@ import StyledButton from '../../../src/components/StyledButton';
 import { playDiceRollSound } from '../../../src/lib/diceRollSound';
 import {
   claimMatchesRoll,
+  compareClaims,
+  isAlwaysClaimable,
   isChallengeClaim,
   isLegalRaise,
+  isReverseOf,
   rankValue,
   resolveActiveChallenge,
   resolveBluff,
-  splitClaim
+  splitClaim,
 } from '../../../src/engine/mexican';
 import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
 import { ensureUserProfile, getCurrentUser } from '../../../src/lib/auth';
@@ -558,7 +561,7 @@ export default function OnlineGameV2Screen() {
       : 0;
   const WINK_LIMIT = 3;
   const winkUsesRemaining = Math.max(0, WINK_LIMIT - myWinksUsed);
-  const canToggleWink =
+  const canSendWink =
     !!myRole &&
     isMyTurn &&
     game?.status === 'in_progress' &&
@@ -599,10 +602,7 @@ export default function OnlineGameV2Screen() {
     }
     prevHistoryLengthRef.current = history.length;
   }, [roundState.history, myRole, hapticsEnabled]);
-  const winkLabelBase =
-    winkUsesRemaining > 0 ? `Send with 😉 (${winkUsesRemaining})` : 'No winks left';
-  const winkLabel =
-    winkArmed && winkUsesRemaining > 0 ? `${winkLabelBase} (Active)` : winkLabelBase;
+  const winkLabel = `Send 😉 (${winkUsesRemaining})`;
   const isGameFinished = game?.status === 'finished';
   const hostRequestedRematch = game?.rematch_requested_by_host ?? false;
   const guestRequestedRematch = game?.rematch_requested_by_guest ?? false;
@@ -1198,7 +1198,11 @@ export default function OnlineGameV2Screen() {
 
   const canClaimTruthfully =
     !!myRoll &&
-    (claimToCheck == null ? true : rankValue(myRoll) >= rankValue(claimToCheck));
+    (claimToCheck == null
+      ? true
+      : isAlwaysClaimable(myRoll) ||
+        isReverseOf(claimToCheck, myRoll) ||
+        compareClaims(myRoll, claimToCheck) >= 0);
 
   return (
     <View style={styles.root}>
@@ -1369,7 +1373,7 @@ export default function OnlineGameV2Screen() {
               </View>
               <View style={styles.bottomRow}>
                 <StyledButton
-                  label="Leave Game"
+                  label="Leave"
                   variant="ghost"
                   onPress={handleQuitGame}
                   style={[styles.btn, styles.goldOutlineButton]}
@@ -1382,7 +1386,13 @@ export default function OnlineGameV2Screen() {
                       variant="ghost"
                       onPress={handleRematchPress}
                       disabled={!myRole || hasRequestedRematch || isRequestingRematch}
-                      style={[styles.btn, styles.winkButton]}
+                      style={[
+                        styles.btn,
+                        styles.winkButton,
+                        !myRole || hasRequestedRematch || isRequestingRematch
+                          ? styles.winkButtonDisabled
+                          : styles.winkButtonActive,
+                      ]}
                     />
                     {(waitingForRematch || opponentWantsRematch) && (
                       <Text style={styles.rematchStatusText}>
@@ -1397,20 +1407,20 @@ export default function OnlineGameV2Screen() {
                     label={winkLabel}
                     variant="ghost"
                     onPress={() => {
-                      if (!canToggleWink) return;
+                      if (!canSendWink) return;
                       setWinkArmed((prev) => !prev);
                     }}
-                    disabled={!canToggleWink}
+                    disabled={!canSendWink}
                     style={[
                       styles.btn,
                       styles.winkButton,
-                      winkArmed && styles.winkButtonActive,
+                      canSendWink ? styles.winkButtonActive : styles.winkButtonDisabled,
                     ]}
                   />
                 )}
 
                 <StyledButton
-                  label="View Rules"
+                  label="Rules"
                   variant="ghost"
                   onPress={() => setRulesOpen(true)}
                   style={[styles.btn, styles.goldOutlineButton]}
@@ -1740,11 +1750,15 @@ const styles = StyleSheet.create({
   },
   winkButton: {
     borderWidth: 2,
-    borderColor: '#C87400',
-    backgroundColor: '#FE9902',
+    borderRadius: 12,
   },
   winkButtonActive: {
     backgroundColor: '#FE9902',
+    borderColor: '#C87400',
+  },
+  winkButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#30363D',
   },
   rematchWrapper: {
     flex: 1,

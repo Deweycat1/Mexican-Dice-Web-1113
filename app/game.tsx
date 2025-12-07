@@ -1033,7 +1033,7 @@ export default function Game() {
                   style={[styles.btn, styles.menuBtnBlueOutline]}
                 />
                 <StyledButton
-                  label="View Rules"
+                  label="Rules"
                   variant="ghost"
                   onPress={() => setRulesOpen(true)}
                   style={[styles.btn, styles.newGameBtn]}

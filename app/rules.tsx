@@ -33,7 +33,7 @@ export default function RulesScreen() {
             pressed && styles.menuButtonPressed,
           ])}
         >
-          <Text style={styles.menuButtonText}>Main Menu</Text>
+          <Text style={styles.menuButtonText}>Menu</Text>
         </Pressable>
       </View>
     </View>
@@ -63,12 +63,12 @@ const styles = StyleSheet.create({
     rowGap: 12,
   },
   menuButton: {
-    backgroundColor: '#C21807',
+    backgroundColor: '#53A7F3',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 30,
     borderWidth: 2,
-    borderColor: '#8B0000',
+    borderColor: '#1C75BC',
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',

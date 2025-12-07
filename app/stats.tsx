@@ -166,7 +166,7 @@ export default function StatsScreen() {
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, styles.randomStatsContainerRoot]}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Error Loading Stats</Text>
           <Text style={styles.errorText}>{error}</Text>
@@ -387,7 +387,7 @@ export default function StatsScreen() {
             ) : (
               <>
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>🎭 Honesty Rating</Text>
+                  <Text style={styles.cardTitle}>Honesty Rating</Text>
                   <Text style={styles.bigNumber}>{formatPercentage(randomStats.honestyRating)}</Text>
                   <Text style={styles.tendencyDescription}>
                     How often users tell the truth instead of bluffing
@@ -395,7 +395,7 @@ export default function StatsScreen() {
                 </View>
 
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>🎲 Most Common Roll</Text>
+                  <Text style={styles.cardTitle}>Most Common Roll</Text>
                   <Text style={styles.bigNumber}>{formatRoll(randomStats.mostCommonRoll)}</Text>
                   <Text style={styles.tendencyDescription}>
                     Users' most frequently rolled combo
@@ -403,7 +403,7 @@ export default function StatsScreen() {
                 </View>
 
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>❄️ Coldest Roll</Text>
+                  <Text style={styles.cardTitle}>Coldest Roll</Text>
                   <Text style={styles.bigNumber}>{formatRoll(randomStats.coldestRoll)}</Text>
                   <Text style={styles.tendencyDescription}>
                     The roll that almost never shows up for users
@@ -411,7 +411,7 @@ export default function StatsScreen() {
                 </View>
 
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>⏱️ Average Turn Length</Text>
+                  <Text style={styles.cardTitle}>Average Turn Length</Text>
                   <Text style={styles.bigNumber}>{formatTurnLength(randomStats.averageTurnLengthMs)}</Text>
                   <Text style={styles.tendencyDescription}>
                     How long users typically take to make a move
@@ -419,7 +419,7 @@ export default function StatsScreen() {
                 </View>
 
                 <View style={styles.card}>
-                  <Text style={styles.cardTitle}>🃏 Low-Roll Lie Rate</Text>
+                  <Text style={styles.cardTitle}>Low-Roll Lie Rate</Text>
                   <Text style={styles.bigNumber}>{formatPercentage(randomStats.lowRollLieRate)}</Text>
                   <Text style={styles.tendencyDescription}>
                     How often users bluff when they roll below a 61
@@ -524,6 +524,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20,
+  },
+  randomStatsContainerRoot: {
+    paddingTop: 50,
   },
   randomStatsContent: {
     flex: 1,

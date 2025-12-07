@@ -740,7 +740,7 @@ export default function OnlineLobbyScreen() {
 
             <Link href="/" asChild>
               <Pressable style={styles.mainMenuButton}>
-                <Text style={styles.mainMenuButtonText}>Main Menu</Text>
+                <Text style={styles.mainMenuButtonText}>Menu</Text>
               </Pressable>
             </Link>
           </View>
@@ -1002,14 +1002,14 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   mainMenuButton: {
-    backgroundColor: '#C21807',
+    backgroundColor: '#53A7F3',
     borderRadius: 12,
     paddingVertical: 20,
     paddingHorizontal: 28,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#8B0000',
+    borderColor: '#1C75BC',
     marginTop: 16,
   },
   mainMenuButtonText: {
