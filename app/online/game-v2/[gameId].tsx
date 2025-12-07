@@ -1394,14 +1394,8 @@ export default function OnlineGameV2Screen() {
                           ? styles.winkButtonDisabled
                           : styles.winkButtonActive,
                       ]}
+                      textStyle={styles.rematchButtonLabel}
                     />
-                    {(waitingForRematch || opponentWantsRematch) && (
-                      <Text style={styles.rematchStatusText}>
-                        {waitingForRematch
-                          ? 'Waiting for Infernoman to accept…'
-                          : 'Infernoman wants a rematch!'}
-                      </Text>
-                    )}
                   </View>
                 ) : (
                   <StyledButton
@@ -1765,11 +1759,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'stretch',
   },
-  rematchStatusText: {
-    marginTop: 4,
+  rematchButtonLabel: {
     fontSize: 11,
-    color: '#E6FFE6',
-    textAlign: 'center',
   },
   finishedBox: {
     marginTop: 24,

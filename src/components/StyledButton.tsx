@@ -1,11 +1,12 @@
 // src/components/StyledButton.tsx
 import React from 'react';
 import {
-    Pressable,
-    StyleProp,
-    StyleSheet,
-    Text,
-    ViewStyle,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  TextStyle,
+  ViewStyle,
 } from 'react-native';
 
 // Try to use your theme colors, but fall back if the file/path changes.
@@ -33,6 +34,7 @@ type Props = {
   variant?: Variant;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   testID?: string;
 };
 
@@ -42,6 +44,7 @@ export default function StyledButton({
   variant = 'primary',
   disabled = false,
   style,
+  textStyle,
   testID,
 }: Props) {
   const v = getVariant(variant);
@@ -69,7 +72,7 @@ export default function StyledButton({
       }
     >
       <Text
-        style={[styles.label, v.label, disabled && styles.labelDisabled]}
+        style={[styles.label, v.label, disabled && styles.labelDisabled, textStyle]}
         numberOfLines={1}
         ellipsizeMode="clip"
       >
