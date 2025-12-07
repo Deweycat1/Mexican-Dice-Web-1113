@@ -603,6 +603,7 @@ export default function OnlineGameV2Screen() {
     prevHistoryLengthRef.current = history.length;
   }, [roundState.history, myRole, hapticsEnabled]);
   const winkLabel = `Send 😉 (${winkUsesRemaining})`;
+  const showAsActive = canSendWink && winkArmed;
   const isGameFinished = game?.status === 'finished';
   const hostRequestedRematch = game?.rematch_requested_by_host ?? false;
   const guestRequestedRematch = game?.rematch_requested_by_guest ?? false;
@@ -1414,7 +1415,7 @@ export default function OnlineGameV2Screen() {
                     style={[
                       styles.btn,
                       styles.winkButton,
-                      canSendWink ? styles.winkButtonActive : styles.winkButtonDisabled,
+                      showAsActive ? styles.winkButtonActive : styles.winkButtonDisabled,
                     ]}
                   />
                 )}
