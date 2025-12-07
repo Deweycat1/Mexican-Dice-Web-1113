@@ -30,6 +30,7 @@ type RollClaimRow = {
 };
 
 type BluffCategory = 'over' | 'under' | 'balanced';
+type InsightKind = BluffCategory;
 
 export default function RollClaimComparisonScreen() {
   const router = useRouter();
@@ -150,7 +151,10 @@ export default function RollClaimComparisonScreen() {
     if (category === 'balanced') {
       return '⚖️';
     }
-    return '';
+    if (category === 'over') {
+      return '🔥';
+    }
+    return '🧊';
   };
 
   const getCategoryLabel = (category: BluffCategory): string => {
@@ -162,6 +166,22 @@ export default function RollClaimComparisonScreen() {
       case 'balanced':
         return 'Balanced';
     }
+  };
+
+  const InsightCell: React.FC<{ kind: InsightKind }> = ({ kind }) => {
+    const config =
+      kind === 'balanced'
+        ? { icon: getCategoryEmoji('balanced'), label: getCategoryLabel('balanced') }
+        : kind === 'over'
+        ? { icon: getCategoryEmoji('over'), label: getCategoryLabel('over') }
+        : { icon: getCategoryEmoji('under'), label: getCategoryLabel('under') };
+
+    return (
+      <View style={styles.insightCell}>
+        <Text style={styles.insightIcon}>{config.icon}</Text>
+        <Text style={styles.insightText}>{config.label}</Text>
+      </View>
+    );
   };
 
   if (isLoading) {
@@ -222,15 +242,6 @@ export default function RollClaimComparisonScreen() {
 
   const renderRow = ({ item }: { item: RollClaimRow }) => {
     const category = getBluffCategory(item.bluffBias);
-    const categoryLabel = getCategoryLabel(category);
-    let insightIcon: React.ReactNode = null;
-    if (category === 'over') {
-      insightIcon = <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />;
-    } else if (category === 'under') {
-      insightIcon = <IceEmojiIcon size={16} style={styles.inlineIceIcon} />;
-    } else {
-      insightIcon = <Text style={styles.insightText}>{getCategoryEmoji(category)}</Text>;
-    }
 
     return (
       <View style={styles.tableRow}>
@@ -253,11 +264,8 @@ export default function RollClaimComparisonScreen() {
         <Text style={[styles.diffCell, item.bluffBias > 0 ? styles.diffPositive : styles.diffNegative]}>
           {item.bluffBias > 0 ? '+' : ''}{item.bluffBias.toFixed(2)}%
         </Text>
-        
-        <View style={styles.insightCell}>
-          {insightIcon}
-          <Text style={styles.insightText}>{categoryLabel}</Text>
-        </View>
+
+        <InsightCell kind={category} />
       </View>
     );
   };
@@ -519,18 +527,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+  },
+  insightIcon: {
+    width: 22,
+    textAlign: 'center',
+    marginRight: 4,
   },
   insightText: {
-    fontSize: 11,
+    fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
-  },
-  inlineFlameIcon: {
-    marginRight: 4,
-  },
-  inlineIceIcon: {
-    marginRight: 4,
   },
   loadingContainer: {
     flex: 1,
