@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#1F262A',
-    paddingTop: 20,
+    paddingTop: 25,
   },
   scrollContent: {
     flexGrow: 1,
