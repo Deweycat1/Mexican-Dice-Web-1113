@@ -25,7 +25,15 @@ import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { InlineFlameText } from '../src/components/InlineFlameText';
 import RulesContent from '../src/components/RulesContent';
 import { MEXICAN_ICON } from '../src/lib/constants';
-import { isAlwaysClaimable, meetsOrBeats, rankValue, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
+import {
+  compareClaims,
+  isAlwaysClaimable,
+  isReverseOf,
+  rankValue,
+  resolveActiveChallenge,
+  resolveBluff,
+  splitClaim,
+} from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { useGameStore } from '../src/state/useGameStore';
@@ -228,7 +236,11 @@ export default function Game() {
   const canClaimTruthfully =
     hasRolled &&
     rolledValue !== null &&
-    (lastClaimValue == null ? true : rankValue(rolledValue) > rankValue(lastClaimValue));
+    (lastClaimValue == null
+      ? true
+      : isAlwaysClaimable(rolledValue) ||
+        isReverseOf(lastClaimValue, rolledValue) ||
+        compareClaims(rolledValue, lastClaimValue) >= 0);
   const shouldHighlightBluff =
     hasRolled &&
     rolledValue !== null &&

@@ -25,7 +25,15 @@ import { InlineFlameText } from '../src/components/InlineFlameText';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
 import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
-import { isAlwaysClaimable, meetsOrBeats, rankValue, resolveActiveChallenge, resolveBluff, splitClaim } from '../src/engine/mexican';
+import {
+  compareClaims,
+  isAlwaysClaimable,
+  isReverseOf,
+  rankValue,
+  resolveActiveChallenge,
+  resolveBluff,
+  splitClaim,
+} from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
 import { MEXICAN_ICON } from '../src/lib/constants';
@@ -816,7 +824,11 @@ export default function Survival() {
   const canClaimTruthfully =
     hasRolled &&
     rolledValue !== null &&
-    (lastClaimValue == null ? true : rankValue(rolledValue) > rankValue(lastClaimValue));
+    (lastClaimValue == null
+      ? true
+      : isAlwaysClaimable(rolledValue) ||
+        isReverseOf(lastClaimValue, rolledValue) ||
+        compareClaims(rolledValue, lastClaimValue) >= 0);
   const shouldHighlightBluff =
     hasRolled &&
     rolledValue !== null &&

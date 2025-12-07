@@ -51,7 +51,7 @@ import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStat
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  if (value === 21) return '21 (Mexican)';
+  if (value === 21) return '21 (Inferno)';
   if (value === 31) return '31 (Reverse)';
   if (value === 41) return '41 (Social)';
   const [hi, lo] = splitClaim(value);
@@ -702,7 +702,8 @@ export default function OnlineGameV2Screen() {
     const defenderRole = caller === 'host' ? 'guest' : 'host';
     if (defenderRole !== myRole) return;
     if (game?.status !== 'in_progress') return;
-    setBanner(defenderTruth ? { type: 'got-em', text: "GOT 'EM!!!" } : { type: 'womp-womp', text: 'WOMP WOMP' });
+    const liar = !defenderTruth;
+    setBanner(liar ? { type: 'got-em', text: "GOT 'EM!!!" } : { type: 'womp-womp', text: 'WOMP WOMP' });
   }, [roundState.bluffResultNonce, roundState.lastBluffCaller, roundState.lastBluffDefenderTruth, myRole, game?.status]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -849,7 +850,7 @@ export default function OnlineGameV2Screen() {
       const prev = lastClaim;
       const activeChallenge = resolveActiveChallenge(roundState.baselineClaim, prev);
       if (activeChallenge === 21 && claim !== 21 && claim !== 31 && claim !== 41) {
-        Alert.alert('Invalid claim', 'After Mexican (21), only 21, 31, or 41 are legal.');
+        Alert.alert('Invalid claim', 'After an Inferno roll (21), only 21, 31, or 41 are legal.');
         return;
       }
       const baseline = activeChallenge;
@@ -1156,7 +1157,7 @@ export default function OnlineGameV2Screen() {
 
   const canClaimTruthfully =
     !!myRoll &&
-    (claimToCheck == null ? true : rankValue(myRoll) > rankValue(claimToCheck));
+    (claimToCheck == null ? true : rankValue(myRoll) >= rankValue(claimToCheck));
 
   return (
     <View style={styles.root}>
@@ -1334,13 +1335,13 @@ export default function OnlineGameV2Screen() {
                 />
 
                 {showRematchButton ? (
-                  <View style={[styles.btn, styles.rematchWrapper]}>
+                  <View style={styles.rematchWrapper}>
                     <StyledButton
                       label={rematchButtonLabel}
                       variant="ghost"
                       onPress={handleRematchPress}
                       disabled={!myRole || hasRequestedRematch || isRequestingRematch}
-                      style={[styles.winkButton, styles.rematchButton]}
+                      style={[styles.btn, styles.winkButton]}
                     />
                     {(waitingForRematch || opponentWantsRematch) && (
                       <Text style={styles.rematchStatusText}>
@@ -1617,9 +1618,9 @@ const styles = StyleSheet.create({
     width: '70%',
     minHeight: 72,
     backgroundColor: '#3C4045',
-    borderColor: '#30363D',
-    borderWidth: 1,
-    borderRadius: 8,
+    borderColor: '#000',
+    borderWidth: 2,
+    borderRadius: 6,
     padding: 10,
     marginTop: 12,
     marginBottom: 10,
@@ -1628,7 +1629,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   historyText: {
-    color: '#8B949E',
+    color: '#E6FFE6',
     textAlign: 'center',
     fontSize: 13,
     marginVertical: 2,
@@ -1747,7 +1748,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1a4d2e',
+    backgroundColor: '#3C4045',
     borderRadius: 12,
     padding: 20,
     maxHeight: '70%',
@@ -1809,7 +1810,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rulesContent: {
-    backgroundColor: '#1a4d2e',
+    backgroundColor: '#3C4045',
     borderRadius: 12,
     padding: 20,
     width: '85%',
