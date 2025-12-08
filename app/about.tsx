@@ -1,16 +1,11 @@
 import { Link } from 'expo-router';
 import React from 'react';
-import {
-  Image,
-  Linking,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Image, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';
+import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+import IceEmojiIcon from '../src/components/IceEmojiIcon';
 
 export default function AboutScreen() {
   return (
@@ -43,9 +38,9 @@ export default function AboutScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>What Is InfernoDice?</Text>
             <Text style={styles.sectionBody}>
-              InfernoDice is a fast‑paced bluffing dice game where every roll could spark a comeback
-              or burn your last point. Claim your roll honestly—or bluff your way to victory. Your
-              friends just have to decide: do they believe you?
+              InfernoDice is a fast...paced bluffing dice game where every roll could spark a
+              comeback or burn your last point. Claim your roll honestly...or bluff your way to
+              victory. Your friends just have to decide: do they believe you?
             </Text>
             <Text style={styles.sectionBody}>
               Built for quick sessions and long streaks alike, InfernoDice turns simple dice into a
@@ -53,15 +48,13 @@ export default function AboutScreen() {
             </Text>
 
             <View style={styles.bulletList}>
-              <Text style={styles.bulletItem}>
-                • Bold bluffing and call‑out moments every round.
-              </Text>
+              <Text style={styles.bulletItem}>• Bold bluffing and call...out moments every round.</Text>
               <Text style={styles.bulletItem}>
                 • Special rolls like 21 (Inferno), 31 (Reverse), and 41 (Social) that flip the
                 table.
               </Text>
               <Text style={styles.bulletItem}>
-                • Multiple ways to play: quick single‑player, Survival streaks, and online matches.
+                • Multiple ways to play: quick single...player, Survival streaks, and online matches.
               </Text>
             </View>
           </View>
@@ -71,7 +64,7 @@ export default function AboutScreen() {
             <Text style={styles.sectionTitle}>Key Features</Text>
             <View style={styles.featureGrid}>
               <View style={styles.featureCard}>
-                <Text style={styles.featureIcon}>🔥</Text>
+                <FlameEmojiIcon size={28} style={styles.featureIconImage} />
                 <Text style={styles.featureTitle}>Inferno Mode</Text>
                 <Text style={styles.featureBody}>
                   Push your streak as far as you can in Survival while every mistake burns a point.
@@ -79,8 +72,8 @@ export default function AboutScreen() {
               </View>
 
               <View style={styles.featureCard}>
-                <Text style={styles.featureIcon}>🧊</Text>
-                <Text style={styles.featureTitle}>Ice‑Cool Strategy</Text>
+                <IceEmojiIcon size={28} style={styles.featureIconImage} />
+                <Text style={styles.featureTitle}>Ice...Cool Strategy</Text>
                 <Text style={styles.featureBody}>
                   Bluff, call, and read patterns in your opponents’ claims to stay one step ahead.
                 </Text>
@@ -121,7 +114,7 @@ export default function AboutScreen() {
                 <Text style={styles.stepNumber}>2</Text>
                 <Text style={styles.stepTitle}>Make your claim</Text>
                 <Text style={styles.stepBody}>
-                  Tell the truth or bluff a higher value—your opponent only sees what you say.
+                  Tell the truth or bluff a higher value...your opponent only sees what you say.
                 </Text>
               </View>
               <View style={styles.stepCard}>
@@ -299,6 +292,9 @@ const styles = StyleSheet.create({
     fontSize: 22,
     marginBottom: 4,
   },
+  featureIconImage: {
+    marginBottom: 4,
+  },
   featureTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -363,4 +359,3 @@ const styles = StyleSheet.create({
     color: '#C9D1D9',
   },
 });
-
