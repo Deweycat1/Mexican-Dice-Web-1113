@@ -217,6 +217,8 @@ export default function Survival() {
   const setHapticsEnabled = useSettingsStore((state) => state.setHapticsEnabled);
   const setMusicEnabled = useSettingsStore((state) => state.setMusicEnabled);
   const setSfxEnabled = useSettingsStore((state) => state.setSfxEnabled);
+  const hasSeenSurvivalIntro = useSettingsStore((state) => state.hasSeenSurvivalIntro);
+  const setHasSeenSurvivalIntro = useSettingsStore((state) => state.setHasSeenSurvivalIntro);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [rollingAnim, setRollingAnim] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -236,6 +238,7 @@ export default function Survival() {
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [introVisible, setIntroVisible] = useState(false);
 
   // Milestone tracking state
   const [hasShown5, setHasShown5] = useState(false);
@@ -276,6 +279,12 @@ export default function Survival() {
   const vortexPulseAnim = useRef(new Animated.Value(0)).current;
   const bluffResultNonceRef = useRef(0);
   const bluffResultInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isFocused) return;
+    if (hasSeenSurvivalIntro) return;
+    setIntroVisible(true);
+  }, [isFocused, hasSeenSurvivalIntro]);
 
   const startPlusOneFlash = useCallback((increment: number) => {
     if (plusOneFlashTimerRef.current) {
@@ -1566,6 +1575,56 @@ export default function Survival() {
                     ios_backgroundColor="#4A4E54"
                   />
                 </View>
+              </View>
+            </View>
+          </Modal>
+
+          <Modal
+            visible={introVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => {
+              setIntroVisible(false);
+              void setHasSeenSurvivalIntro(true);
+            }}
+          >
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={() => {
+                setIntroVisible(false);
+                void setHasSeenSurvivalIntro(true);
+              }}
+            />
+            <View style={styles.modalCenter}>
+              <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Inferno Survival</Text>
+                  <Pressable
+                    onPress={() => {
+                      setIntroVisible(false);
+                      void setHasSeenSurvivalIntro(true);
+                    }}
+                    style={styles.closeButton}
+                  >
+                    <Text style={styles.closeButtonText}>✕</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.modalBody}>
+                  <Text style={styles.modalMessage}>
+                    How long can you survive in the inferno without losing a point??
+                  </Text>
+                </View>
+
+                <StyledButton
+                  label="Let’s Find Out"
+                  variant="success"
+                  onPress={() => {
+                    setIntroVisible(false);
+                    void setHasSeenSurvivalIntro(true);
+                  }}
+                  style={[styles.btn, styles.menuActionButtonSuccess]}
+                />
               </View>
             </View>
           </Modal>

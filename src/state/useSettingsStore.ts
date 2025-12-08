@@ -7,20 +7,24 @@ const DEFAULT_SETTINGS = {
   hapticsEnabled: true,
   musicEnabled: false,
   sfxEnabled: false,
+  hasSeenSurvivalIntro: false,
 } as const;
 
 type SettingsSnapshot = {
   hapticsEnabled: boolean;
   musicEnabled: boolean;
   sfxEnabled: boolean;
+  hasSeenSurvivalIntro: boolean;
 };
 
 type SettingsState = SettingsSnapshot & {
+  hasSeenSurvivalIntro: boolean;
   hasHydrated: boolean;
   hydrate: () => Promise<void>;
   setHapticsEnabled: (value: boolean) => Promise<void>;
   setMusicEnabled: (value: boolean) => Promise<void>;
   setSfxEnabled: (value: boolean) => Promise<void>;
+  setHasSeenSurvivalIntro: (seen: boolean) => Promise<void>;
 };
 
 export const useSettingsStore = create<SettingsState>((set, get) => {
@@ -30,6 +34,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
         hapticsEnabled: partial.hapticsEnabled ?? get().hapticsEnabled ?? DEFAULT_SETTINGS.hapticsEnabled,
         musicEnabled: partial.musicEnabled ?? get().musicEnabled ?? DEFAULT_SETTINGS.musicEnabled,
         sfxEnabled: partial.sfxEnabled ?? get().sfxEnabled ?? DEFAULT_SETTINGS.sfxEnabled,
+        hasSeenSurvivalIntro:
+          partial.hasSeenSurvivalIntro ??
+          get().hasSeenSurvivalIntro ??
+          DEFAULT_SETTINGS.hasSeenSurvivalIntro,
       };
       await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
     } catch {
@@ -60,6 +68,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
               typeof parsed.sfxEnabled === 'boolean'
                 ? parsed.sfxEnabled
                 : DEFAULT_SETTINGS.sfxEnabled,
+            hasSeenSurvivalIntro:
+              typeof parsed.hasSeenSurvivalIntro === 'boolean'
+                ? parsed.hasSeenSurvivalIntro
+                : DEFAULT_SETTINGS.hasSeenSurvivalIntro,
           }));
         } else {
           set((state) => ({
@@ -84,6 +96,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => {
     setSfxEnabled: async (value: boolean) => {
       set({ sfxEnabled: value });
       await persist({ sfxEnabled: value });
+    },
+    setHasSeenSurvivalIntro: async (seen: boolean) => {
+      set({ hasSeenSurvivalIntro: seen });
+      await persist({ hasSeenSurvivalIntro: seen });
     },
   };
 });
