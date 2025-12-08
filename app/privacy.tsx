@@ -120,14 +120,33 @@ export default function PrivacyPolicyScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) =>
-            StyleSheet.flatten([styles.menuButton, pressed && styles.menuButtonPressed])
-          }
-        >
-          <Text style={styles.menuButtonText}>Back</Text>
-        </Pressable>
+        <View style={styles.footerButtonsRow}>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) =>
+              StyleSheet.flatten([
+                styles.menuButton,
+                styles.footerButtonInline,
+                pressed && styles.menuButtonPressed,
+              ])
+            }
+          >
+            <Text style={styles.menuButtonText}>Back</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push('/support')}
+            style={({ pressed }) =>
+              StyleSheet.flatten([
+                styles.menuButton,
+                styles.footerButtonInline,
+                pressed && styles.menuButtonPressed,
+              ])
+            }
+          >
+            <Text style={styles.menuButtonText}>Support</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -186,6 +205,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 24,
   },
+  footerButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   menuButton: {
     backgroundColor: '#53A7F3',
     borderRadius: 12,
@@ -198,6 +222,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     // @ts-ignore - boxShadow is web-only
     boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
+  },
+  footerButtonInline: {
+    marginHorizontal: 8,
+    alignSelf: 'auto',
   },
   menuButtonPressed: {
     opacity: 0.85,
