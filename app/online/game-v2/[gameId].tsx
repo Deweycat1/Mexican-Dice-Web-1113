@@ -1248,17 +1248,21 @@ export default function OnlineGameV2Screen() {
 
             {banner && (
               // NOTE: bannerContainer is a full-width overlay; the inner banner view is
-              // constrained so we don't briefly see a full-width solid block during updates.
-              <Animated.View pointerEvents="none" style={[styles.bannerContainer, banner.type === 'wink' && glowStyle]}>
+              // constrained so we don't briefly see a full-width block during updates.
+              // Wink glow is applied only to the compact wink banner, not the full overlay,
+              // to avoid a large rectangular flash when the glow animates.
+              <Animated.View pointerEvents="none" style={styles.bannerContainer}>
                 {banner.type === 'wink' ? (
-                  <LinearGradient
-                    colors={['#FE9902', '#FE9902']}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={styles.winkBanner}
-                  >
-                    <Text style={styles.winkText}>{banner.text}</Text>
-                  </LinearGradient>
+                  <Animated.View style={glowStyle}>
+                    <LinearGradient
+                      colors={['#FE9902', '#FE9902']}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={styles.winkBanner}
+                    >
+                      <Text style={styles.winkText}>{banner.text}</Text>
+                    </LinearGradient>
+                  </Animated.View>
                 ) : (
                   <View
                     style={[
@@ -1788,7 +1792,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   rematchButtonText: {
-    fontSize: 13, // ~20% smaller than default 16
+    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -1797,13 +1801,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rematchAcceptLine1: {
-    fontSize: 13, // match 20% smaller size
+    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
     lineHeight: 18,
   },
   rematchAcceptLine2: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
     marginTop: -2,
