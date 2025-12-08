@@ -734,7 +734,7 @@ export default function OnlineGameV2Screen() {
         // I was truthful and they were wrong
         setBanner({
           type: 'got-em',
-          text: "You were right to stand firm.",
+          text: "GOT 'EM!!!",
         });
       }
     }
@@ -1247,17 +1247,9 @@ export default function OnlineGameV2Screen() {
             </View>
 
             {banner && (
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  styles.bannerContainer,
-                  styles.banner,
-                  banner.type === 'got-em' && styles.bannerSuccess,
-                  banner.type === 'womp-womp' && styles.bannerFail,
-                  banner.type === 'social' && styles.bannerSocial,
-                  banner.type === 'wink' && glowStyle,
-                ]}
-              >
+              // NOTE: bannerContainer is a full-width overlay; the inner banner view is
+              // constrained so we don't briefly see a full-width solid block during updates.
+              <Animated.View pointerEvents="none" style={[styles.bannerContainer, banner.type === 'wink' && glowStyle]}>
                 {banner.type === 'wink' ? (
                   <LinearGradient
                     colors={['#FE9902', '#FE9902']}
@@ -1268,7 +1260,16 @@ export default function OnlineGameV2Screen() {
                     <Text style={styles.winkText}>{banner.text}</Text>
                   </LinearGradient>
                 ) : (
-                  <Text style={styles.bannerText}>{banner.text}</Text>
+                  <View
+                    style={[
+                      styles.banner,
+                      banner.type === 'got-em' && styles.bannerSuccess,
+                      banner.type === 'womp-womp' && styles.bannerFail,
+                      banner.type === 'social' && styles.bannerSocial,
+                    ]}
+                  >
+                    <Text style={styles.bannerText}>{banner.text}</Text>
+                  </View>
                 )}
               </Animated.View>
             )}
@@ -1644,6 +1645,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     alignItems: 'center',
     borderWidth: 1,
+    maxWidth: '80%',
   },
   bannerText: {
     color: '#F0F6FC',
