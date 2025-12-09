@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -363,6 +364,9 @@ export default function RollClaimComparisonScreen() {
   );
 }
 
+const androidScale = (size: number) =>
+  Platform.OS === 'android' ? size * 0.75 : size;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -382,18 +386,18 @@ const styles = StyleSheet.create({
   },
   backButtonTopText: {
     color: '#53A7F3',
-    fontSize: 16,
+    fontSize: androidScale(16),
     fontWeight: '600',
   },
   title: {
-    fontSize: 28,
+    fontSize: androidScale(28),
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: androidScale(14),
     color: 'rgba(255, 255, 255, 0.7)',
     textAlign: 'center',
     marginBottom: 24,
@@ -418,7 +422,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   highlightIcon: {
-    fontSize: 32,
+    fontSize: androidScale(32),
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -437,19 +441,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   highlightValue: {
-    fontSize: 24,
+    fontSize: androidScale(24),
     fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 4,
     textAlign: 'center',
   },
   highlightLabel: {
-    fontSize: 12,
+    fontSize: androidScale(12),
     color: '#8B949E',
     textAlign: 'center',
   },
   highlightDetail: {
-    fontSize: 11,
+    fontSize: androidScale(11),
     color: '#8B949E',
     textAlign: 'center',
     marginTop: 4,
@@ -471,7 +475,7 @@ const styles = StyleSheet.create({
   },
   headerCell: {
     flex: 1,
-    fontSize: 12,
+    fontSize: androidScale(12),
     fontWeight: '700',
     color: '#FE9902',
     textAlign: 'center',
@@ -488,7 +492,7 @@ const styles = StyleSheet.create({
   },
   rollCell: {
     flex: 1,
-    fontSize: 13,
+    fontSize: androidScale(13),
     fontWeight: '600',
     color: '#FFFFFF',
     textAlign: 'center',
@@ -498,7 +502,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cellText: {
-    fontSize: 12,
+    fontSize: androidScale(12),
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
     marginBottom: 4,
@@ -522,7 +526,7 @@ const styles = StyleSheet.create({
   },
   diffCell: {
     flex: 1,
-    fontSize: 13,
+    fontSize: androidScale(13),
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -545,7 +549,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   insightText: {
-    fontSize: 12,
+    fontSize: androidScale(12),
     color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'left',
   },
@@ -556,7 +560,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
+    fontSize: androidScale(16),
     color: '#F0F6FC',
   },
   errorContainer: {
@@ -566,13 +570,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   errorTitle: {
-    fontSize: 20,
+    fontSize: androidScale(20),
     fontWeight: '700',
     color: '#FF6B6B',
     marginBottom: 12,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: androidScale(14),
     color: '#8B949E',
     textAlign: 'center',
     marginBottom: 24,
@@ -591,7 +595,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#F0F6FC',
-    fontSize: 16,
+    fontSize: androidScale(16),
     fontWeight: '600',
   },
   backButton: {
@@ -606,11 +610,11 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: androidScale(16),
     fontWeight: '600',
   },
   noDataText: {
-    fontSize: 14,
+    fontSize: androidScale(14),
     color: '#8B949E',
     textAlign: 'center',
     paddingVertical: 20,
@@ -629,7 +633,7 @@ const styles = StyleSheet.create({
   },
   bottomMenuButtonText: {
     color: '#F0F6FC',
-    fontSize: 16,
+    fontSize: androidScale(16),
     fontWeight: '700',
   },
 });
