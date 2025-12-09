@@ -728,6 +728,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   menuButtonIconImage: {
+    width: 48,
+    height: 48,
+    resizeMode: 'contain',
     marginBottom: 12,
   },
   menuButtonTitle: {

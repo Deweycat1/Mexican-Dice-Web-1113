@@ -5,6 +5,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 're
 import {
   Animated,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -1798,7 +1799,12 @@ const styles = StyleSheet.create({
   subtle: {
     color: '#FE9902',
     fontWeight: '800',
-    fontSize: 18,
+    fontSize: Platform.select({
+      ios: 18,
+      web: 18,
+      android: 14,
+      default: 18,
+    }),
     marginBottom: 6,
     textAlign: 'center',
   },

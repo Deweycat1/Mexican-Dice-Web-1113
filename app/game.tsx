@@ -1,16 +1,17 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    View,
-    useWindowDimensions,
+  Animated,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -1298,7 +1299,12 @@ const styles = StyleSheet.create({
   },
   claimHeaderLine: {
     color: '#FE9902',
-    fontSize: 18,
+    fontSize: Platform.select({
+      ios: 18,
+      web: 18,
+      android: 14,
+      default: 18,
+    }),
     fontWeight: '800',
     textAlign: 'center',
     marginVertical: 2,

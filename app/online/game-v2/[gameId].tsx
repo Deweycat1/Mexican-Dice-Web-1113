@@ -1630,7 +1630,12 @@ const styles = StyleSheet.create({
   },
   claimText: {
     color: '#FE9902',
-    fontSize: 18,
+    fontSize: Platform.select({
+      ios: 18,
+      web: 18,
+      android: 14,
+      default: 18,
+    }),
     fontWeight: '800',
     textAlign: 'center',
     marginBottom: 6,
