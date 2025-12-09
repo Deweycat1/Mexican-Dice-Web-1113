@@ -802,6 +802,7 @@ export default function Survival() {
 
   const narration = (buildBanner?.() || message || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
+  const hasClaim = lastClaimValue != null;
 
   const buildFlameCelebrationTitle = (text: string, color: string) => (
     <View style={styles.celebrationTitleRow}>
@@ -1392,9 +1393,13 @@ export default function Survival() {
                 <StyledButton
                   label="Call Bluff"
                   variant="primary"
-                  onPress={handleCallBluff}
-                  style={[styles.btn, styles.menuActionButton]}
-                  disabled={controlsDisabled || hasRolled}
+                  onPress={hasClaim ? handleCallBluff : undefined}
+                  style={[
+                    styles.btn,
+                    styles.menuActionButton,
+                    !hasClaim && { opacity: 0.4 },
+                  ]}
+                  disabled={controlsDisabled || hasRolled || !hasClaim}
                 />
               </View>
 

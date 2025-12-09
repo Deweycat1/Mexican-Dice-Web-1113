@@ -251,6 +251,7 @@ export default function Game() {
       : isAlwaysClaimable(rolledValue) ||
         isReverseOf(lastClaimValue, rolledValue) ||
         compareClaims(rolledValue, lastClaimValue) >= 0);
+  const hasClaim = lastClaimValue != null;
   const shouldHighlightBluff =
     hasRolled &&
     rolledValue !== null &&
@@ -1003,9 +1004,13 @@ export default function Game() {
                 <StyledButton
                   label="Call Bluff"
                   variant="primary"
-                  onPress={handleCallBluff}
-                  style={[styles.btn, styles.menuActionButton]}
-                  disabled={controlsDisabled || hasRolled}
+                  onPress={hasClaim ? handleCallBluff : undefined}
+                  style={[
+                    styles.btn,
+                    styles.menuActionButton,
+                    !hasClaim && { opacity: 0.4 },
+                  ]}
+                  disabled={controlsDisabled || hasRolled || !hasClaim}
                 />
               </View>
 

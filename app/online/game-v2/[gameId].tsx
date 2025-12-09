@@ -480,6 +480,13 @@ export default function OnlineGameV2Screen() {
   const opponentScore = myRole === 'host' ? game?.guest_score ?? 0 : game?.host_score ?? 0;
   const claimToCheck = resolveActiveChallenge(roundState.baselineClaim, lastClaim);
   const [dieHi, dieLo] = facesFromRoll(myRoll);
+  const canClaimTruthfully =
+    !!myRoll &&
+    (claimToCheck == null
+      ? true
+      : isAlwaysClaimable(myRoll) ||
+        isReverseOf(claimToCheck, myRoll) ||
+        compareClaims(myRoll, claimToCheck) >= 0);
 
   useEffect(() => {
     console.log('[ONLINE GAME] current claim derived', {
@@ -789,10 +796,7 @@ export default function OnlineGameV2Screen() {
     return getOnlineClaimOptions(baseline, myRoll);
   }, [claimToCheck, myRoll]);
   const shouldHighlightBluff =
-    isMyTurn &&
-    myRoll != null &&
-    claimToCheck != null &&
-    rankValue(myRoll) <= rankValue(claimToCheck);
+    isMyTurn && myRoll != null && claimToCheck != null && !canClaimTruthfully;
 
   const handleUpdate = useCallback(
     async (
@@ -1195,15 +1199,8 @@ export default function OnlineGameV2Screen() {
   const canRoll = isMyTurn && game.status === 'in_progress' && myRoll == null;
   const canClaim = isMyTurn && myRoll != null;
   const canShowSocial = canClaim && myRoll === 41;
+  const hasClaim = lastClaim != null;
   const canCallBluff = isMyTurn && lastClaim != null && roundState.lastClaimer && roundState.lastClaimer !== myRole;
-
-  const canClaimTruthfully =
-    !!myRoll &&
-    (claimToCheck == null
-      ? true
-      : isAlwaysClaimable(myRoll) ||
-        isReverseOf(claimToCheck, myRoll) ||
-        compareClaims(myRoll, claimToCheck) >= 0);
 
   return (
     <View style={styles.root}>
@@ -1363,9 +1360,13 @@ export default function OnlineGameV2Screen() {
                 <StyledButton
                   label="Call Bluff"
                   variant="primary"
-                  onPress={handleCallBluff}
-                  disabled={!canCallBluff || myRoll !== null || isRevealAnimating}
-                  style={[styles.btn, styles.menuActionButton]}
+                  onPress={hasClaim ? handleCallBluff : undefined}
+                  disabled={!hasClaim || !canCallBluff || myRoll !== null || isRevealAnimating}
+                  style={[
+                    styles.btn,
+                    styles.menuActionButton,
+                    !hasClaim && { opacity: 0.4 },
+                  ]}
                 />
               </View>
               <View style={styles.bottomRow}>
