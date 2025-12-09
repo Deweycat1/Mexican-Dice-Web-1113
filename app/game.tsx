@@ -1248,9 +1248,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    borderWidth: 2,
-    borderColor: '#B26B01',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
@@ -1294,6 +1291,10 @@ const styles = StyleSheet.create({
   },
   claimHeaderContainer: {
     alignItems: 'center',
+    marginTop: Platform.select({
+      android: 15,
+      default: 0,
+    }),
     paddingTop: 50,
     marginBottom: 8,
   },
