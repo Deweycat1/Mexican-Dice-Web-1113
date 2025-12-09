@@ -1,16 +1,17 @@
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Animated,
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    View,
-    useWindowDimensions,
+  Animated,
+  Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -39,6 +40,7 @@ import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/li
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
+import { androidTextTight } from '../src/styles/text';
 
 // ---------- helpers ----------
 function formatClaimDetailed(value: number | null | undefined): string {
@@ -227,6 +229,7 @@ export default function Game() {
 
   const isGameOver = gameOver !== null;
   const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock;
+  const hasActiveClaim = lastClaimValue != null && !isGameOver;
   const showCpuThinking = turn !== 'player' && !isGameOver;
   const lastPlayerClaim = useMemo(() => {
     if (!claims || claims.length === 0) return null;
@@ -585,7 +588,7 @@ export default function Game() {
   }
 
   function handleCallBluff() {
-    if (controlsDisabled) return;
+    if (controlsDisabled || !hasActiveClaim) return;
     console.log("BLUFF: Player called Rival's bluff", { lastClaim, lastCpuRoll, lastAction });
 
     let rivalToldTruth: boolean | null = null;
@@ -734,17 +737,25 @@ export default function Game() {
                 endBannerType === 'win' ? styles.endBannerWin : styles.endBannerLose,
               ]}
             >
-              <Text style={[
-                styles.endBannerTitle,
-                endBannerType === 'win' ? styles.endBannerTitleWin : styles.endBannerTitleLose
-              ]}>
+              <Text
+                style={[
+                  styles.endBannerTitle,
+                  endBannerType === 'win' ? styles.endBannerTitleWin : styles.endBannerTitleLose,
+                  androidTextTight,
+                ]}
+              >
                 {endBannerType === 'win' ? 'You win' : 'You lose'}
               </Text>
               {!!endBannerLine && (
-                <Text style={[
-                  styles.endBannerSubtitle,
-                  endBannerType === 'win' ? styles.endBannerSubtitleWin : styles.endBannerSubtitleLose
-                ]}>
+                <Text
+                  style={[
+                    styles.endBannerSubtitle,
+                    endBannerType === 'win'
+                      ? styles.endBannerSubtitleWin
+                      : styles.endBannerSubtitleLose,
+                    androidTextTight,
+                  ]}
+                >
                   {endBannerLine}
                 </Text>
               )}
@@ -770,7 +781,7 @@ export default function Game() {
                   currentBluffBannerStyle,
                 ]}
               >
-                <Text style={styles.gotEmBannerText}>
+                <Text style={[styles.gotEmBannerText, androidTextTight]}>
                   {currentBluffBannerText}
                 </Text>
               </View>
@@ -831,8 +842,8 @@ export default function Game() {
                   ]}
                 >
                   <View style={styles.claimHeaderContainer}>
-                    <Text style={styles.claimHeaderLine}>
-                      Current claim: {formatClaimSimple(lastClaim)}
+                    <Text style={[styles.claimHeaderLine, androidTextTight]}>
+                      {`Current claim: ${formatClaimSimple(lastClaim)}`}
                     </Text>
                     <Text style={styles.claimHeaderLine}>
                       Your roll: {formatRollSimple(lastPlayerRoll)}
@@ -871,7 +882,7 @@ export default function Game() {
               <View style={[styles.narrationContainer, layoutTweaks.narrationHeight]}>
                 <InlineFlameText
                   text={narration || 'Ready to roll.'}
-                  style={[styles.status, isSmallScreen && styles.statusSmall]}
+                  style={[styles.status, isSmallScreen && styles.statusSmall, androidTextTight]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
                   iconSize={18}
@@ -1005,7 +1016,7 @@ export default function Game() {
                   variant="primary"
                   onPress={handleCallBluff}
                   style={[styles.btn, styles.menuActionButton]}
-                  disabled={controlsDisabled || hasRolled}
+                  disabled={controlsDisabled || !hasActiveClaim || hasRolled}
                 />
               </View>
 
@@ -1068,7 +1079,7 @@ export default function Game() {
             <View style={styles.modalCenter}>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Last 10 events</Text>
+                  <Text style={[styles.modalTitle, androidTextTight]}>Last 10 events</Text>
                   <Pressable
                     onPress={() => setHistoryModalOpen(false)}
                     style={({ pressed }) => [
@@ -1085,7 +1096,11 @@ export default function Game() {
                       if (h.type === 'event') {
                         return (
                           <View key={i} style={styles.historyItem}>
-                            <InlineFlameText text={h.text} style={styles.historyItemText} iconSize={16} />
+                            <InlineFlameText
+                              text={h.text}
+                              style={[styles.historyItemText, androidTextTight]}
+                              iconSize={16}
+                            />
                           </View>
                         );
                       }
@@ -1097,7 +1112,7 @@ export default function Game() {
                         <View key={i} style={styles.historyItem}>
                           <InlineFlameText
                             text={`${actor} ${verb} ${claimText}`}
-                            style={styles.historyItemText}
+                            style={[styles.historyItemText, androidTextTight]}
                             iconSize={18}
                           />
                         </View>
@@ -1150,7 +1165,7 @@ export default function Game() {
                 </View>
 
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Vibration</Text>
+                    <Text style={[styles.settingsLabel, androidTextTight]}>Vibration</Text>
                   <Switch
                     value={hapticsEnabled}
                     onValueChange={(value) => {
@@ -1163,7 +1178,7 @@ export default function Game() {
                 </View>
 
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Music</Text>
+                  <Text style={[styles.settingsLabel, androidTextTight]}>Music</Text>
                   <Switch
                     value={musicEnabled}
                     onValueChange={(value) => {
@@ -1176,7 +1191,7 @@ export default function Game() {
                 </View>
 
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Sound Effects</Text>
+                  <Text style={[styles.settingsLabel, androidTextTight]}>Sound Effects</Text>
                   <Switch
                     value={sfxEnabled}
                     onValueChange={(value) => {
@@ -1210,22 +1225,46 @@ const BAR_BG = '#2A2D31';
 const HEADER_MIN_HEIGHT = 220; // Enough space for claim text plus two narration lines
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#1B1D1F' },
-  safe: { flex: 1 },
+  root: Platform.select({
+    ios: {
+      flex: 1,
+      backgroundColor: '#1B1D1F',
+    },
+    android: {
+      flex: 1,
+      backgroundColor: '#1B1D1F',
+    },
+  }),
+  safe: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? 24 : 0,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 18,
     paddingBottom: 20,
   },
-  headerCard: {
-    position: 'relative',
-    backgroundColor: '#2A2D31',
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 8,
-    minHeight: HEADER_MIN_HEIGHT,
-    justifyContent: 'space-between',
-  },
+  headerCard: Platform.select({
+    ios: {
+      position: 'relative',
+      backgroundColor: '#2A2D31',
+      borderRadius: 14,
+      padding: 14,
+      marginTop: 8,
+      minHeight: HEADER_MIN_HEIGHT,
+      justifyContent: 'space-between',
+    },
+    android: {
+      position: 'relative',
+      backgroundColor: '#2A2D31',
+      borderRadius: 14,
+      padding: 14,
+      marginTop: 8,
+      minHeight: HEADER_MIN_HEIGHT,
+      justifyContent: 'space-between',
+      elevation: 6,
+    },
+  }),
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1291,13 +1330,24 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     marginBottom: 8,
   },
-  claimHeaderLine: {
-    color: '#FE9902',
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginVertical: 2,
-  },
+  claimHeaderLine: Platform.select({
+    ios: {
+      color: '#FE9902',
+      fontSize: 18,
+      fontWeight: '800',
+      textAlign: 'center',
+      marginVertical: 2,
+    },
+    android: {
+      color: '#FE9902',
+      fontSize: 18,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginVertical: 2,
+      lineHeight: 22,
+      includeFontPadding: false,
+    },
+  }),
   title: {
     color: '#fff',
     fontWeight: '800',
@@ -1340,13 +1390,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  controls: {
-    backgroundColor: BAR_BG,
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    marginTop: -DIE_SIZE * 1.5,
-  },
+  controls: Platform.select({
+    ios: {
+      backgroundColor: BAR_BG,
+      borderRadius: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      marginTop: -DIE_SIZE * 1.5,
+    },
+    android: {
+      backgroundColor: BAR_BG,
+      borderRadius: 16,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      marginTop: -DIE_SIZE * 1.5,
+      elevation: 8,
+    },
+  }),
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1407,21 +1467,39 @@ const styles = StyleSheet.create({
     color: '#1B1D1F',
     fontWeight: '800',
   },
-  historyBox: {
-    alignSelf: 'center',
-    width: '70%',
-    minHeight: 72,
-    backgroundColor: '#3C4045',
-    borderColor: '#000',
-    borderWidth: 2,
-    borderRadius: 6,
-    padding: 10,
-    marginTop: 12,
-    marginBottom: 10,
-    justifyContent: 'center',
-    position: 'relative',
-    zIndex: 2,
-  },
+  historyBox: Platform.select({
+    ios: {
+      alignSelf: 'center',
+      width: '70%',
+      minHeight: 72,
+      backgroundColor: '#3C4045',
+      borderColor: '#000',
+      borderWidth: 2,
+      borderRadius: 6,
+      padding: 10,
+      marginTop: 12,
+      marginBottom: 10,
+      justifyContent: 'center',
+      position: 'relative',
+      zIndex: 2,
+    },
+    android: {
+      alignSelf: 'center',
+      width: '70%',
+      minHeight: 72,
+      backgroundColor: '#3C4045',
+      borderColor: '#000',
+      borderWidth: 2,
+      borderRadius: 6,
+      padding: 10,
+      marginTop: 12,
+      marginBottom: 10,
+      justifyContent: 'center',
+      position: 'relative',
+      zIndex: 2,
+      elevation: 4,
+    },
+  }),
   historyText: {
     color: '#E6FFE6',
     textAlign: 'center',
@@ -1471,12 +1549,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#C0C0C0',
     borderColor: 'rgba(255, 255, 255, 0.65)',
   },
-  gotEmBannerText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: 0.6,
-  },
+  gotEmBannerText: Platform.select({
+    ios: {
+      color: '#FFFFFF',
+      fontSize: 20,
+      fontWeight: '900',
+      letterSpacing: 0.6,
+    },
+    android: {
+      color: '#FFFFFF',
+      fontSize: 20,
+      fontWeight: '900',
+      letterSpacing: 0.6,
+      lineHeight: 24,
+      includeFontPadding: false,
+    },
+  }),
   footer: {
     alignItems: 'center',
     marginTop: 16,
@@ -1520,11 +1608,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  modalTitle: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 18,
-  },
+  modalTitle: Platform.select({
+    ios: {
+      color: '#fff',
+      fontWeight: '800',
+      fontSize: 18,
+    },
+    android: {
+      color: '#fff',
+      fontWeight: 'bold',
+      fontSize: 18,
+      lineHeight: 22,
+      includeFontPadding: false,
+    },
+  }),
   modalBody: {
     marginBottom: 8,
   },
@@ -1619,11 +1716,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
   },
-  settingsLabel: {
-    color: '#F0F6FC',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  settingsLabel: Platform.select({
+    ios: {
+      color: '#F0F6FC',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    android: {
+      color: '#F0F6FC',
+      fontSize: 16,
+      fontWeight: 'bold',
+      lineHeight: 20,
+      includeFontPadding: false,
+    },
+  }),
   settingsActions: {
     marginTop: 16,
   },
@@ -1671,23 +1777,42 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ff4444',
   },
-  endBannerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
+  endBannerTitle: Platform.select({
+    ios: {
+      fontSize: 28,
+      fontWeight: '800',
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    android: {
+      fontSize: 28,
+      fontWeight: '800',
+      marginBottom: 8,
+      textAlign: 'center',
+      lineHeight: 32,
+      includeFontPadding: false,
+    },
+  }),
   endBannerTitleWin: {
     color: '#F0F6FC',
   },
   endBannerTitleLose: {
     color: '#ffffff',
   },
-  endBannerSubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
+  endBannerSubtitle: Platform.select({
+    ios: {
+      fontSize: 16,
+      textAlign: 'center',
+      fontWeight: '600',
+    },
+    android: {
+      fontSize: 16,
+      textAlign: 'center',
+      fontWeight: 'bold',
+      lineHeight: 20,
+      includeFontPadding: false,
+    },
+  }),
   endBannerSubtitleWin: {
     color: '#E0F2FF',
   },
