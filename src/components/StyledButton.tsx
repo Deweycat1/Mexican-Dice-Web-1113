@@ -186,6 +186,7 @@ const styles = StyleSheet.create({
   },
   labelAndroid: {
     includeFontPadding: false,
+    fontSize: 13, // ~20% smaller than base 16 on Android
     textShadowColor: 'transparent',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 0,

@@ -1603,8 +1603,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   avatarImage: {
-    width: 41,
-    height: 41,
+    width: 34,
+    height: 34,
     resizeMode: 'contain',
   },
   userAvatarImage: {

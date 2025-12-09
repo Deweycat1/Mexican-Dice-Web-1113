@@ -1263,8 +1263,8 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   rivalAvatarImage: {
-    width: 39,
-    height: 39,
+    width: 31,
+    height: 31,
   },
   playerScoreLabel: {
     color: '#FFFFFF',
