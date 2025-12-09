@@ -17,6 +17,7 @@ import {
   Animated,
   Image,
   Modal,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -1555,7 +1556,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 18,
-    paddingBottom: 10,
+    paddingBottom: Platform.select({
+      ios: 10,
+      android: 18, // extra bottom padding on Android to help keep controls visible
+      default: 10,
+    }),
   },
   centered: {
     flex: 1,
@@ -1717,9 +1722,21 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 260,
-    marginTop: -134,
-    marginBottom: 20,
+    minHeight: Platform.select({
+      ios: 260,
+      android: 220, // slightly shorter on Android so the layout isn't overly tall
+      default: 260,
+    }),
+    marginTop: Platform.select({
+      ios: -134,
+      android: -80, // less aggressive lift on Android
+      default: -134,
+    }),
+    marginBottom: Platform.select({
+      ios: 20,
+      android: 12, // a bit tighter on Android
+      default: 20,
+    }),
   },
   diceRow: {
     flexDirection: 'row',
@@ -1731,10 +1748,18 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    marginTop: -150,
+    marginTop: Platform.select({
+      ios: -150,
+      android: -90, // reduce negative offset on Android
+      default: -150,
+    }),
     position: 'relative',
     zIndex: 10,
-    marginBottom: -10,
+    marginBottom: Platform.select({
+      ios: -10,
+      android: 8, // no negative margin on Android; small positive space instead
+      default: -10,
+    }),
   },
   actionRow: {
     flexDirection: 'row',
