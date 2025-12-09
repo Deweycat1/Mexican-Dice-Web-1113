@@ -1,16 +1,16 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
-import IceEmojiIcon from '../src/components/IceEmojiIcon';
 interface RollStatsData {
   rolls: Record<string, number>;
 }
@@ -246,7 +246,10 @@ export default function StatsScreen() {
           onPress={() => router.push('/roll-claim-comparison')}
           style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}
         >
-          <IceEmojiIcon size={48} style={styles.menuButtonIconImage} />
+          <Image
+            source={require('../assets/images/InfernoDiceEmoji.png')}
+            style={styles.menuButtonIconImage}
+          />
           <Text style={styles.menuButtonTitle}>Roll vs Claim</Text>
           <Text style={styles.menuButtonDesc}>See how honest the table really is</Text>
         </Pressable>
