@@ -1,6 +1,7 @@
 // src/components/StyledButton.tsx
 import React from 'react';
 import {
+  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -8,6 +9,7 @@ import {
   TextStyle,
   ViewStyle,
 } from 'react-native';
+import { androidTextTight } from '../styles/text';
 
 // Try to use your theme colors, but fall back if the file/path changes.
 let ThemeColors: any = {
@@ -66,6 +68,9 @@ export default function StyledButton({
       style={({ pressed }) =>
         StyleSheet.flatten([
           styles.base,
+          Platform.OS === 'android' &&
+            (variant === 'ghost' || variant === 'outline') &&
+            styles.baseAndroidFlat,
           v.container,
           disabled && styles.disabled,
           pressed && styles.pressed,
@@ -77,7 +82,19 @@ export default function StyledButton({
         children
       ) : (
         <Text
-          style={[styles.label, v.label, disabled && styles.labelDisabled, textStyle]}
+          style={[
+            styles.label,
+            v.label,
+            disabled && styles.labelDisabled,
+            androidTextTight,
+            Platform.select<TextStyle>({
+              ios: styles.labelShadow,
+              web: styles.labelShadow,
+              android: styles.labelAndroid,
+              default: styles.labelShadow,
+            }),
+            textStyle,
+          ]}
           numberOfLines={1}
           ellipsizeMode="clip"
         >
@@ -149,11 +166,29 @@ const styles = StyleSheet.create({
     // Elevation (Android)
     elevation: 4,
   },
+  baseAndroidFlat: {
+    elevation: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+  },
   label: {
     fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    fontWeight: '800',
+    letterSpacing: 0.6,
     textAlign: 'center',
+  },
+  labelShadow: {
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  labelAndroid: {
+    includeFontPadding: false,
+    textShadowColor: 'transparent',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 0,
   },
   pressed: {
     transform: [{ scale: 0.98 }],
