@@ -54,7 +54,7 @@ export default function AboutScreen() {
                 table.
               </Text>
               <Text style={styles.bulletItem}>
-                • Multiple ways to play: quick single...player, Survival streaks, and online matches.
+                • Multiple ways to play: quick single...player, Inferno streaks, and online matches.
               </Text>
             </View>
           </View>
@@ -67,7 +67,7 @@ export default function AboutScreen() {
                 <FlameEmojiIcon size={28} style={styles.featureIconImage} />
                 <Text style={styles.featureTitle}>Inferno Mode</Text>
                 <Text style={styles.featureBody}>
-                  Push your streak as far as you can in Survival while every mistake burns a point.
+                  Push your streak as far as you can in Inferno while every mistake burns a point.
                 </Text>
               </View>
 
@@ -127,7 +127,7 @@ export default function AboutScreen() {
               </View>
             </View>
             <Text style={styles.sectionBody}>
-              In Survival, you only have so many points to lose. See how long you can last before
+              In Inferno, you only have so many points to lose. See how long you can last before
               the inferno finally catches up.
             </Text>
           </View>
