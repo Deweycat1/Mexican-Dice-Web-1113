@@ -1292,13 +1292,13 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   userAvatarImage: {
-    width: 50.2,
-    height: 50.2,
+    width: 38,
+    height: 38,
     resizeMode: 'contain',
   },
   rivalAvatarImage: {
-    width: 56,
-    height: 56,
+    width: 42,
+    height: 42,
   },
   playerScoreLabel: {
     color: '#FFFFFF',

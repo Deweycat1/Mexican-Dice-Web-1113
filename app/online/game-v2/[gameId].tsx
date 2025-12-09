@@ -1582,6 +1582,12 @@ const styles = StyleSheet.create({
       lineHeight: 22,
       includeFontPadding: false,
     },
+    web: {
+      marginTop: 16,
+      color: '#F0F6FC',
+      fontSize: 18,
+      fontWeight: '600',
+    },
   }),
   errorText: {
     color: '#F0F6FC',
@@ -1608,6 +1614,15 @@ const styles = StyleSheet.create({
       borderColor: '#30363D',
       elevation: 8,
     },
+    web: {
+      position: 'relative',
+      backgroundColor: '#161B22',
+      borderRadius: 22,
+      padding: 14,
+      marginTop: 8,
+      borderWidth: 1,
+      borderColor: '#30363D',
+    },
   }),
   headerRow: {
     flexDirection: 'row',
@@ -1629,13 +1644,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   avatarImage: {
-    width: 58,
-    height: 58,
+    width: 44,
+    height: 44,
     resizeMode: 'contain',
   },
   userAvatarImage: {
-    width: 47.0,
-    height: 47.0,
+    width: 35,
+    height: 35,
     resizeMode: 'contain',
   },
   playerLabel: {
@@ -1665,6 +1680,13 @@ const styles = StyleSheet.create({
       marginBottom: 6,
       lineHeight: 22,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#FE9902',
+      fontSize: 18,
+      fontWeight: '800',
+      textAlign: 'center',
+      marginBottom: 6,
     },
   }),
   status: {
@@ -1701,6 +1723,11 @@ const styles = StyleSheet.create({
       fontSize: 18,
       lineHeight: 22,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#F0F6FC',
+      fontWeight: '800',
+      fontSize: 18,
     },
   }),
   bannerContainer: {
@@ -1746,6 +1773,11 @@ const styles = StyleSheet.create({
       lineHeight: 24,
       includeFontPadding: false,
     },
+    web: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#222',
+    },
   }),
   historyBox: Platform.select({
     ios: {
@@ -1779,6 +1811,21 @@ const styles = StyleSheet.create({
       zIndex: 2,
       elevation: 4,
     },
+    web: {
+      alignSelf: 'center',
+      width: '70%',
+      minHeight: 72,
+      backgroundColor: '#3C4045',
+      borderColor: '#000',
+      borderWidth: 2,
+      borderRadius: 6,
+      padding: 10,
+      marginTop: 12,
+      marginBottom: 10,
+      justifyContent: 'center',
+      position: 'relative',
+      zIndex: 2,
+    },
   }),
   historyText: Platform.select({
     ios: {
@@ -1794,6 +1841,12 @@ const styles = StyleSheet.create({
       marginVertical: 2,
       lineHeight: 18,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#E6FFE6',
+      textAlign: 'center',
+      fontSize: 13,
+      marginVertical: 2,
     },
   }),
   diceArea: {
@@ -1830,6 +1883,16 @@ const styles = StyleSheet.create({
       zIndex: 10,
       marginBottom: -10,
       elevation: 8,
+    },
+    web: {
+      backgroundColor: BAR_BG,
+      borderRadius: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 14,
+      marginTop: -150,
+      position: 'relative',
+      zIndex: 10,
+      marginBottom: -10,
     },
   }),
   actionRow: {
@@ -1931,6 +1994,11 @@ const styles = StyleSheet.create({
       lineHeight: 22,
       includeFontPadding: false,
     },
+    web: {
+      color: '#fff',
+      fontSize: 18,
+      textAlign: 'center',
+    },
   }),
   modalBackdrop: {
     position: 'absolute',
@@ -1973,6 +2041,11 @@ const styles = StyleSheet.create({
       lineHeight: 22,
       includeFontPadding: false,
     },
+    web: {
+      color: '#fff',
+      fontWeight: '800',
+      fontSize: 18,
+    },
   }),
   closeButton: {
     padding: 8,
@@ -2005,6 +2078,12 @@ const styles = StyleSheet.create({
       lineHeight: 18,
       includeFontPadding: false,
     },
+    web: {
+      color: '#E6FFE6',
+      fontSize: 14,
+      flex: 1,
+      lineHeight: 20,
+    },
   }),
   noHistoryText: Platform.select({
     ios: {
@@ -2020,6 +2099,12 @@ const styles = StyleSheet.create({
       marginVertical: 20,
       lineHeight: 18,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#C9F0D6',
+      textAlign: 'center',
+      fontSize: 14,
+      marginVertical: 20,
     },
   }),
   rulesBackdrop: {
@@ -2062,6 +2147,11 @@ const styles = StyleSheet.create({
       fontSize: 20,
       lineHeight: 24,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#fff',
+      fontWeight: '800',
+      fontSize: 20,
     },
   }),
   rulesCloseButton: {

@@ -766,6 +766,12 @@ const styles = StyleSheet.create({
       backgroundColor: '#1F262A',
       paddingTop: 32,
     },
+    web: {
+      // Match iOS lobby layout on web
+      flex: 1,
+      backgroundColor: '#1F262A',
+      paddingTop: 25,
+    },
   }),
   scrollContent: {
     flexGrow: 1,
@@ -811,6 +817,11 @@ const styles = StyleSheet.create({
       lineHeight: 18,
       includeFontPadding: false,
     },
+    web: {
+      color: '#F0F6FC',
+      textAlign: 'center',
+      fontSize: 13,
+    },
   }),
   refreshHint: Platform.select({
     ios: {
@@ -828,6 +839,13 @@ const styles = StyleSheet.create({
       marginTop: 6,
       lineHeight: 18,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#53A7F3',
+      fontSize: 13,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginTop: 6,
     },
   }),
   card: Platform.select({
@@ -847,6 +865,14 @@ const styles = StyleSheet.create({
       borderWidth: 1,
       borderColor: '#30363D',
       elevation: 6,
+    },
+    web: {
+      backgroundColor: '#2A3136',
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 18,
+      borderWidth: 1,
+      borderColor: '#30363D',
     },
   }),
   cardTitle: {
@@ -894,6 +920,10 @@ const styles = StyleSheet.create({
       fontWeight: '800',
       lineHeight: 20,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#F0F6FC',
+      fontWeight: '800',
     },
   }),
   refreshButton: {
@@ -964,6 +994,12 @@ const styles = StyleSheet.create({
       lineHeight: 22,
       includeFontPadding: false,
     },
+    web: {
+      color: '#FE9902',
+      fontWeight: '800',
+      fontSize: 18,
+      marginBottom: 10,
+    },
   }),
   emptyTextSmall: {
     color: '#8B949E',
@@ -987,6 +1023,14 @@ const styles = StyleSheet.create({
       borderWidth: 1,
       borderColor: '#30363D',
       elevation: 4,
+    },
+    web: {
+      backgroundColor: '#2A3136',
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: '#30363D',
     },
   }),
   gameCardHeader: {
@@ -1043,6 +1087,11 @@ const styles = StyleSheet.create({
       fontWeight: 'bold',
       lineHeight: 18,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#F0F6FC',
+      fontSize: 14,
+      fontWeight: '700',
     },
   }),
   openMatchButton: {
@@ -1105,6 +1154,17 @@ const styles = StyleSheet.create({
       marginTop: 24,
       elevation: 4,
     },
+    web: {
+      backgroundColor: '#53A7F3',
+      borderRadius: 12,
+      paddingVertical: 20,
+      paddingHorizontal: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: '#1C75BC',
+      marginTop: 16,
+    },
   }),
   mainMenuButtonText: Platform.select({
     ios: {
@@ -1118,6 +1178,11 @@ const styles = StyleSheet.create({
       fontWeight: '700',
       lineHeight: 20,
       includeFontPadding: false,
+    },
+    web: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '700',
     },
   }),
 });

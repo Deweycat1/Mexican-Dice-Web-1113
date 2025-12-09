@@ -168,6 +168,19 @@ const styles = StyleSheet.create({
       // Elevation for Android shadow
       elevation: 4,
     },
+    web: {
+      // Match iOS layout on web so buttons keep their previous size/shape
+      minHeight: 52,
+      paddingHorizontal: 16,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.28,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 4,
+    },
   }) as ViewStyle,
   label: Platform.select({
     ios: {
@@ -187,6 +200,13 @@ const styles = StyleSheet.create({
       textShadowColor: 'transparent',
       textShadowRadius: 0,
       textShadowOffset: { width: 0, height: 0 },
+    },
+    web: {
+      // Use the same typography as iOS on web
+      fontSize: 16,
+      fontWeight: '700',
+      letterSpacing: 0.3,
+      textAlign: 'center',
     },
   }) as TextStyle,
   pressed: {
