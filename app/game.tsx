@@ -804,7 +804,7 @@ export default function Game() {
                     <Image
                       source={require('../assets/images/User.png')}
                       style={styles.userAvatarImage}
-                      resizeMode="cover"
+                      resizeMode="contain"
                     />
                   </View>
                   <Animated.View
@@ -848,7 +848,7 @@ export default function Game() {
                     <Image
                       source={require('../assets/images/Rival.png')}
                       style={styles.rivalAvatarImage}
-                      resizeMode="cover"
+                      resizeMode="contain"
                     />
                   </View>
                   <Animated.View
