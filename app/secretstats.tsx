@@ -1,17 +1,15 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
-import { androidTextTight } from '../src/styles/text';
 
 interface SurvivalBestData {
   streak: number;
@@ -308,13 +306,13 @@ export default function SecretStatsScreen() {
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#53A7F3" />
-          <Text style={[styles.loadingText, androidTextTight]}>Loading statistics...</Text>
+          <Text style={styles.loadingText}>Loading statistics...</Text>
         </View>
         <Pressable
           onPress={() => router.push('/')}
           style={({ pressed }: { pressed: boolean }) => [styles.backButton, pressed && styles.backButtonPressed]}
         >
-          <Text style={[styles.backButtonText, androidTextTight]}>Back to Menu</Text>
+          <Text style={styles.backButtonText}>Back to Menu</Text>
         </Pressable>
       </View>
     );
@@ -324,14 +322,14 @@ export default function SecretStatsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorTitle, androidTextTight]}>Error Loading Stats</Text>
-          <Text style={[styles.errorText, androidTextTight]}>{error}</Text>
+          <Text style={styles.errorTitle}>Error Loading Stats</Text>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
         <Pressable
           onPress={() => router.push('/')}
           style={({ pressed }: { pressed: boolean }) => [styles.backButton, pressed && styles.backButtonPressed]}
         >
-          <Text style={[styles.backButtonText, androidTextTight]}>Back to Menu</Text>
+          <Text style={styles.backButtonText}>Back to Menu</Text>
         </Pressable>
       </View>
     );
@@ -344,15 +342,15 @@ export default function SecretStatsScreen() {
   return (
     <View style={styles.container}>
       <Pressable onPress={() => router.push('/')} style={styles.backButtonTop}>
-        <Text style={[styles.backButtonTopText, androidTextTight]}>← Back</Text>
+        <Text style={styles.backButtonTopText}>← Back</Text>
       </Pressable>
       
       <View style={styles.titleRow}>
-        <Text style={[styles.title, styles.titleSegment, androidTextTight]}>Win & Inferno</Text>
+        <Text style={[styles.title, styles.titleSegment]}>Win & Inferno</Text>
         <FlameEmojiIcon size={28} style={styles.inlineFlameIcon} />
-        <Text style={[styles.title, styles.titleSegment, androidTextTight]}>Mode Stats</Text>
+        <Text style={[styles.title, styles.titleSegment]}>Mode Stats</Text>
       </View>
-      <Text style={[styles.subtitle, androidTextTight]}>🔒 Hidden Analytics</Text>
+      <Text style={styles.subtitle}>🔒 Hidden Analytics</Text>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.card}>
@@ -644,24 +642,13 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingHorizontal: 16,
   },
-  title: Platform.select({
-    ios: {
-      fontSize: 28,
-      fontWeight: '800',
-      color: '#E0B50C',
-      marginBottom: 4,
-      textAlign: 'center',
-    },
-    android: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: '#E0B50C',
-      marginBottom: 4,
-      textAlign: 'center',
-      lineHeight: 32,
-      includeFontPadding: false,
-    },
-  }),
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#E0B50C',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -672,24 +659,13 @@ const styles = StyleSheet.create({
   titleSegment: {
     marginBottom: 0,
   },
-  subtitle: Platform.select({
-    ios: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: '#8B949E',
-      marginBottom: 16,
-      textAlign: 'center',
-    },
-    android: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#8B949E',
-      marginBottom: 16,
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  subtitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8B949E',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   scrollView: {
     flex: 1,
     width: '100%',
@@ -708,24 +684,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#30363D',
   },
-  cardTitle: Platform.select({
-    ios: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: '#E0B50C',
-      marginBottom: 12,
-      textAlign: 'center',
-    },
-    android: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#E0B50C',
-      marginBottom: 12,
-      textAlign: 'center',
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-  }),
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#E0B50C',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -775,22 +740,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#30363D',
   },
-  statLabel: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      fontWeight: '600',
-      flex: 1,
-    },
-    android: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      fontWeight: 'bold',
-      flex: 1,
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  statLabel: {
+    fontSize: 16,
+    color: '#F0F6FC',
+    fontWeight: '600',
+    flex: 1,
+  },
   statLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -805,40 +760,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  statCount: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      fontWeight: '700',
-      minWidth: 50,
-      textAlign: 'right',
-    },
-    android: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      fontWeight: '700',
-      width: 70,
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
-  statPercent: Platform.select({
-    ios: {
-      fontSize: 14,
-      color: '#8B949E',
-      minWidth: 70,
-      textAlign: 'right',
-    },
-    android: {
-      fontSize: 14,
-      color: '#8B949E',
-      width: 80,
-      textAlign: 'center',
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
+  statCount: {
+    fontSize: 16,
+    color: '#F0F6FC',
+    fontWeight: '700',
+    minWidth: 50,
+    textAlign: 'right',
+  },
+  statPercent: {
+    fontSize: 14,
+    color: '#8B949E',
+    minWidth: 70,
+    textAlign: 'right',
+  },
   noDataText: {
     fontSize: 14,
     color: '#8B949E',
@@ -860,82 +794,42 @@ const styles = StyleSheet.create({
   backButtonPressed: {
     opacity: 0.7,
   },
-  backButtonText: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontSize: 16,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    android: {
-      color: '#F0F6FC',
-      fontSize: 16,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  backButtonText: {
+    color: '#F0F6FC',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1F262A',
   },
-  loadingText: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      marginTop: 16,
-    },
-    android: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      marginTop: 16,
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  loadingText: {
+    fontSize: 16,
+    color: '#F0F6FC',
+    marginTop: 16,
+  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
   },
-  errorTitle: Platform.select({
-    ios: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: '#FF3B30',
-      marginBottom: 12,
-      textAlign: 'center',
-    },
-    android: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: '#FF3B30',
-      marginBottom: 12,
-      textAlign: 'center',
-      lineHeight: 24,
-      includeFontPadding: false,
-    },
-  }),
-  errorText: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      textAlign: 'center',
-      marginBottom: 8,
-    },
-    android: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      textAlign: 'center',
-      marginBottom: 8,
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FF3B30',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F0F6FC',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
   backButtonTop: {
     position: 'absolute',
     top: 16,
@@ -944,20 +838,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
   },
-  backButtonTopText: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#53A7F3',
-      fontWeight: '600',
-    },
-    android: {
-      fontSize: 16,
-      color: '#53A7F3',
-      fontWeight: 'bold',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  backButtonTopText: {
+    fontSize: 16,
+    color: '#53A7F3',
+    fontWeight: '600',
+  },
   statCountLarge: {
     fontSize: 24,
     color: '#F0F6FC',
@@ -983,59 +868,27 @@ const styles = StyleSheet.create({
   resetButtonPressed: {
     opacity: 0.7,
   },
-  resetButtonText: Platform.select({
-    ios: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '700',
-      textAlign: 'center',
-    },
-    android: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '700',
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
-  warningText: Platform.select({
-    ios: {
-      fontSize: 13,
-      color: '#E0B50C',
-      textAlign: 'center',
-      marginTop: 12,
-      fontStyle: 'italic',
-      lineHeight: 18,
-    },
-    android: {
-      fontSize: 13,
-      color: '#E0B50C',
-      textAlign: 'center',
-      marginTop: 12,
-      fontStyle: 'italic',
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
-  resetMessage: Platform.select({
-    ios: {
-      fontSize: 14,
-      color: '#F0F6FC',
-      textAlign: 'center',
-      marginTop: 12,
-      fontWeight: '600',
-    },
-    android: {
-      fontSize: 14,
-      color: '#F0F6FC',
-      textAlign: 'center',
-      marginTop: 12,
-      fontWeight: '600',
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
+  resetButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  warningText: {
+    fontSize: 13,
+    color: '#E0B50C',
+    textAlign: 'center',
+    marginTop: 12,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  resetMessage: {
+    fontSize: 14,
+    color: '#F0F6FC',
+    textAlign: 'center',
+    marginTop: 12,
+    fontWeight: '600',
+  },
   resetMessageSuccess: {
     color: '#53A7F3',
   },

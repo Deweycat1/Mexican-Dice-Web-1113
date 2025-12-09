@@ -17,7 +17,6 @@ import {
   Animated,
   Image,
   Modal,
-  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -52,7 +51,6 @@ import { ensureUserProfile, getCurrentUser } from '../../../src/lib/auth';
 import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
-import { androidTextTight } from '../../../src/styles/text';
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -794,7 +792,7 @@ export default function OnlineGameV2Screen() {
     isMyTurn &&
     myRoll != null &&
     claimToCheck != null &&
-    !canClaimTruthfully;
+    rankValue(myRoll) <= rankValue(claimToCheck);
 
   const handleUpdate = useCallback(
     async (
@@ -1243,7 +1241,7 @@ export default function OnlineGameV2Screen() {
                 </View>
               </View>
 
-              <Text style={[styles.status, androidTextTight]} numberOfLines={2}>
+              <Text style={styles.status} numberOfLines={2}>
                 {myTurnText}
               </Text>
             </View>
@@ -1262,7 +1260,7 @@ export default function OnlineGameV2Screen() {
                       end={{ x: 1, y: 0.5 }}
                       style={styles.winkBanner}
                     >
-                      <Text style={[styles.winkText, androidTextTight]}>{banner.text}</Text>
+                      <Text style={styles.winkText}>{banner.text}</Text>
                     </LinearGradient>
                   </Animated.View>
                 ) : (
@@ -1274,7 +1272,7 @@ export default function OnlineGameV2Screen() {
                       banner.type === 'social' && styles.bannerSocial,
                     ]}
                   >
-                    <Text style={[styles.bannerText, androidTextTight]}>{banner.text}</Text>
+                    <Text style={styles.bannerText}>{banner.text}</Text>
                   </View>
                 )}
               </Animated.View>
@@ -1505,14 +1503,12 @@ export default function OnlineGameV2Screen() {
                 <ScrollView>
                   {modalHistory.map((entry) => (
                     <View key={entry.id} style={styles.historyItem}>
-                      <Text style={[styles.historyItemText, androidTextTight]}>
-                        {formatHistoryEntry(entry)}
-                      </Text>
+                      <Text style={styles.historyItemText}>{formatHistoryEntry(entry)}</Text>
                     </View>
                   ))}
                 </ScrollView>
               ) : (
-                <Text style={[styles.noHistoryText, androidTextTight]}>No history yet.</Text>
+                <Text style={styles.noHistoryText}>No history yet.</Text>
               )}
             </View>
           </View>
@@ -1529,7 +1525,7 @@ export default function OnlineGameV2Screen() {
         <View style={styles.rulesCenter}>
           <View style={styles.rulesContent}>
             <View style={styles.rulesHeader}>
-              <Text style={[styles.rulesTitle, androidTextTight]}>Game Rules</Text>
+              <Text style={styles.rulesTitle}>Game Rules</Text>
               <Pressable onPress={() => setRulesOpen(false)} style={styles.rulesCloseButton}>
                 <Text style={styles.rulesClose}>✕</Text>
               </Pressable>
@@ -1554,7 +1550,6 @@ const styles = StyleSheet.create({
   },
   safe: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 24 : 0,
   },
   content: {
     flex: 1,
@@ -1567,63 +1562,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
   },
-  loadingText: Platform.select({
-    ios: {
-      marginTop: 16,
-      color: '#F0F6FC',
-      fontSize: 18,
-      fontWeight: '600',
-    },
-    android: {
-      marginTop: 16,
-      color: '#F0F6FC',
-      fontSize: 18,
-      fontWeight: 'bold',
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-    web: {
-      marginTop: 16,
-      color: '#F0F6FC',
-      fontSize: 18,
-      fontWeight: '600',
-    },
-  }),
+  loadingText: {
+    marginTop: 16,
+    color: '#F0F6FC',
+    fontSize: 18,
+    fontWeight: '600',
+  },
   errorText: {
     color: '#F0F6FC',
     fontSize: 18,
     textAlign: 'center',
   },
-  headerCard: Platform.select({
-    ios: {
-      position: 'relative',
-      backgroundColor: '#161B22',
-      borderRadius: 22,
-      padding: 14,
-      marginTop: 8,
-      borderWidth: 1,
-      borderColor: '#30363D',
-    },
-    android: {
-      position: 'relative',
-      backgroundColor: '#161B22',
-      borderRadius: 22,
-      padding: 14,
-      marginTop: 8,
-      borderWidth: 1,
-      borderColor: '#30363D',
-      elevation: 8,
-    },
-    web: {
-      position: 'relative',
-      backgroundColor: '#161B22',
-      borderRadius: 22,
-      padding: 14,
-      marginTop: 8,
-      borderWidth: 1,
-      borderColor: '#30363D',
-    },
-  }),
+  headerCard: {
+    position: 'relative',
+    backgroundColor: '#161B22',
+    borderRadius: 22,
+    padding: 14,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#30363D',
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1644,13 +1602,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   avatarImage: {
-    width: 44,
-    height: 44,
+    width: 41,
+    height: 41,
     resizeMode: 'contain',
   },
   userAvatarImage: {
-    width: 35,
-    height: 35,
+    width: 33,
+    height: 33,
     resizeMode: 'contain',
   },
   playerLabel: {
@@ -1664,31 +1622,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
   },
-  claimText: Platform.select({
-    ios: {
-      color: '#FE9902',
-      fontSize: 18,
-      fontWeight: '800',
-      textAlign: 'center',
-      marginBottom: 6,
-    },
-    android: {
-      color: '#FE9902',
-      fontSize: 18,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      marginBottom: 6,
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#FE9902',
-      fontSize: 18,
-      fontWeight: '800',
-      textAlign: 'center',
-      marginBottom: 6,
-    },
-  }),
+  claimText: {
+    color: '#FE9902',
+    fontSize: 18,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
   status: {
     marginTop: 12,
     color: '#F0F6FC',
@@ -1711,25 +1651,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     maxWidth: '80%',
   },
-  bannerText: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontWeight: '800',
-      fontSize: 18,
-    },
-    android: {
-      color: '#F0F6FC',
-      fontWeight: 'bold',
-      fontSize: 18,
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#F0F6FC',
-      fontWeight: '800',
-      fontSize: 18,
-    },
-  }),
+  bannerText: {
+    color: '#F0F6FC',
+    fontWeight: '800',
+    fontSize: 18,
+  },
   bannerContainer: {
     position: 'absolute',
     top: 270,
@@ -1760,95 +1686,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  winkText: Platform.select({
-    ios: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: '#222',
-    },
-    android: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: '#222',
-      lineHeight: 24,
-      includeFontPadding: false,
-    },
-    web: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: '#222',
-    },
-  }),
-  historyBox: Platform.select({
-    ios: {
-      alignSelf: 'center',
-      width: '70%',
-      minHeight: 72,
-      backgroundColor: '#3C4045',
-      borderColor: '#000',
-      borderWidth: 2,
-      borderRadius: 6,
-      padding: 10,
-      marginTop: 12,
-      marginBottom: 10,
-      justifyContent: 'center',
-      position: 'relative',
-      zIndex: 2,
-    },
-    android: {
-      alignSelf: 'center',
-      width: '70%',
-      minHeight: 72,
-      backgroundColor: '#3C4045',
-      borderColor: '#000',
-      borderWidth: 2,
-      borderRadius: 6,
-      padding: 10,
-      marginTop: 12,
-      marginBottom: 10,
-      justifyContent: 'center',
-      position: 'relative',
-      zIndex: 2,
-      elevation: 4,
-    },
-    web: {
-      alignSelf: 'center',
-      width: '70%',
-      minHeight: 72,
-      backgroundColor: '#3C4045',
-      borderColor: '#000',
-      borderWidth: 2,
-      borderRadius: 6,
-      padding: 10,
-      marginTop: 12,
-      marginBottom: 10,
-      justifyContent: 'center',
-      position: 'relative',
-      zIndex: 2,
-    },
-  }),
-  historyText: Platform.select({
-    ios: {
-      color: '#E6FFE6',
-      textAlign: 'center',
-      fontSize: 13,
-      marginVertical: 2,
-    },
-    android: {
-      color: '#E6FFE6',
-      textAlign: 'center',
-      fontSize: 13,
-      marginVertical: 2,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#E6FFE6',
-      textAlign: 'center',
-      fontSize: 13,
-      marginVertical: 2,
-    },
-  }),
+  winkText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#222',
+  },
+  historyBox: {
+    alignSelf: 'center',
+    width: '70%',
+    minHeight: 72,
+    backgroundColor: '#3C4045',
+    borderColor: '#000',
+    borderWidth: 2,
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 10,
+    justifyContent: 'center',
+    position: 'relative',
+    zIndex: 2,
+  },
+  historyText: {
+    color: '#E6FFE6',
+    textAlign: 'center',
+    fontSize: 13,
+    marginVertical: 2,
+  },
   diceArea: {
     flexGrow: 1,
     alignItems: 'center',
@@ -1862,39 +1725,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  controls: Platform.select({
-    ios: {
-      backgroundColor: BAR_BG,
-      borderRadius: 16,
-      paddingVertical: 14,
-      paddingHorizontal: 14,
-      marginTop: -150,
-      position: 'relative',
-      zIndex: 10,
-      marginBottom: -10,
-    },
-    android: {
-      backgroundColor: BAR_BG,
-      borderRadius: 16,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      marginTop: -150,
-      position: 'relative',
-      zIndex: 10,
-      marginBottom: -10,
-      elevation: 8,
-    },
-    web: {
-      backgroundColor: BAR_BG,
-      borderRadius: 16,
-      paddingVertical: 14,
-      paddingHorizontal: 14,
-      marginTop: -150,
-      position: 'relative',
-      zIndex: 10,
-      marginBottom: -10,
-    },
-  }),
+  controls: {
+    backgroundColor: BAR_BG,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginTop: -150,
+    position: 'relative',
+    zIndex: 10,
+    marginBottom: -10,
+  },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1981,25 +1821,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  finishedText: Platform.select({
-    ios: {
-      color: '#fff',
-      fontSize: 18,
-      textAlign: 'center',
-    },
-    android: {
-      color: '#fff',
-      fontSize: 18,
-      textAlign: 'center',
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#fff',
-      fontSize: 18,
-      textAlign: 'center',
-    },
-  }),
+  finishedText: {
+    color: '#fff',
+    fontSize: 18,
+    textAlign: 'center',
+  },
   modalBackdrop: {
     position: 'absolute',
     top: 0,
@@ -2028,25 +1854,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  modalTitle: Platform.select({
-    ios: {
-      color: '#fff',
-      fontWeight: '800',
-      fontSize: 18,
-    },
-    android: {
-      color: '#fff',
-      fontWeight: 'bold',
-      fontSize: 18,
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#fff',
-      fontWeight: '800',
-      fontSize: 18,
-    },
-  }),
+  modalTitle: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 18,
+  },
   closeButton: {
     padding: 8,
   },
@@ -2064,49 +1876,18 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     paddingHorizontal: 8,
   },
-  historyItemText: Platform.select({
-    ios: {
-      color: '#E6FFE6',
-      fontSize: 14,
-      flex: 1,
-      lineHeight: 20,
-    },
-    android: {
-      color: '#E6FFE6',
-      fontSize: 14,
-      flex: 1,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#E6FFE6',
-      fontSize: 14,
-      flex: 1,
-      lineHeight: 20,
-    },
-  }),
-  noHistoryText: Platform.select({
-    ios: {
-      color: '#C9F0D6',
-      textAlign: 'center',
-      fontSize: 14,
-      marginVertical: 20,
-    },
-    android: {
-      color: '#C9F0D6',
-      textAlign: 'center',
-      fontSize: 14,
-      marginVertical: 20,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#C9F0D6',
-      textAlign: 'center',
-      fontSize: 14,
-      marginVertical: 20,
-    },
-  }),
+  historyItemText: {
+    color: '#E6FFE6',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
+  noHistoryText: {
+    color: '#C9F0D6',
+    textAlign: 'center',
+    fontSize: 14,
+    marginVertical: 20,
+  },
   rulesBackdrop: {
     position: 'absolute',
     top: 0,
@@ -2135,25 +1916,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  rulesTitle: Platform.select({
-    ios: {
-      color: '#fff',
-      fontWeight: '800',
-      fontSize: 20,
-    },
-    android: {
-      color: '#fff',
-      fontWeight: 'bold',
-      fontSize: 20,
-      lineHeight: 24,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#fff',
-      fontWeight: '800',
-      fontSize: 20,
-    },
-  }),
+  rulesTitle: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 20,
+  },
   rulesCloseButton: {
     padding: 4,
   },

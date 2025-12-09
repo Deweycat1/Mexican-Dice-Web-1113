@@ -1,18 +1,16 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
+    ActivityIndicator,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import IceEmojiIcon from '../src/components/IceEmojiIcon';
-import { androidTextTight } from '../src/styles/text';
 interface RollStatsData {
   rolls: Record<string, number>;
 }
@@ -232,7 +230,7 @@ export default function StatsScreen() {
           onPress={() => router.back()}
           style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
         >
-          <Text style={[styles.backButtonText, androidTextTight]}>Back to Menu</Text>
+          <Text style={styles.backButtonText}>Back to Menu</Text>
         </Pressable>
       </View>
     );
@@ -447,13 +445,13 @@ export default function StatsScreen() {
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#53A7F3" />
-          <Text style={[styles.loadingText, androidTextTight]}>Loading statistics...</Text>
+          <Text style={styles.loadingText}>Loading statistics...</Text>
         </View>
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
         >
-          <Text style={[styles.backButtonText, androidTextTight]}>Back to Menu</Text>
+          <Text style={styles.backButtonText}>Back to Menu</Text>
         </Pressable>
       </View>
     );
@@ -463,9 +461,9 @@ export default function StatsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorTitle, androidTextTight]}>Error Loading Stats</Text>
-          <Text style={[styles.errorText, androidTextTight]}>{error}</Text>
-          <Text style={[styles.errorHint, androidTextTight]}>
+          <Text style={styles.errorTitle}>Error Loading Stats</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorHint}>
             Make sure the Upstash KV database is connected to your Vercel project.
           </Text>
         </View>
@@ -473,7 +471,7 @@ export default function StatsScreen() {
           onPress={() => router.back()}
           style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
         >
-          <Text style={[styles.backButtonText, androidTextTight]}>Back to Menu</Text>
+          <Text style={styles.backButtonText}>Back to Menu</Text>
         </Pressable>
       </View>
     );
@@ -504,24 +502,13 @@ const styles = StyleSheet.create({
   globalStatsContainer: {
     paddingTop: 55, // base 40 + 15px extra space for the heading
   },
-  title: Platform.select({
-    ios: {
-      fontSize: 28,
-      fontWeight: '700',
-      color: '#F0F6FC',
-      marginBottom: 16,
-      textAlign: 'center',
-    },
-    android: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: '#F0F6FC',
-      marginBottom: 16,
-      textAlign: 'center',
-      lineHeight: 32,
-      includeFontPadding: false,
-    },
-  }),
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F0F6FC',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   subtitle: {
     fontSize: 14,
     fontWeight: '500',
@@ -568,24 +555,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#30363D',
   },
-  cardTitle: Platform.select({
-    ios: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: '#F0F6FC',
-      marginBottom: 12,
-      textAlign: 'center',
-    },
-    android: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#F0F6FC',
-      marginBottom: 12,
-      textAlign: 'center',
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-  }),
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F0F6FC',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   bigNumber: {
     fontSize: 48,
     fontWeight: '700',
@@ -603,61 +579,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#30363D',
   },
-  statLabel: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      fontWeight: '600',
-      flex: 1,
-    },
-    android: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      fontWeight: 'bold',
-      flex: 1,
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  statLabel: {
+    fontSize: 16,
+    color: '#F0F6FC',
+    fontWeight: '600',
+    flex: 1,
+  },
   statValues: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  statCount: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#53A7F3',
-      fontWeight: '700',
-      minWidth: 50,
-      textAlign: 'right',
-    },
-    android: {
-      fontSize: 16,
-      color: '#53A7F3',
-      fontWeight: '700',
-      width: 70,
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
-  statPercent: Platform.select({
-    ios: {
-      fontSize: 14,
-      color: '#8B949E',
-      minWidth: 70,
-      textAlign: 'right',
-    },
-    android: {
-      fontSize: 14,
-      color: '#8B949E',
-      width: 80,
-      textAlign: 'center',
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
+  statCount: {
+    fontSize: 16,
+    color: '#53A7F3',
+    fontWeight: '700',
+    minWidth: 50,
+    textAlign: 'right',
+  },
+  statPercent: {
+    fontSize: 14,
+    color: '#8B949E',
+    minWidth: 70,
+    textAlign: 'right',
+  },
   noDataText: {
     fontSize: 14,
     color: '#CCCCCC',
@@ -694,99 +639,48 @@ const styles = StyleSheet.create({
   backButtonPressed: {
     opacity: 0.7,
   },
-  backButtonText: Platform.select({
-    ios: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    android: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  backButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      marginTop: 16,
-    },
-    android: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      marginTop: 16,
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  loadingText: {
+    fontSize: 16,
+    color: '#F0F6FC',
+    marginTop: 16,
+  },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
   },
-  errorTitle: Platform.select({
-    ios: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: '#FF3B30',
-      marginBottom: 12,
-      textAlign: 'center',
-    },
-    android: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: '#FF3B30',
-      marginBottom: 12,
-      textAlign: 'center',
-      lineHeight: 24,
-      includeFontPadding: false,
-    },
-  }),
-  errorText: Platform.select({
-    ios: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      textAlign: 'center',
-      marginBottom: 8,
-    },
-    android: {
-      fontSize: 16,
-      color: '#F0F6FC',
-      textAlign: 'center',
-      marginBottom: 8,
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
-  errorHint: Platform.select({
-    ios: {
-      fontSize: 14,
-      color: '#CCCCCC',
-      textAlign: 'center',
-      fontStyle: 'italic',
-      marginBottom: 20,
-    },
-    android: {
-      fontSize: 14,
-      color: '#CCCCCC',
-      textAlign: 'center',
-      fontStyle: 'italic',
-      marginBottom: 20,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FF3B30',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F0F6FC',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorHint: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: 20,
+  },
   retryButton: {
     backgroundColor: '#53A7F3',
     borderRadius: 8,
@@ -799,22 +693,12 @@ const styles = StyleSheet.create({
   retryButtonPressed: {
     opacity: 0.7,
   },
-  retryButtonText: Platform.select({
-    ios: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    android: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   menuButton: {
     backgroundColor: '#2A3136',
     borderRadius: 12,

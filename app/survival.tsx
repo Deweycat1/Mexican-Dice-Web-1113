@@ -5,7 +5,6 @@ import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 're
 import {
   Animated,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -41,7 +40,6 @@ import { MEXICAN_ICON } from '../src/lib/constants';
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DICE_SPACING, DIE_SIZE } from '../src/theme/dice';
-import { androidTextTight } from '../src/styles/text';
 
 function formatClaimDetailed(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -166,7 +164,7 @@ const StreakMeter: React.FC<StreakMeterProps> = ({
       pointerEvents="none"
     >
       <View style={styles.streakRow}>
-        <Text style={[styles.streakLabel, androidTextTight]}>Streak: {currentStreak}</Text>
+        <Text style={styles.streakLabel}>Streak: {currentStreak}</Text>
         <View style={[styles.streakMeterThermoRow, styles.streakMeter]}>
           <View style={styles.streakMeterBulbWrapper}>
             <Animated.View
@@ -201,7 +199,7 @@ const StreakMeter: React.FC<StreakMeterProps> = ({
             )}
           </View>
         </View>
-        <Text style={[styles.recordLabel, androidTextTight]}>Record: {safeGlobalBest}</Text>
+        <Text style={styles.recordLabel}>Record: {safeGlobalBest}</Text>
       </View>
     </View>
   );
@@ -830,7 +828,6 @@ export default function Survival() {
 
   const isGameOver = gameOver !== null;
   const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock || isSurvivalOver;
-  const hasActiveClaim = lastClaimValue != null && !isGameOver && !isSurvivalOver;
   const streakEnded = isSurvivalOver;
   const showCpuThinking = turn !== 'player' && !isGameOver;
   const lastSurvivalClaim = useMemo(() => {
@@ -1071,7 +1068,7 @@ export default function Survival() {
       : 'Roll';
 
   function handleCallBluff() {
-    if (controlsDisabled || !hasActiveClaim) {
+    if (controlsDisabled) {
       console.log('SURVIVAL: call bluff blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
       return;
     }
@@ -1232,38 +1229,20 @@ export default function Survival() {
             {/* HEADER */}
             <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
               <Animated.View style={[styles.titleRow, { transform: [{ scale: pulseAnim }] }]}>
-                <Text style={[styles.title, styles.titleSegment, androidTextTight]}>Inferno</Text>
+                <Text style={[styles.title, styles.titleSegment]}>Inferno</Text>
                 <FlameEmojiIcon size={30} style={styles.titleFlameIcon} />
-                <Text style={[styles.title, styles.titleSegment, androidTextTight]}>Mode</Text>
+                <Text style={[styles.title, styles.titleSegment]}>Mode</Text>
               </Animated.View>
-              <Animated.Text
-                style={[
-                  styles.scoreLine,
-                  {
-                    transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }],
-                    color: dynamicScoreColor,
-                    opacity: streakFlashAnim,
-                  },
-                  androidTextTight,
-                ]}
-              >
-                Your Best: {bestStreak} | Global Best: {globalBest}
-              </Animated.Text>
+              <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
               {claimText ? (
-                <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall, androidTextTight]}>
-                  {claimText}
-                </Text>
+                <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall]}>{claimText}</Text>
               ) : (
-                <Text
-                  style={[styles.subtle, isSmallScreen && styles.subtleSmall, androidTextTight]}
-                >
-                  No active claim yet.
-                </Text>
+                <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall]}>No active claim yet.</Text>
               )}
               <View style={[styles.narrationContainer, layoutTweaks.narrationHeight]}>
                 <InlineFlameText
                   text={narration || 'Ready to roll.'}
-                  style={[styles.status, isSmallScreen && styles.statusSmall, androidTextTight]}
+                  style={[styles.status, isSmallScreen && styles.statusSmall]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
                   iconSize={18}
@@ -1292,13 +1271,13 @@ export default function Survival() {
                   [...survivalClaims.slice(-2)].reverse().map((h, i) => {
                     if (h.type === 'event') {
                       return (
-                          <InlineFlameText
-                            key={i}
-                            text={h.text}
-                            style={[styles.historyText, androidTextTight]}
-                            numberOfLines={1}
-                            iconSize={14}
-                          />
+                        <InlineFlameText
+                          key={i}
+                          text={h.text}
+                          style={styles.historyText}
+                          numberOfLines={1}
+                          iconSize={14}
+                        />
                       );
                     }
                     const actor = h.who === 'player' ? 'You' : 'Infernoman';
@@ -1309,7 +1288,7 @@ export default function Survival() {
                       <InlineFlameText
                         key={i}
                         text={`${actor} ${verb} ${claimText}`}
-                        style={[styles.historyText, androidTextTight]}
+                        style={styles.historyText}
                         numberOfLines={1}
                         ellipsizeMode="tail"
                         iconSize={16}
@@ -1317,7 +1296,7 @@ export default function Survival() {
                     );
                   })
                 ) : (
-                  <Text style={[styles.historyText, androidTextTight]}>No recent events.</Text>
+                  <Text style={styles.historyText}>No recent events.</Text>
                 )}
               </Animated.View>
             </Pressable>
@@ -1415,7 +1394,7 @@ export default function Survival() {
                   variant="primary"
                   onPress={handleCallBluff}
                   style={[styles.btn, styles.menuActionButton]}
-                  disabled={controlsDisabled || !hasActiveClaim || hasRolled}
+                  disabled={controlsDisabled || hasRolled}
                 />
               </View>
 
@@ -1477,7 +1456,7 @@ export default function Survival() {
             <View style={styles.modalCenter}>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, androidTextTight]}>Last 10 events</Text>
+                  <Text style={styles.modalTitle}>Last 10 events</Text>
                   <Pressable
                     onPress={() => setHistoryModalOpen(false)}
                     style={({ pressed }) => [
@@ -1494,11 +1473,7 @@ export default function Survival() {
                       if (h.type === 'event') {
                         return (
                           <View key={i} style={styles.historyItem}>
-                            <InlineFlameText
-                              text={h.text}
-                              style={[styles.historyItemText, androidTextTight]}
-                              iconSize={16}
-                            />
+                            <InlineFlameText text={h.text} style={styles.historyItemText} iconSize={16} />
                           </View>
                         );
                       }
@@ -1510,14 +1485,14 @@ export default function Survival() {
                         <View key={i} style={styles.historyItem}>
                           <InlineFlameText
                             text={`${actor} ${verb} ${claimText}`}
-                            style={[styles.historyItemText, androidTextTight]}
+                            style={styles.historyItemText}
                             iconSize={18}
                           />
                         </View>
                       );
                     })
                   ) : (
-                    <Text style={[styles.noHistoryText, androidTextTight]}>No history yet.</Text>
+                    <Text style={styles.noHistoryText}>No history yet.</Text>
                   )}
                 </View>
               </View>
@@ -1534,7 +1509,7 @@ export default function Survival() {
             <View style={styles.rulesCenter}>
               <View style={styles.rulesContent}>
                 <View style={styles.rulesHeader}>
-                  <Text style={[styles.rulesTitle, androidTextTight]}>Game Rules</Text>
+                  <Text style={styles.rulesTitle}>Game Rules</Text>
                   <Pressable onPress={() => setRulesOpen(false)} style={styles.rulesCloseButton}>
                     <Text style={styles.rulesClose}>✕</Text>
                   </Pressable>
@@ -1556,14 +1531,14 @@ export default function Survival() {
             <View style={styles.modalCenter}>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, androidTextTight]}>Settings</Text>
+                  <Text style={styles.modalTitle}>Settings</Text>
                   <Pressable onPress={() => setSettingsOpen(false)} style={styles.closeButton}>
                     <Text style={styles.closeButtonText}>✕</Text>
                   </Pressable>
                 </View>
 
                 <View style={styles.settingsRow}>
-                  <Text style={[styles.settingsLabel, androidTextTight]}>Vibration</Text>
+                  <Text style={styles.settingsLabel}>Vibration</Text>
                   <Switch
                     value={hapticsEnabled}
                     onValueChange={(value) => {
@@ -1576,7 +1551,7 @@ export default function Survival() {
                 </View>
 
                 <View style={styles.settingsRow}>
-                  <Text style={[styles.settingsLabel, androidTextTight]}>Music</Text>
+                  <Text style={styles.settingsLabel}>Music</Text>
                   <Switch
                     value={musicEnabled}
                     onValueChange={(value) => {
@@ -1589,7 +1564,7 @@ export default function Survival() {
                 </View>
 
                 <View style={styles.settingsRow}>
-                  <Text style={[styles.settingsLabel, androidTextTight]}>Sound Effects</Text>
+                  <Text style={styles.settingsLabel}>Sound Effects</Text>
                   <Switch
                     value={sfxEnabled}
                     onValueChange={(value) => {
@@ -1623,7 +1598,7 @@ export default function Survival() {
             <View style={styles.modalCenter}>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, androidTextTight]}>Inferno Survival</Text>
+                  <Text style={styles.modalTitle}>Inferno Survival</Text>
                   <Pressable
                     onPress={() => {
                       setIntroVisible(false);
@@ -1636,7 +1611,7 @@ export default function Survival() {
                 </View>
 
                 <View style={styles.modalBody}>
-                  <Text style={[styles.modalMessage, androidTextTight]}>
+                  <Text style={styles.modalMessage}>
                     How long can you survive in the inferno without losing a point??
                   </Text>
                 </View>
@@ -1778,30 +1753,18 @@ const PLUS_ONE_FLASH_INTERVAL = PLUS_ONE_TOTAL_DURATION / (PLUS_ONE_FLASHES * 2)
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0D1117' },
-  safe: {
-    flex: 1,
-    paddingTop: Platform.OS === 'android' ? 24 : 0,
-  },
+  safe: { flex: 1 },
   content: {
     flex: 1,
     paddingHorizontal: 18,
     paddingBottom: 20,
   },
-  headerCard: Platform.select({
-    ios: {
-      backgroundColor: '#161B22',
-      borderRadius: 14,
-      padding: 14,
-      marginTop: 8,
-    },
-    android: {
-      backgroundColor: '#161B22',
-      borderRadius: 14,
-      padding: 14,
-      marginTop: 8,
-      elevation: 6,
-    },
-  }),
+  headerCard: {
+    backgroundColor: '#161B22',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 8,
+  },
   title: {
     color: '#F0F6FC',
     fontWeight: '800',
@@ -1821,40 +1784,19 @@ const styles = StyleSheet.create({
   titleFlameIcon: {
     marginLeft: 8,
   },
-  scoreLine: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontWeight: '600',
-      marginBottom: 2,
-      textAlign: 'center',
-    },
-    android: {
-      color: '#F0F6FC',
-      fontWeight: 'bold',
-      marginBottom: 2,
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
-  subtle: Platform.select({
-    ios: {
-      color: '#FE9902',
-      fontWeight: '800',
-      fontSize: 18,
-      marginBottom: 6,
-      textAlign: 'center',
-    },
-    android: {
-      color: '#FE9902',
-      fontWeight: 'bold',
-      fontSize: 18,
-      marginBottom: 6,
-      textAlign: 'center',
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-  }),
+  scoreLine: {
+    color: '#F0F6FC',
+    fontWeight: '600',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  subtle: {
+    color: '#FE9902',
+    fontWeight: '800',
+    fontSize: 18,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
   subtleSmall: {
     fontSize: 16,
   },
@@ -1901,44 +1843,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 4,
   },
-  streakLabel: Platform.select({
-    ios: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '600',
-      marginRight: 8,
-      minWidth: 70,
-    },
-    android: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: 'bold',
-      marginRight: 8,
-      minWidth: 70,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
-  recordLabel: Platform.select({
-    ios: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '600',
-      marginLeft: 8,
-      minWidth: 70,
-      textAlign: 'right',
-    },
-    android: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: 'bold',
-      marginLeft: 8,
-      minWidth: 70,
-      textAlign: 'right',
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
+  streakLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 8,
+    minWidth: 70,
+  },
+  recordLabel: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+    minWidth: 70,
+    textAlign: 'right',
+  },
   streakMeter: {
     flex: 1,
     marginHorizontal: 4,
@@ -1993,27 +1912,15 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  controls: Platform.select({
-    ios: {
-      backgroundColor: '#161B22',
-      borderRadius: 16,
-      paddingVertical: 14,
-      paddingHorizontal: 14,
-      marginTop: -DIE_SIZE * 1.5,
-      position: 'relative',
-      zIndex: 10,
-    },
-    android: {
-      backgroundColor: '#161B22',
-      borderRadius: 16,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      marginTop: -DIE_SIZE * 1.5,
-      position: 'relative',
-      zIndex: 10,
-      elevation: 8,
-    },
-  }),
+  controls: {
+    backgroundColor: '#161B22',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginTop: -DIE_SIZE * 1.5,
+    position: 'relative',
+    zIndex: 10,
+  },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2067,39 +1974,21 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 6,
   },
-  historyBox: Platform.select({
-    ios: {
-      alignSelf: 'center',
-      width: '70%',
-      minHeight: 72,
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      borderColor: '#30363D',
-      borderWidth: 2,
-      borderRadius: 6,
-      padding: 10,
-      marginTop: 12,
-      marginBottom: 10,
-      justifyContent: 'center',
-      position: 'relative',
-      zIndex: 2,
-    },
-    android: {
-      alignSelf: 'center',
-      width: '70%',
-      minHeight: 72,
-      backgroundColor: 'rgba(255,255,255,0.08)',
-      borderColor: '#30363D',
-      borderWidth: 2,
-      borderRadius: 6,
-      padding: 10,
-      marginTop: 12,
-      marginBottom: 10,
-      justifyContent: 'center',
-      position: 'relative',
-      zIndex: 2,
-      elevation: 4,
-    },
-  }),
+  historyBox: {
+    alignSelf: 'center',
+    width: '70%',
+    minHeight: 72,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#30363D',
+    borderWidth: 2,
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 12,
+    marginBottom: 10,
+    justifyContent: 'center',
+    position: 'relative',
+    zIndex: 2,
+  },
   historyText: {
     color: '#F0F6FC',
     textAlign: 'center',
@@ -2166,22 +2055,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#C0C0C0',
     borderColor: 'rgba(255, 255, 255, 0.65)',
   },
-  gotEmBannerText: Platform.select({
-    ios: {
-      color: '#FFFFFF',
-      fontSize: 20,
-      fontWeight: '900',
-      letterSpacing: 0.6,
-    },
-    android: {
-      color: '#FFFFFF',
-      fontSize: 20,
-      fontWeight: '900',
-      letterSpacing: 0.6,
-      lineHeight: 24,
-      includeFontPadding: false,
-    },
-  }),
+  gotEmBannerText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
   footer: {
     alignItems: 'center',
     marginTop: 16,
@@ -2225,38 +2104,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  modalTitle: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontWeight: '800',
-      fontSize: 18,
-    },
-    android: {
-      color: '#F0F6FC',
-      fontWeight: 'bold',
-      fontSize: 18,
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-  }),
+  modalTitle: {
+    color: '#F0F6FC',
+    fontWeight: '800',
+    fontSize: 18,
+  },
   modalBody: {
     marginBottom: 8,
   },
-  modalMessage: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontSize: 16,
-      textAlign: 'center',
-      lineHeight: 22,
-    },
-    android: {
-      color: '#F0F6FC',
-      fontSize: 16,
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  modalMessage: {
+    color: '#F0F6FC',
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
   closeButton: {
     padding: 8,
   },
@@ -2280,37 +2141,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '700',
   },
-  historyItemText: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontSize: 14,
-      flex: 1,
-      lineHeight: 20,
-    },
-    android: {
-      color: '#F0F6FC',
-      fontSize: 14,
-      flex: 1,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
-  noHistoryText: Platform.select({
-    ios: {
-      color: '#8B949E',
-      textAlign: 'center',
-      fontSize: 14,
-      marginVertical: 20,
-    },
-    android: {
-      color: '#8B949E',
-      textAlign: 'center',
-      fontSize: 14,
-      marginVertical: 20,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-  }),
+  historyItemText: {
+    color: '#F0F6FC',
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
+  },
+  noHistoryText: {
+    color: '#8B949E',
+    textAlign: 'center',
+    fontSize: 14,
+    marginVertical: 20,
+  },
   celebrationTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2353,20 +2195,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  rulesTitle: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontWeight: '800',
-      fontSize: 20,
-    },
-    android: {
-      color: '#F0F6FC',
-      fontWeight: 'bold',
-      fontSize: 20,
-      lineHeight: 24,
-      includeFontPadding: false,
-    },
-  }),
+  rulesTitle: {
+    color: '#F0F6FC',
+    fontWeight: '800',
+    fontSize: 20,
+  },
   rulesCloseButton: {
     padding: 4,
   },
@@ -2384,20 +2217,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
   },
-  settingsLabel: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    android: {
-      color: '#F0F6FC',
-      fontSize: 16,
-      fontWeight: 'bold',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-  }),
+  settingsLabel: {
+    color: '#F0F6FC',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   screenOverlay: {
     position: 'absolute',
     top: 0,

@@ -68,8 +68,9 @@ export default function ThinkingIndicator({
         <Image
           source={require('../../assets/images/Rival.png')}
           style={{
-            width: size * 0.5625,
-            height: size * 0.5625,
+            // Increase size by 25% (0.6 * 1.25 = 0.75)
+            width: size * 0.75,
+            height: size * 0.75,
             resizeMode: 'contain',
           }}
         />

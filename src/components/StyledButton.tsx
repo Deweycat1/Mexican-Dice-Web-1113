@@ -1,7 +1,6 @@
 // src/components/StyledButton.tsx
 import React from 'react';
 import {
-  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -9,8 +8,6 @@ import {
   TextStyle,
   ViewStyle,
 } from 'react-native';
-
-import { androidTextTight } from '../styles/text';
 
 // Try to use your theme colors, but fall back if the file/path changes.
 let ThemeColors: any = {
@@ -80,13 +77,7 @@ export default function StyledButton({
         children
       ) : (
         <Text
-          style={[
-            styles.label,
-            v.label,
-            disabled && styles.labelDisabled,
-            androidTextTight,
-            textStyle,
-          ]}
+          style={[styles.label, v.label, disabled && styles.labelDisabled, textStyle]}
           numberOfLines={1}
           ellipsizeMode="clip"
         >
@@ -144,71 +135,26 @@ function getVariant(variant: Variant) {
 }
 
 const styles = StyleSheet.create({
-  base: Platform.select({
-    ios: {
-      minHeight: 52,
-      paddingHorizontal: 16,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      // Shadow (iOS)
-      shadowColor: '#000',
-      shadowOpacity: 0.28,
-      shadowRadius: 6,
-      shadowOffset: { width: 0, height: 3 },
-      // Elevation (Android, ignored on iOS)
-      elevation: 4,
-    },
-    android: {
-      minHeight: 48,
-      paddingHorizontal: 18,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      // Elevation for Android shadow
-      elevation: 4,
-    },
-    web: {
-      // Match iOS layout on web so buttons keep their previous size/shape
-      minHeight: 52,
-      paddingHorizontal: 16,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.28,
-      shadowRadius: 6,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 4,
-    },
-  }) as ViewStyle,
-  label: Platform.select({
-    ios: {
-      fontSize: 16,
-      fontWeight: '700',
-      letterSpacing: 0.3,
-      textAlign: 'center',
-    },
-    android: {
-      fontSize: 16,
-      fontWeight: '800',
-      letterSpacing: 0.2,
-      textAlign: 'center',
-      lineHeight: 20,
-      includeFontPadding: false,
-      backgroundColor: 'transparent',
-      textShadowColor: 'transparent',
-      textShadowRadius: 0,
-      textShadowOffset: { width: 0, height: 0 },
-    },
-    web: {
-      // Use the same typography as iOS on web
-      fontSize: 16,
-      fontWeight: '700',
-      letterSpacing: 0.3,
-      textAlign: 'center',
-    },
-  }) as TextStyle,
+  base: {
+    minHeight: 52,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Shadow (iOS)
+    shadowColor: '#000',
+    shadowOpacity: 0.28,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    // Elevation (Android)
+    elevation: 4,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textAlign: 'center',
+  },
   pressed: {
     transform: [{ scale: 0.98 }],
     opacity: 0.9, // never 0

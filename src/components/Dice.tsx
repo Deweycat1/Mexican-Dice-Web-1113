@@ -27,8 +27,8 @@ const VEGAS_RED = '#B80F15';
 const EDGE = '#70090C';
 const PIP = '#fcfafaff';
 const BASE_RED = '#C81D25';
-const THINKING_RIVAL = require('../../assets/images/ThinkingRival.png');
-const ANGRY_RIVAL = require('../../assets/images/angryrival..png');
+const THINKING_RIVAL = require('../../assets/images/thinkingrival.png');
+const ANGRY_RIVAL = require('../../assets/images/angryrival.png');
 
 const pipsFor: Record<number, { x: number; y: number }[]> = {
   1: [{ x: 0.5, y: 0.5 }],

@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,7 +21,6 @@ import { splitClaim } from '../src/engine/mexican';
 import { ensureUserProfile } from '../src/lib/auth';
 import { normalizeColorAnimalName } from '../src/lib/colorAnimalName';
 import { supabase } from '../src/lib/supabase';
-import { androidTextTight } from '../src/styles/text';
 
 const STARTING_SCORE = 5;
 const MAX_ACTIVE_GAMES = 5;
@@ -649,9 +647,9 @@ export default function OnlineLobbyScreen() {
 
   const renderSection = (title: string, data: LobbyGame[], emptyText: string) => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, androidTextTight]}>{title}</Text>
+      <Text style={styles.sectionTitle}>{title}</Text>
       {data.length === 0 ? (
-        <Text style={[styles.emptyTextSmall, androidTextTight]}>{emptyText}</Text>
+        <Text style={styles.emptyTextSmall}>{emptyText}</Text>
       ) : (
         data.map(renderGameCard)
       )}
@@ -662,7 +660,7 @@ export default function OnlineLobbyScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FE9902" />
-        <Text style={[styles.loadingText, androidTextTight]}>Loading online play…</Text>
+        <Text style={styles.loadingText}>Loading online play…</Text>
       </View>
     );
   }
@@ -674,10 +672,8 @@ export default function OnlineLobbyScreen() {
           <View style={styles.innerContent}>
             <View>
               <View style={styles.banner}>
-                <Text style={[styles.bannerText, androidTextTight]}>{friendlyHint}</Text>
-                <Text style={[styles.refreshHint, androidTextTight]}>
-                  Refresh to see new challenges
-                </Text>
+                <Text style={styles.bannerText}>{friendlyHint}</Text>
+                <Text style={styles.refreshHint}>Refresh to see new challenges</Text>
               </View>
 
               <View style={styles.card}>
@@ -724,7 +720,7 @@ export default function OnlineLobbyScreen() {
               {loadingGames ? (
                 <View style={styles.loadingMatches}>
                   <ActivityIndicator size="small" color="#FE9902" />
-                  <Text style={[styles.loadingText, androidTextTight]}>Loading matches…</Text>
+                  <Text style={styles.loadingText}>Loading matches…</Text>
                 </View>
               ) : (
                 <>
@@ -744,7 +740,7 @@ export default function OnlineLobbyScreen() {
 
             <Link href="/" asChild>
               <Pressable style={styles.mainMenuButton}>
-                <Text style={[styles.mainMenuButtonText, androidTextTight]}>Menu</Text>
+                <Text style={styles.mainMenuButtonText}>Menu</Text>
               </Pressable>
             </Link>
           </View>
@@ -755,24 +751,11 @@ export default function OnlineLobbyScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: Platform.select({
-    ios: {
-      flex: 1,
-      backgroundColor: '#1F262A',
-      paddingTop: 25,
-    },
-    android: {
-      flex: 1,
-      backgroundColor: '#1F262A',
-      paddingTop: 32,
-    },
-    web: {
-      // Match iOS lobby layout on web
-      flex: 1,
-      backgroundColor: '#1F262A',
-      paddingTop: 25,
-    },
-  }),
+  root: {
+    flex: 1,
+    backgroundColor: '#1F262A',
+    paddingTop: 25,
+  },
   scrollContent: {
     flexGrow: 1,
     padding: 20,
@@ -804,77 +787,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
-  bannerText: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      textAlign: 'center',
-      fontSize: 13,
-    },
-    android: {
-      color: '#F0F6FC',
-      textAlign: 'center',
-      fontSize: 13,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#F0F6FC',
-      textAlign: 'center',
-      fontSize: 13,
-    },
-  }),
-  refreshHint: Platform.select({
-    ios: {
-      color: '#53A7F3',
-      fontSize: 13,
-      fontWeight: '700',
-      textAlign: 'center',
-      marginTop: 6,
-    },
-    android: {
-      color: '#53A7F3',
-      fontSize: 13,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      marginTop: 6,
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#53A7F3',
-      fontSize: 13,
-      fontWeight: '700',
-      textAlign: 'center',
-      marginTop: 6,
-    },
-  }),
-  card: Platform.select({
-    ios: {
-      backgroundColor: '#2A3136',
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 18,
-      borderWidth: 1,
-      borderColor: '#30363D',
-    },
-    android: {
-      backgroundColor: '#2A3136',
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 18,
-      borderWidth: 1,
-      borderColor: '#30363D',
-      elevation: 6,
-    },
-    web: {
-      backgroundColor: '#2A3136',
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 18,
-      borderWidth: 1,
-      borderColor: '#30363D',
-    },
-  }),
+  bannerText: {
+    color: '#F0F6FC',
+    textAlign: 'center',
+    fontSize: 13,
+  },
+  refreshHint: {
+    color: '#53A7F3',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 6,
+  },
+  card: {
+    backgroundColor: '#2A3136',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#30363D',
+  },
   cardTitle: {
     color: '#FE9902',
     fontWeight: '800',
@@ -910,22 +842,10 @@ const styles = StyleSheet.create({
     borderColor: '#1C75BC',
     borderWidth: 2,
   },
-  startMatchGreenText: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontWeight: '800',
-    },
-    android: {
-      color: '#F0F6FC',
-      fontWeight: '800',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#F0F6FC',
-      fontWeight: '800',
-    },
-  }),
+  startMatchGreenText: {
+    color: '#F0F6FC',
+    fontWeight: '800',
+  },
   refreshButton: {
     backgroundColor: '#B33636',
     borderColor: '#7A2424',
@@ -979,60 +899,25 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
   },
-  sectionTitle: Platform.select({
-    ios: {
-      color: '#FE9902',
-      fontWeight: '800',
-      fontSize: 18,
-      marginBottom: 10,
-    },
-    android: {
-      color: '#FE9902',
-      fontWeight: 'bold',
-      fontSize: 18,
-      marginBottom: 10,
-      lineHeight: 22,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#FE9902',
-      fontWeight: '800',
-      fontSize: 18,
-      marginBottom: 10,
-    },
-  }),
+  sectionTitle: {
+    color: '#FE9902',
+    fontWeight: '800',
+    fontSize: 18,
+    marginBottom: 10,
+  },
   emptyTextSmall: {
     color: '#8B949E',
     textAlign: 'center',
     fontSize: 13,
   },
-  gameCard: Platform.select({
-    ios: {
-      backgroundColor: '#2A3136',
-      borderRadius: 14,
-      padding: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: '#30363D',
-    },
-    android: {
-      backgroundColor: '#2A3136',
-      borderRadius: 14,
-      padding: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: '#30363D',
-      elevation: 4,
-    },
-    web: {
-      backgroundColor: '#2A3136',
-      borderRadius: 14,
-      padding: 14,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: '#30363D',
-    },
-  }),
+  gameCard: {
+    backgroundColor: '#2A3136',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#30363D',
+  },
   gameCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1075,25 +960,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 6,
   },
-  completedOutcomeText: Platform.select({
-    ios: {
-      color: '#F0F6FC',
-      fontSize: 14,
-      fontWeight: '700',
-    },
-    android: {
-      color: '#F0F6FC',
-      fontSize: 14,
-      fontWeight: 'bold',
-      lineHeight: 18,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#F0F6FC',
-      fontSize: 14,
-      fontWeight: '700',
-    },
-  }),
+  completedOutcomeText: {
+    color: '#F0F6FC',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   openMatchButton: {
     flex: 1,
     marginRight: 12,
@@ -1130,59 +1001,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 20,
   },
-  mainMenuButton: Platform.select({
-    ios: {
-      backgroundColor: '#53A7F3',
-      borderRadius: 12,
-      paddingVertical: 20,
-      paddingHorizontal: 28,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: '#1C75BC',
-      marginTop: 16,
-    },
-    android: {
-      backgroundColor: '#53A7F3',
-      borderRadius: 12,
-      paddingVertical: 12,
-      paddingHorizontal: 28,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: '#1C75BC',
-      marginTop: 24,
-      elevation: 4,
-    },
-    web: {
-      backgroundColor: '#53A7F3',
-      borderRadius: 12,
-      paddingVertical: 20,
-      paddingHorizontal: 28,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: '#1C75BC',
-      marginTop: 16,
-    },
-  }),
-  mainMenuButtonText: Platform.select({
-    ios: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '700',
-    },
-    android: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '700',
-      lineHeight: 20,
-      includeFontPadding: false,
-    },
-    web: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '700',
-    },
-  }),
+  mainMenuButton: {
+    backgroundColor: '#53A7F3',
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#1C75BC',
+    marginTop: 16,
+  },
+  mainMenuButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
 });
