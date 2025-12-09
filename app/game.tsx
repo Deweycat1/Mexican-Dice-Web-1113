@@ -807,6 +807,7 @@ export default function Game() {
                       resizeMode="contain"
                     />
                   </View>
+                  <Text style={[styles.playerScoreLabel, styles.playerScoreLabelYou]}>You</Text>
                   <Animated.View
                     style={{
                       transform: [
@@ -851,6 +852,7 @@ export default function Game() {
                       resizeMode="contain"
                     />
                   </View>
+                  <Text style={[styles.playerScoreLabel, styles.playerScoreLabelRival]}>Infernoman</Text>
                   <Animated.View
                     style={{
                       transform: [
@@ -1261,17 +1263,22 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   rivalAvatarImage: {
-    width: 31,
-    height: 31,
+    width: 42,
+    height: 42,
   },
   playerScoreLabel: {
-    color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 18,
+    fontSize: 12,
     textAlign: 'center',
     textShadowColor: 'rgba(0,0,0,0.4)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  playerScoreLabelYou: {
+    color: '#53A7F3',
+  },
+  playerScoreLabelRival: {
+    color: '#FE9902',
   },
   scoreDie: {
     marginTop: 6,
