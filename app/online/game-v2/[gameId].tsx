@@ -1724,17 +1724,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: Platform.select({
       ios: 260,
-      android: 220, // slightly shorter on Android so the layout isn't overly tall
+      android: 240,
       default: 260,
     }),
     marginTop: Platform.select({
       ios: -134,
-      android: -80, // less aggressive lift on Android
+      android: -65,
       default: -134,
     }),
     marginBottom: Platform.select({
       ios: 20,
-      android: 12, // a bit tighter on Android
+      android: 20,
       default: 20,
     }),
   },
@@ -1750,14 +1750,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginTop: Platform.select({
       ios: -150,
-      android: -90, // reduce negative offset on Android
+      android: -75,
       default: -150,
     }),
     position: 'relative',
     zIndex: 10,
     marginBottom: Platform.select({
       ios: -10,
-      android: 8, // no negative margin on Android; small positive space instead
+      android: 20,
       default: -10,
     }),
   },

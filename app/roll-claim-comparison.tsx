@@ -2,6 +2,7 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -283,7 +284,10 @@ export default function RollClaimComparisonScreen() {
           {/* Highlight Cards */}
           <View style={styles.highlightRow}>
             <View style={styles.highlightCard}>
-              <Text style={styles.highlightIcon}>🎲</Text>
+              <Image
+                source={require('../assets/images/InfernoDiceEmoji.png')}
+                style={styles.highlightIconImage}
+              />
               <Text style={styles.highlightValue}>{totalRolls.toLocaleString()}</Text>
               <Text style={styles.highlightLabel}>Rolls Tracked</Text>
             </View>
@@ -417,6 +421,12 @@ const styles = StyleSheet.create({
     fontSize: 32,
     marginBottom: 8,
     textAlign: 'center',
+  },
+  highlightIconImage: {
+    width: 32,
+    height: 32,
+    marginBottom: 8,
+    resizeMode: 'contain',
   },
   highlightIceIcon: {
     marginBottom: 8,
