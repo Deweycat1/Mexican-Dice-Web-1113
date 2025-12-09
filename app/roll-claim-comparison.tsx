@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
-import IceEmojiIcon from '../src/components/IceEmojiIcon';
 interface RollStatsData {
   rolls: Record<string, number>;
 }
@@ -173,7 +172,15 @@ export default function RollClaimComparisonScreen() {
         ? { icon: <Text>⚖️</Text>, label: getCategoryLabel('balanced') }
         : kind === 'over'
         ? { icon: <FlameEmojiIcon size={16} />, label: getCategoryLabel('over') }
-        : { icon: <IceEmojiIcon size={16} />, label: getCategoryLabel('under') };
+        : {
+            icon: (
+              <Image
+                source={require('../assets/images/InfernoDiceEmoji.png')}
+                style={styles.insightInfernoIcon}
+              />
+            ),
+            label: getCategoryLabel('under'),
+          };
 
     return (
       <View style={styles.insightCell}>
@@ -316,7 +323,10 @@ export default function RollClaimComparisonScreen() {
 
             {mostAvoided && mostAvoided.bluffBias < -3 && (
               <View style={[styles.highlightCard, styles.highlightCardWide]}>
-                <IceEmojiIcon size={32} style={styles.highlightIceIcon} />
+                <Image
+                  source={require('../assets/images/InfernoDiceEmoji.png')}
+                  style={styles.highlightInfernoIcon}
+                />
                 <Text style={styles.highlightValue}>{mostAvoided.label}</Text>
                 <Text style={styles.highlightLabel}>Most Avoided</Text>
                 <Text style={styles.highlightDetail}>
@@ -548,6 +558,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  insightInfernoIcon: {
+    width: 16,
+    height: 16,
+    resizeMode: 'contain',
+  },
   insightText: {
     fontSize: androidScale(12),
     color: 'rgba(255, 255, 255, 0.8)',
@@ -635,5 +650,11 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: androidScale(16),
     fontWeight: '700',
+  },
+  highlightInfernoIcon: {
+    width: 32,
+    height: 32,
+    marginBottom: 8,
+    resizeMode: 'contain',
   },
 });

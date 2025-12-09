@@ -80,7 +80,10 @@ export default function AboutScreen() {
               </View>
 
               <View style={styles.featureCard}>
-                <Text style={styles.featureIcon}>🎲</Text>
+                <Image
+                  source={require('../assets/images/InfernoDiceEmoji.png')}
+                  style={[styles.featureIconImage, styles.featureIconDice]}
+                />
                 <Text style={styles.featureTitle}>Special Rolls</Text>
                 <Text style={styles.featureBody}>
                   21 (Inferno) tops the table, 31 (Reverse) flips the pressure, and 41 (Social)
@@ -294,6 +297,11 @@ const styles = StyleSheet.create({
   },
   featureIconImage: {
     marginBottom: 4,
+  },
+  featureIconDice: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
   },
   featureTitle: {
     fontSize: 16,
