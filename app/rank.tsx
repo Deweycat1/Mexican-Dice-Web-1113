@@ -228,7 +228,7 @@ export default function RankScreen() {
 
     return (
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Survival Champion</Text>
+        <Text style={styles.cardTitle}>Inferno Mode Record Holder</Text>
         {topSurvivors.length === 0 ? (
           <Text style={styles.noDataText}>
             No Survival data yet. Push your streak in Inferno Survival mode to claim this title.
