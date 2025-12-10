@@ -34,6 +34,7 @@ import {
 } from '../engine/mexican';
 import { formatCallBluffMessage } from '../utils/narration';
 import { updatePersonalStatsOnGamePlayed } from '../stats/personalStats';
+import { awardBadge, incrementBluffCaught } from '../stats/badges';
 
 export type Turn = 'player' | 'cpu';
 export type LastAction = 'normal' | 'reverseVsMexican';
@@ -411,7 +412,20 @@ export const useGameStore = create<Store>((set, get) => {
     const loserScore = who === 'player' ? updatedPlayer : updatedCpu;
     const finished = loserScore <= 0;
     if (finished) {
-      void updatePersonalStatsOnGamePlayed();
+      // Update personal stats and check day-based badges in the background
+      void (async () => {
+        try {
+          const stats = await updatePersonalStatsOnGamePlayed();
+          if (stats.totalDaysPlayed >= 7) {
+            void awardBadge('welcome_back_7_days');
+          }
+          if (stats.currentDailyStreak >= 7) {
+            void awardBadge('inferno_week_7_day_streak');
+          }
+        } catch (err) {
+          console.error('Failed to update personal stats after game end', err);
+        }
+      })();
     }
     const finalMessage = finished
       ? who === 'player'
@@ -474,6 +488,29 @@ export const useGameStore = create<Store>((set, get) => {
         } else if (loser === 'cpu' && cpuLastClaim && cpuLastClaim.type === 'claim') {
           void trackClaimRisk(String(cpuLastClaim.claim), false); // CPU lost
         }
+
+        // Quick Play style badges that depend on the outcome and claim history
+        if (winner === 'player') {
+          try {
+            const claimsSnapshot = state.claims ?? [];
+
+            const playerClaims = claimsSnapshot.filter(
+              (e): e is { type: 'claim'; who: Turn; claim: number; bluff: boolean } =>
+                e.type === 'claim' && e.who === 'player'
+            );
+
+            const hasPlayerBluff = playerClaims.some((c) => c.bluff);
+            if (!hasPlayerBluff) {
+              void awardBadge('pure_honesty');
+            }
+
+            if (playerClaims.length <= 3) {
+              void awardBadge('silent_strategist');
+            }
+          } catch (err) {
+            console.error('Failed to evaluate Quick Play style badges', err);
+          }
+        }
       }
       // Add point event to normal mode claims history
       pushEvent(finalMessage);
@@ -502,22 +539,61 @@ export const useGameStore = create<Store>((set, get) => {
           void submitGlobalBest(prevStreak);
           // Record survival run to average calculation
           void recordSurvivalRun(prevStreak);
-          void updatePersonalStatsOnGamePlayed();
+          // Survival run completion also counts as a played game for personal stats
+          void (async () => {
+            try {
+              const stats = await updatePersonalStatsOnGamePlayed();
+              if (stats.totalDaysPlayed >= 7) {
+                void awardBadge('welcome_back_7_days');
+              }
+              if (stats.currentDailyStreak >= 7) {
+                void awardBadge('inferno_week_7_day_streak');
+              }
+            } catch (err) {
+              console.error('Failed to update personal stats after survival run', err);
+            }
+          })();
         } else if (who === 'cpu') {
           // cpu lost -> player survived the round
           // increment streak and update/persist bestStreak if we've reached a new high
           const streakIncrement = amount === 2 ? 2 : 1;
+          let newStreak = 0;
+          let prevBest = 0;
+          let newBest = 0;
           set((prev) => {
             const prevStreak = prev.currentStreak || 0;
-            const newStreak = prevStreak + streakIncrement;
-            const prevBest = prev.bestStreak || 0;
-            const newBest = Math.max(prevBest, newStreak);
+            newStreak = prevStreak + streakIncrement;
+            prevBest = prev.bestStreak || 0;
+            newBest = Math.max(prevBest, newStreak);
             // persist new best if it changed
             if (newBest !== prevBest) {
               void saveBestStreak(newBest);
             }
             return { currentStreak: newStreak, bestStreak: newBest };
           });
+
+          // Survival streak badges (per-run and record-based)
+          try {
+            if (newStreak >= 5) {
+              void awardBadge('inferno_streak_5');
+              void awardBadge('first_survivor');
+            }
+            if (newStreak >= 10) {
+              void awardBadge('inferno_streak_10');
+            }
+            if (newStreak >= 20) {
+              void awardBadge('true_survivor_20');
+            }
+            if (newBest > prevBest) {
+              void awardBadge('inferno_record_breaker');
+            }
+            if (newBest >= 20) {
+              void awardBadge('inferno_immortal');
+            }
+          } catch (err) {
+            console.error('Failed to evaluate survival streak badges', err);
+          }
+
           // record point gain event
           pushSurvivalEvent(`✨ You survived! Streak: ${get().currentStreak}`);
         }
@@ -686,6 +762,26 @@ export const useGameStore = create<Store>((set, get) => {
       caller: caller === 'player' ? 'player' : 'rival',
       correct: callerWasCorrect,
     });
+
+    // Lifetime bluff-catcher badges: only count when the player correctly calls Infernoman's bluff
+    if (caller === 'player' && callerWasCorrect) {
+      (async () => {
+        try {
+          const totalCaught = await incrementBluffCaught();
+          if (totalCaught >= 5) {
+            void awardBadge('bluff_catcher_5');
+          }
+          if (totalCaught >= 10) {
+            void awardBadge('bluff_catcher_10');
+          }
+          if (totalCaught >= 20) {
+            void awardBadge('bluff_catcher_20');
+          }
+        } catch (err) {
+          console.error('Failed to evaluate bluff-catcher badges', err);
+        }
+      })();
+    }
 
     const callerName = caller === 'player' ? 'You' : 'Infernoman';
     const defenderName = prevBy === 'player' ? 'You' : 'Infernoman';

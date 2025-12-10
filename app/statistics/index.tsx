@@ -25,6 +25,11 @@ export default function StatisticsMenuScreen() {
             style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonGold]}
           />
           <StyledButton
+            label="Badges"
+            onPress={() => router.push('/badges')}
+            style={[styles.menuButton, styles.buttonSpacing]}
+          />
+          <StyledButton
             label="Back to Menu"
             onPress={() => router.push('/')}
             variant="success"

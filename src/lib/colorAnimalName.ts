@@ -19,16 +19,29 @@ const ANIMALS = [
 export function generateRandomColorAnimalName() {
   const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
   const randomAnimal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
-  return `${randomColor}-${randomAnimal}`;
+  const suffix = String(Math.floor(Math.random() * 100)).padStart(2, '0');
+  return `${randomColor}${randomAnimal}${suffix}`;
 }
 
 export function normalizeColorAnimalName(value: string | null | undefined): string {
   if (!value) return '';
-  return value
+
+  const trimmed = value.trim().replace(/[-\s]+/g, '');
+
+  // Separate the final 2 digits (suffix)
+  const match = trimmed.match(/^(.*?)(\d{2})$/);
+  if (!match) return '';
+
+  const base = match[1];
+  const suffix = match[2];
+
+  // Capitalize each component (Color, Animal)
+  const normalizedBase = base
+    .replace(/([A-Z][a-z]*)/g, ' $1')
     .trim()
-    .replace(/\s+/g, '-')
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join('-');
+    .split(/\s+/)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
+    .join('');
+
+  return `${normalizedBase}${suffix}`;
 }

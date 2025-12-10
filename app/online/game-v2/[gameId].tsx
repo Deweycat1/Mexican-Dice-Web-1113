@@ -52,6 +52,7 @@ import { ensureUserProfile, getCurrentUser } from '../../../src/lib/auth';
 import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
+import { awardBadge } from '../../../src/stats/badges';
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -511,7 +512,20 @@ export default function OnlineGameV2Screen() {
     if (!game || !myRole) return;
     const prev = prevStatusRef.current;
     if (prev !== 'finished' && game.status === 'finished') {
-      void updatePersonalStatsOnGamePlayed();
+      // Online games also count toward personal stats and day-based badges
+      void (async () => {
+        try {
+          const stats = await updatePersonalStatsOnGamePlayed();
+          if (stats.totalDaysPlayed >= 7) {
+            void awardBadge('welcome_back_7_days');
+          }
+          if (stats.currentDailyStreak >= 7) {
+            void awardBadge('inferno_week_7_day_streak');
+          }
+        } catch (err) {
+          console.error('Failed to update personal stats after online game end', err);
+        }
+      })();
     }
     prevStatusRef.current = game.status;
   }, [game?.status, myRole]);

@@ -202,10 +202,13 @@ const nextUsernameCandidate = (attempt: number, preferred?: string | null) => {
       return normalizedPreferred;
     }
   }
-  const normalizedRandom = normalizeCandidate(generateRandomColorAnimalName());
+  const raw = generateRandomColorAnimalName();
+  const normalizedRandom = normalizeColorAnimalName(raw);
+
   if (!normalizedRandom) {
     throw new Error('Failed to generate username');
   }
+
   return normalizedRandom;
 };
 
