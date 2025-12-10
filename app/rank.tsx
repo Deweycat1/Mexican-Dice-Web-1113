@@ -11,7 +11,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import StyledButton from '../src/components/StyledButton';
 import type { PlayerRank } from '../src/stats/rank';
-import { getMyRank, getRankTier, getTop10Ranks } from '../src/stats/rank';
+import {
+  getMyRank,
+  getRankTier,
+  getTop10Ranks,
+  getTopBluffersBySuccess,
+  getTopSurvivalPlayers,
+} from '../src/stats/rank';
 
 export default function RankScreen() {
   const router = useRouter();
@@ -19,6 +25,8 @@ export default function RankScreen() {
   const [top10, setTop10] = useState<PlayerRank[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [topBluffers, setTopBluffers] = useState<PlayerRank[]>([]);
+  const [topSurvivors, setTopSurvivors] = useState<PlayerRank[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -28,12 +36,19 @@ export default function RankScreen() {
         setLoading(true);
         setError(null);
 
-        const [rank, leaderboard] = await Promise.all([getMyRank(), getTop10Ranks()]);
+        const [rank, leaderboard, bluffers, survivors] = await Promise.all([
+          getMyRank(),
+          getTop10Ranks(),
+          getTopBluffersBySuccess(5),
+          getTopSurvivalPlayers(5, 1),
+        ]);
 
         if (cancelled) return;
 
         setMyRank(rank);
         setTop10(leaderboard);
+        setTopBluffers(bluffers);
+        setTopSurvivors(survivors);
       } catch (err) {
         console.error('Failed to load rank data', err);
         if (!cancelled) {
@@ -169,6 +184,79 @@ export default function RankScreen() {
     );
   };
 
+  const renderBluffLegend = () => {
+    if (loading) {
+      // Main loading state already shows a spinner; no need to duplicate here
+      return null;
+    }
+
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Bluff Legend</Text>
+        {topBluffers.length === 0 ? (
+          <Text style={styles.noDataText}>
+            No bluff data yet. Call a few bluffs (and be right about them) to claim this title.
+          </Text>
+        ) : (
+          (() => {
+            const legend = topBluffers[0];
+            const isMe = !!myRank && myRank.userId === legend.userId;
+
+            return (
+              <View style={styles.bluffLegendContent}>
+                <Text style={styles.bluffLegendName}>
+                  {legend.username} {isMe ? '(that’s you!)' : ''}
+                </Text>
+                <Text style={styles.bluffLegendStat}>
+                  Successful bluffs: {legend.correctBluffEvents}
+                </Text>
+                <Text style={styles.bluffLegendStatSecondary}>
+                  Total bluff events: {legend.bluffEvents}
+                </Text>
+              </View>
+            );
+          })()
+        )}
+      </View>
+    );
+  };
+
+  const renderSurvivalChampion = () => {
+    if (loading) {
+      return null; // covered by main loading state in the rank card
+    }
+
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Survival Champion</Text>
+        {topSurvivors.length === 0 ? (
+          <Text style={styles.noDataText}>
+            No Survival data yet. Push your streak in Inferno Survival mode to claim this title.
+          </Text>
+        ) : (
+          (() => {
+            const champ = topSurvivors[0];
+            const isMe = !!myRank && myRank.userId === champ.userId;
+
+            return (
+              <View style={styles.survivalChampionContent}>
+                <Text style={styles.survivalChampionName}>
+                  {champ.username} {isMe ? '(that’s you!)' : ''}
+                </Text>
+                <Text style={styles.survivalChampionStat}>
+                  Best Survival streak: {champ.survivalBest}
+                </Text>
+                <Text style={styles.survivalChampionStatSecondary}>
+                  Survival runs played: {champ.survivalRuns}
+                </Text>
+              </View>
+            );
+          })()
+        )}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safe}>
@@ -177,6 +265,8 @@ export default function RankScreen() {
           <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
             {renderMyRankCard()}
             {renderLeaderboard()}
+            {renderBluffLegend()}
+            {renderSurvivalChampion()}
             <View style={styles.footer}>
               <StyledButton
                 label="Back to Stats"
@@ -362,5 +452,40 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 300,
   },
+  bluffLegendContent: {
+    marginTop: 8,
+  },
+  bluffLegendName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FE9902',
+    marginBottom: 4,
+  },
+  bluffLegendStat: {
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  bluffLegendStatSecondary: {
+    fontSize: 14,
+    color: '#A0B4C0',
+    marginTop: 2,
+  },
+  survivalChampionContent: {
+    marginTop: 8,
+  },
+  survivalChampionName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FE9902',
+    marginBottom: 4,
+  },
+  survivalChampionStat: {
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  survivalChampionStatSecondary: {
+    fontSize: 14,
+    color: '#A0B4C0',
+    marginTop: 2,
+  },
 });
-

@@ -113,6 +113,54 @@ export async function getTop10Ranks(): Promise<PlayerRank[]> {
   }
 }
 
+export async function getTopBluffersBySuccess(limit = 5): Promise<PlayerRank[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_top_bluffers_by_success', {
+      p_limit: limit,
+    });
+
+    if (error) {
+      console.error('get_top_bluffers_by_success error', error);
+      return [];
+    }
+
+    if (!data || !Array.isArray(data)) {
+      return [];
+    }
+
+    return (data as PlayerRankRow[]).map(mapRowToPlayerRank);
+  } catch (err) {
+    console.error('Failed to get top bluffers by success', err);
+    return [];
+  }
+}
+
+export async function getTopSurvivalPlayers(
+  limit = 5,
+  minBest = 1
+): Promise<PlayerRank[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_top_survival_players', {
+      p_limit: limit,
+      p_min_best: minBest,
+    });
+
+    if (error) {
+      console.error('get_top_survival_players error', error);
+      return [];
+    }
+
+    if (!data || !Array.isArray(data)) {
+      return [];
+    }
+
+    return (data as PlayerRankRow[]).map(mapRowToPlayerRank);
+  } catch (err) {
+    console.error('Failed to get top survival players', err);
+    return [];
+  }
+}
+
 export async function updateRankFromGameResult(opts: {
   mode: 'quick_play' | 'survival' | 'online';
   won?: boolean;
@@ -149,4 +197,3 @@ export async function updateRankFromGameResult(opts: {
     return null;
   }
 }
-

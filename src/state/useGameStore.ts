@@ -98,6 +98,9 @@ export type Store = {
   lastBluffDefenderTruth: boolean | null;
   bluffResultNonce: number;
   pendingInfernoDelay: boolean;
+  // Per-game bluff tracking for ranking
+  playerBluffEventsThisGame: number;
+  playerSuccessfulBluffsThisGame: number;
   
   // Turn timing tracking
   playerTurnStartTime: number | null;
@@ -457,12 +460,11 @@ export const useGameStore = create<Store>((set, get) => {
         const loser = who; // who lost the point
         void recordWin(winner);
         // Update global rank for quick play (non-blocking).
-        // TODO: Wire real bluff event counts into this call.
         void updateRankFromGameResult({
           mode: 'quick_play',
           won: winner === 'player',
-          bluffEvents: 0,
-          correctBluffEvents: 0,
+          bluffEvents: state.playerBluffEventsThisGame,
+          correctBluffEvents: state.playerSuccessfulBluffsThisGame,
         });
         
         // Record winning/losing claims for Quick Play
@@ -548,6 +550,13 @@ export const useGameStore = create<Store>((set, get) => {
           void submitGlobalBest(prevStreak);
           // Record survival run to average calculation
           void recordSurvivalRun(prevStreak);
+          // Update global rank based on survival streak and bluff behavior (non-blocking).
+          void updateRankFromGameResult({
+            mode: 'survival',
+            survivalStreak: prevStreak,
+            bluffEvents: s.playerBluffEventsThisGame,
+            correctBluffEvents: s.playerSuccessfulBluffsThisGame,
+          });
           // Update global rank based on survival streak (non-blocking).
           void updateRankFromGameResult({
             mode: 'survival',
@@ -656,6 +665,8 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
       playerTurnStartTime: null,
+      playerBluffEventsThisGame: 0,
+      playerSuccessfulBluffsThisGame: 0,
       turn: 'player',
     });
     void loadBestStreak().then((b) => set({ bestStreak: b || 0 })).catch(() => {});
@@ -682,6 +693,8 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
       playerTurnStartTime: null,
+      playerBluffEventsThisGame: 0,
+      playerSuccessfulBluffsThisGame: 0,
       turn: 'player',
     });
   };
@@ -776,6 +789,16 @@ export const useGameStore = create<Store>((set, get) => {
       caller: caller === 'player' ? 'player' : 'rival',
       correct: callerWasCorrect,
     });
+
+    // Track per-game bluff events for ranking when the player calls bluff
+    if (caller === 'player') {
+      set((prev) => ({
+        ...prev,
+        playerBluffEventsThisGame: (prev.playerBluffEventsThisGame ?? 0) + 1,
+        playerSuccessfulBluffsThisGame:
+          (prev.playerSuccessfulBluffsThisGame ?? 0) + (callerWasCorrect ? 1 : 0),
+      }));
+    }
 
     // Lifetime bluff-catcher badges: only count when the player correctly calls Infernoman's bluff
     if (caller === 'player' && callerWasCorrect) {
@@ -1080,6 +1103,8 @@ export const useGameStore = create<Store>((set, get) => {
     lastBluffCaller: null,
     lastBluffDefenderTruth: null,
     bluffResultNonce: 0,
+    playerBluffEventsThisGame: 0,
+    playerSuccessfulBluffsThisGame: 0,
     
     // Turn timing tracking
     playerTurnStartTime: null,
@@ -1127,6 +1152,8 @@ export const useGameStore = create<Store>((set, get) => {
         cpuSocialDice: null,
         cpuSocialRevealNonce: 0,
         socialBannerNonce: 0,
+        playerBluffEventsThisGame: 0,
+        playerSuccessfulBluffsThisGame: 0,
       });
     },
 
