@@ -35,6 +35,7 @@ import {
 import { formatCallBluffMessage } from '../utils/narration';
 import { updatePersonalStatsOnGamePlayed } from '../stats/personalStats';
 import { awardBadge, incrementBluffCaught } from '../stats/badges';
+import { updateRankFromGameResult } from '../stats/rank';
 
 export type Turn = 'player' | 'cpu';
 export type LastAction = 'normal' | 'reverseVsMexican';
@@ -455,6 +456,14 @@ export const useGameStore = create<Store>((set, get) => {
         const winner = other(who); // The winner is the opposite of who lost
         const loser = who; // who lost the point
         void recordWin(winner);
+        // Update global rank for quick play (non-blocking).
+        // TODO: Wire real bluff event counts into this call.
+        void updateRankFromGameResult({
+          mode: 'quick_play',
+          won: winner === 'player',
+          bluffEvents: 0,
+          correctBluffEvents: 0,
+        });
         
         // Record winning/losing claims for Quick Play
         // Use the last claim made (normalized roll code)
@@ -539,6 +548,11 @@ export const useGameStore = create<Store>((set, get) => {
           void submitGlobalBest(prevStreak);
           // Record survival run to average calculation
           void recordSurvivalRun(prevStreak);
+          // Update global rank based on survival streak (non-blocking).
+          void updateRankFromGameResult({
+            mode: 'survival',
+            survivalStreak: prevStreak,
+          });
           // Survival run completion also counts as a played game for personal stats
           void (async () => {
             try {

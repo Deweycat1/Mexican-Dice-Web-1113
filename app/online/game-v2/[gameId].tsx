@@ -53,6 +53,7 @@ import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import { awardBadge } from '../../../src/stats/badges';
+import { updateRankFromGameResult } from '../../../src/stats/rank';
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -458,6 +459,7 @@ export default function OnlineGameV2Screen() {
     return defaultRoundState;
   }, [game?.round_state, game?.id]);
   const socialRevealNonceRef = useRef<number | null>(null);
+  const rankUpdatedRef = useRef(false);
 
   const lastClaim = useMemo(() => {
     if (game?.last_claim == null) return null;
@@ -526,6 +528,42 @@ export default function OnlineGameV2Screen() {
           console.error('Failed to update personal stats after online game end', err);
         }
       })();
+
+      // Update global rank based on online match outcome (non-blocking).
+      if (!rankUpdatedRef.current) {
+        rankUpdatedRef.current = true;
+        void (async () => {
+          try {
+            const currentUser = await getCurrentUser();
+            if (!currentUser || !game) {
+              return;
+            }
+
+            let didCurrentUserWin: boolean | null = null;
+            const isHost = currentUser.id === game.host_id;
+            const isGuest = currentUser.id === game.guest_id;
+
+            if (isHost) {
+              if (game.host_score !== game.guest_score) {
+                didCurrentUserWin = game.host_score > game.guest_score;
+              }
+            } else if (isGuest) {
+              if (game.host_score !== game.guest_score) {
+                didCurrentUserWin = game.guest_score > game.host_score;
+              }
+            }
+
+            if (didCurrentUserWin !== null) {
+              void updateRankFromGameResult({
+                mode: 'online',
+                won: didCurrentUserWin,
+              });
+            }
+          } catch (err) {
+            console.error('Failed to update rank after online game end', err);
+          }
+        })();
+      }
     }
     prevStatusRef.current = game.status;
   }, [game?.status, myRole]);

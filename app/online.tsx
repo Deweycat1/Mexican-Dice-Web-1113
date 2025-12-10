@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -12,7 +13,6 @@ import {
   View,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import * as Clipboard from 'expo-clipboard';
 
 import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
@@ -679,7 +679,7 @@ export default function OnlineLobbyScreen() {
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Start a new match</Text>
                 <Text style={styles.cardSubtitle}>
-                  Invite a friend using their color-animal code (for example: "Blue-Panda").
+                  Invite a friend using their color-animal code (for example: "BluePanda04").
                 </Text>
                 {myUsername && (
                   <View style={styles.usernameRow}>
