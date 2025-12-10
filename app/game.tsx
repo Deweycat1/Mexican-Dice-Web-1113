@@ -197,7 +197,7 @@ export default function Game() {
     callBluff,
     newGame,
     buildBanner,
-    message,
+    getBaseMessage,
     claims,
     gameOver,
     mustBluff,
@@ -211,7 +211,7 @@ export default function Game() {
     stopSurvival,
   } = useGameStore();
 
-  const narration = (buildBanner?.() || message || '').trim();
+  const narration = (buildBanner?.() || getBaseMessage() || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
 
   // Ensure we leave Survival mode whenever the Quick Play screen mounts so claims/event

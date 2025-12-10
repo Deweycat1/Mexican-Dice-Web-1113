@@ -326,7 +326,7 @@ export default function Survival() {
     playerClaim,
     callBluff,
     buildBanner,
-    message,
+    getBaseMessage,
     survivalClaims,
     gameOver,
     mustBluff,
@@ -801,7 +801,7 @@ export default function Survival() {
     }
   }, [currentStreak, globalBest, hasShownNewLeader, dimAnim]);
 
-  const narration = (buildBanner?.() || message || '').trim();
+  const narration = (buildBanner?.() || getBaseMessage() || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
   const hasClaim = lastClaimValue != null;
 

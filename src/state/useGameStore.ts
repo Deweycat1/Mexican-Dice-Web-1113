@@ -84,7 +84,10 @@ export type Store = {
 
   isRolling: boolean;
   mustBluff: boolean;
+  // Quick Play narration/status line
   message: string;
+  // Survival mode narration/status line (kept separate so modes don't bleed)
+  survivalMessage: string;
   mexicanFlashNonce: number;
   cpuSocialDice: DicePair | null;
   cpuSocialRevealNonce: number;
@@ -130,6 +133,7 @@ export type Store = {
 
   buildBanner(): string;
   setMessage(msg: string): void;
+  getBaseMessage(): string;
   // Survival mode state
   mode: 'normal' | 'survival';
   currentStreak: number;
@@ -156,7 +160,6 @@ const buildSurvivalChallengeReset = (): Pick<
   | 'lastPlayerRoll'
   | 'lastCpuRoll'
   | 'mustBluff'
-  | 'history'
   | 'survivalHistory'
   | 'survivalClaims'
 > => ({
@@ -166,7 +169,6 @@ const buildSurvivalChallengeReset = (): Pick<
   lastPlayerRoll: null,
   lastCpuRoll: null,
   mustBluff: false,
-  history: [] as Store['history'],
   survivalHistory: [] as Store['survivalHistory'],
   survivalClaims: [] as Store['survivalClaims'],
 });
@@ -430,9 +432,9 @@ export const useGameStore = create<Store>((set, get) => {
         survivalPlayerScore: updatedSP,
         survivalCpuScore: updatedSC,
         gameOver: finished ? other(who) : null,
-        message: finalMessage,
         survivalHistory: [...(prev.survivalHistory ?? []), entry].slice(-3),
       }));
+      setModeMessage(finalMessage);
     } else {
       // Quick Play mode - record win if game ends
       if (finished) {
@@ -479,9 +481,9 @@ export const useGameStore = create<Store>((set, get) => {
         playerScore: updatedPlayer,
         cpuScore: updatedCpu,
         gameOver: finished ? other(who) : null,
-        message: finalMessage,
         history: [...(prev.history ?? []), entry].slice(-3),
       }));
+      setModeMessage(finalMessage);
     }
 
     // Survival mode handling: if survival is active update streaks/run state
@@ -595,7 +597,8 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const endSurvival = (reason: string) => {
-    set({ isSurvivalOver: true, message: reason });
+    set({ isSurvivalOver: true });
+    setModeMessage(reason);
   };
 
   const stopSurvival = () => {
@@ -650,7 +653,7 @@ export const useGameStore = create<Store>((set, get) => {
     const { lastClaim, lastAction, lastPlayerRoll, lastCpuRoll } = state;
 
     if (lastClaim == null) {
-      set({ message: 'No claim to challenge yet.' });
+      setModeMessage('No claim to challenge yet.');
       return { gameOver: false };
     }
 
@@ -706,11 +709,11 @@ export const useGameStore = create<Store>((set, get) => {
       useEmDash: false,
     });
 
-    set((prevState) => ({
-      lastBluffCaller: caller,
-      lastBluffDefenderTruth: defenderToldTruth,
-      bluffResultNonce: (prevState.bluffResultNonce ?? 0) + 1,
-    }));
+      set((prevState) => ({
+        lastBluffCaller: caller,
+        lastBluffDefenderTruth: defenderToldTruth,
+        bluffResultNonce: (prevState.bluffResultNonce ?? 0) + 1,
+      }));
 
     // Add history entry when Infernoman incorrectly calls player's bluff
     if (caller === 'cpu' && prevBy === 'player' && defenderToldTruth) {
@@ -743,6 +746,16 @@ export const useGameStore = create<Store>((set, get) => {
     }
 
     return result;
+  };
+
+  // Helper: set the appropriate per-mode narration message without leaking between modes
+  const setModeMessage = (msg: string) => {
+    const mode = get().mode;
+    if (mode === 'survival') {
+      set({ survivalMessage: msg });
+    } else {
+      set({ message: msg });
+    }
   };
 
   const cpuTurn = async () => {
@@ -799,8 +812,8 @@ export const useGameStore = create<Store>((set, get) => {
           cpuSocialRevealNonce: prevState.cpuSocialRevealNonce + 1,
           socialBannerNonce: prevState.socialBannerNonce + 1,
           turn: 'player',
-          message: 'Infernoman shows Social (41). Round resets.',
         }));
+        setModeMessage('Infernoman shows Social (41). Round resets.');
         return;
       }
 
@@ -948,6 +961,7 @@ export const useGameStore = create<Store>((set, get) => {
     isRolling: false,
     mustBluff: false,
     message: `Welcome to Inferno ${MEXICAN_ICON} Dice!`,
+    survivalMessage: 'Survive as long as you can in Inferno Mode.',
     pendingInfernoDelay: false,
     mexicanFlashNonce: 0,
     cpuSocialDice: null,
@@ -1035,12 +1049,14 @@ export const useGameStore = create<Store>((set, get) => {
         lastPlayerRoll: actual,
         mustBluff: !legalTruth,
         isRolling: false,
-        message: legalTruth
-          ? `You rolled ${actual}. Claim it or choose a bluff.`
-          : `You rolled ${actual}. You must bluff with a higher claim (21 or 31 are always available).`,
         mexicanFlashNonce: actual === 21 ? Date.now() : prev.mexicanFlashNonce,
         playerTurnStartTime: turnStartTime,
       }));
+      setModeMessage(
+        legalTruth
+          ? `You rolled ${actual}. Claim it or choose a bluff.`
+          : `You rolled ${actual}. You must bluff with a higher claim (21 or 31 are always available).`
+      );
 
       endTurnLock();
     },
@@ -1108,23 +1124,20 @@ export const useGameStore = create<Store>((set, get) => {
       const claimToCheck = resolveActiveChallenge(state.baselineClaim, prev);
       
       if (!isLegalRaise(claimToCheck, claim)) {
-        set({
-          message:
-            claimToCheck == null
-              ? 'Choose a valid claim.'
-              : `Claim ${claim} must beat ${claimToCheck}.`,
-          isBusy: false,
-        });
+        const msg =
+          claimToCheck == null
+            ? 'Choose a valid claim.'
+            : `Claim ${claim} must beat ${claimToCheck}.`;
+        set({ isBusy: false });
+        setModeMessage(msg);
         endTurnLock();
         return;
       }
 
       if (claim === 41) {
         if (state.lastPlayerRoll !== 41) {
-          set({
-            message: '41 is Social and must be shown, not bluffed.',
-            isBusy: false,
-          });
+          set({ isBusy: false });
+          setModeMessage('41 is Social and must be shown, not bluffed.');
           endTurnLock();
           return;
         }
@@ -1139,10 +1152,10 @@ export const useGameStore = create<Store>((set, get) => {
         resetRoundState();
         set((prevState) => ({
           turn: 'cpu',
-          message: 'Social (41) shown. Round resets.',
           socialBannerNonce: prevState.socialBannerNonce + 1,
           pendingInfernoDelay: false,
         }));
+        setModeMessage('Social (41) shown. Round resets.');
         set({ isBusy: false });
         endTurnLock();
         cpuTurn();
@@ -1212,9 +1225,9 @@ export const useGameStore = create<Store>((set, get) => {
         turn: 'cpu',
         mustBluff: false,
         lastPlayerRoll: state.lastPlayerRoll,
-        message,
         pendingInfernoDelay: claim === 21,
       });
+      setModeMessage(message);
 
       set({ isBusy: false });
       endTurnLock();
@@ -1288,14 +1301,20 @@ export const useGameStore = create<Store>((set, get) => {
 
     buildBanner: () => {
       const state = get();
+      const baseMessage =
+        state.mode === 'survival' ? state.survivalMessage : state.message;
       if (isMexican(state.lastClaim)) {
         return state.turn === 'player'
           ? `Infernoman claims 21 (Inferno${MEXICAN_ICON}). You must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`
           : `You claimed 21 (Inferno${MEXICAN_ICON}). Infernoman must roll a real 21, 31, or 41 or bluff 21/31, otherwise call bluff.`;
       }
-      return state.message;
+      return baseMessage;
     },
 
-    setMessage: (msg: string) => set({ message: msg }),
+    setMessage: (msg: string) => setModeMessage(msg),
+    getBaseMessage: () => {
+      const state = get();
+      return state.mode === 'survival' ? state.survivalMessage : state.message;
+    },
   };
 });
