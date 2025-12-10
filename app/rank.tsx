@@ -1,0 +1,366 @@
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import StyledButton from '../src/components/StyledButton';
+import type { PlayerRank } from '../src/stats/rank';
+import { getMyRank, getRankTier, getTop10Ranks } from '../src/stats/rank';
+
+export default function RankScreen() {
+  const router = useRouter();
+  const [myRank, setMyRank] = useState<PlayerRank | null>(null);
+  const [top10, setTop10] = useState<PlayerRank[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [rank, leaderboard] = await Promise.all([getMyRank(), getTop10Ranks()]);
+
+        if (cancelled) return;
+
+        setMyRank(rank);
+        setTop10(leaderboard);
+      } catch (err) {
+        console.error('Failed to load rank data', err);
+        if (!cancelled) {
+          setError('Unable to load ranking data right now.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const renderMyRankCard = () => {
+    if (loading) {
+      return (
+        <View style={[styles.card, styles.centerContent]}>
+          <ActivityIndicator size="large" color="#53A7F3" />
+          <Text style={styles.loadingText}>Loading rank...</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={[styles.card, styles.centerContent]}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      );
+    }
+
+    if (!myRank) {
+      return (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Your Rank in the Inferno</Text>
+          <Text style={styles.noDataText}>
+            No rank yet. Play a few games in Quick Play, Survival, or Online to earn your first
+            Inferno rating.
+          </Text>
+        </View>
+      );
+    }
+
+    const tier = getRankTier(myRank.infernoRating);
+    const percentile = myRank.percentile ?? 0;
+    const topPercent = Math.max(1, 100 - Math.round(percentile * 100));
+    const winRate =
+      myRank.gamesPlayed > 0
+        ? Math.round((myRank.wins / myRank.gamesPlayed) * 100)
+        : 0;
+
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Your Rank in the Inferno</Text>
+        <View style={styles.rankMainRow}>
+          <View style={styles.rankTierBlock}>
+            <Text style={styles.rankTierText}>{tier}</Text>
+            <Text style={styles.rankRatingText}>{myRank.infernoRating}</Text>
+            <Text style={styles.rankSubText}>Top {topPercent}% of players worldwide</Text>
+          </View>
+        </View>
+        <View style={styles.rankStatsRow}>
+          <View style={styles.rankStatItem}>
+            <Text style={styles.rankStatLabel}>Games Played</Text>
+            <Text style={styles.rankStatValue}>{myRank.gamesPlayed}</Text>
+          </View>
+          <View style={styles.rankStatItem}>
+            <Text style={styles.rankStatLabel}>Wins / Losses</Text>
+            <Text style={styles.rankStatValue}>
+              {myRank.wins} / {myRank.losses}
+            </Text>
+          </View>
+          <View style={styles.rankStatItem}>
+            <Text style={styles.rankStatLabel}>Win Rate</Text>
+            <Text style={styles.rankStatValue}>{winRate}%</Text>
+          </View>
+          <View style={styles.rankStatItem}>
+            <Text style={styles.rankStatLabel}>Best Survival Streak</Text>
+            <Text style={styles.rankStatValue}>{myRank.survivalBest}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderLeaderboard = () => {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Hall of Flame – Top 10</Text>
+        {top10.length === 0 ? (
+          <Text style={styles.noDataText}>
+            No ranked players yet. Come back after more games have been played.
+          </Text>
+        ) : (
+          <View style={styles.leaderboardContainer}>
+            {top10.map((p, index) => {
+              const tier = getRankTier(p.infernoRating);
+              const isMe = !!myRank && myRank.userId === p.userId;
+              return (
+                <View
+                  key={p.userId}
+                  style={[styles.leaderRow, isMe && styles.leaderRowMe]}
+                >
+                  <Text style={styles.leaderRank}>#{index + 1}</Text>
+                  <View style={styles.leaderMiddle}>
+                    <Text
+                      style={styles.leaderName}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {p.username}
+                    </Text>
+                    <Text style={styles.leaderTier}>{tier}</Text>
+                  </View>
+                  <View style={styles.leaderRight}>
+                    <Text style={styles.leaderRating}>{p.infernoRating}</Text>
+                    <Text style={styles.leaderGames}>
+                      {p.gamesPlayed} game{p.gamesPlayed === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.root}>
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.container}>
+          <Text style={styles.title}>Rank &amp; Leaderboard</Text>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            {renderMyRankCard()}
+            {renderLeaderboard()}
+            <View style={styles.footer}>
+              <StyledButton
+                label="Back to Stats"
+                onPress={() => router.push('/statistics')}
+                style={styles.backButton}
+              />
+            </View>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#1F262A',
+  },
+  safe: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 40,
+    paddingHorizontal: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#F0F6FC',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  card: {
+    backgroundColor: '#2A3136',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#30363D',
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F0F6FC',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#F0F6FC',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#FF6B6B',
+    textAlign: 'center',
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  rankMainRow: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  rankTierBlock: {
+    alignItems: 'center',
+  },
+  rankTierText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FE9902',
+  },
+  rankRatingText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#53A7F3',
+    marginTop: 4,
+  },
+  rankSubText: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  rankStatsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  rankStatItem: {
+    width: '48%',
+    marginTop: 8,
+  },
+  rankStatLabel: {
+    fontSize: 13,
+    color: '#CCCCCC',
+  },
+  rankStatValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F0F6FC',
+    marginTop: 2,
+  },
+  leaderboardContainer: {
+    marginTop: 4,
+  },
+  leaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#30363D',
+  },
+  leaderRowMe: {
+    backgroundColor: 'rgba(83, 167, 243, 0.18)',
+  },
+  leaderRank: {
+    width: 40,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#F0F6FC',
+  },
+  leaderMiddle: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  leaderName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#F0F6FC',
+  },
+  leaderTier: {
+    fontSize: 13,
+    color: '#CCCCCC',
+    marginTop: 2,
+  },
+  leaderRight: {
+    alignItems: 'flex-end',
+  },
+  leaderRating: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#53A7F3',
+  },
+  leaderGames: {
+    fontSize: 12,
+    color: '#8B949E',
+    marginTop: 2,
+  },
+  footer: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  backButton: {
+    width: '100%',
+    maxWidth: 300,
+  },
+});
+
