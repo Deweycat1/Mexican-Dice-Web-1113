@@ -1231,7 +1231,7 @@ export default function OnlineGameV2Screen() {
                   <View style={styles.avatarCircle}>
                     <Image
                       source={require('../../../assets/images/Rival.png')}
-                      style={styles.avatarImage}
+                      style={styles.rivalAvatarImage}
                     />
                   </View>
                   <Text style={styles.playerLabel}>{opponentName}</Text>
@@ -1596,25 +1596,25 @@ const styles = StyleSheet.create({
   },
   playerColumn: {
     alignItems: 'center',
-    width: 96,
+    justifyContent: 'center',
+    minWidth: 70,
   },
   avatarCircle: {
-    width: 66,
-    height: 66,
-    borderRadius: 33,
-    backgroundColor: 'transparent',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
-  avatarImage: {
-    width: 34,
-    height: 34,
+  userAvatarImage: {
+    width: 35,
+    height: 35,
     resizeMode: 'contain',
   },
-  userAvatarImage: {
-    width: 33,
-    height: 33,
+  rivalAvatarImage: {
+    width: 42,
+    height: 42,
     resizeMode: 'contain',
   },
   playerLabel: {
