@@ -1232,7 +1232,6 @@ export default function Survival() {
             <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
               <Animated.View style={[styles.titleRow, { transform: [{ scale: pulseAnim }] }]}>
                 <Text style={[styles.title, styles.titleSegment]}>Inferno</Text>
-                <FlameEmojiIcon size={30} style={styles.titleFlameIcon} />
                 <Text style={[styles.title, styles.titleSegment]}>Mode</Text>
               </Animated.View>
               <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
@@ -1786,9 +1785,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
-  },
-  titleFlameIcon: {
-    marginLeft: 8,
   },
   scoreLine: {
     color: '#F0F6FC',

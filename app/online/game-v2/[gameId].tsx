@@ -1639,6 +1639,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
     marginBottom: 6,
+    marginTop: Platform.select({
+      android: 25,
+      default: 0,
+    }),
   },
   status: {
     marginTop: 12,
