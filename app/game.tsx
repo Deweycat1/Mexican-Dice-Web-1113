@@ -630,7 +630,10 @@ export default function Game() {
   const startFreshGame = useCallback(() => {
     newGame();
     setHasRolledThisGame(false);
-    setScoreDiceAnimKey((k) => k + 1);
+    // Only bump the animation key on non-Android platforms
+    if (Platform.OS !== 'android') {
+      setScoreDiceAnimKey((k) => k + 1);
+    }
     const openingLine = pickRandomRivalLine();
     setTimeout(() => showDialog('rival', openingLine), 300);
   }, [newGame, setHasRolledThisGame, setScoreDiceAnimKey, showDialog]);
@@ -820,7 +823,7 @@ export default function Game() {
                       points={playerScore}
                       style={styles.scoreDie}
                       size={SCORE_DIE_BASE_SIZE}
-                      animationKey={scoreDiceAnimKey}
+                      animationKey={Platform.OS === 'android' ? undefined : scoreDiceAnimKey}
                     />
                   </Animated.View>
                 </View>
@@ -865,7 +868,7 @@ export default function Game() {
                       points={cpuScore}
                       style={styles.scoreDie}
                       size={SCORE_DIE_BASE_SIZE}
-                      animationKey={scoreDiceAnimKey}
+                      animationKey={Platform.OS === 'android' ? undefined : scoreDiceAnimKey}
                     />
                   </Animated.View>
                 </View>
