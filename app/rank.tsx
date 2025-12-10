@@ -17,6 +17,7 @@ import {
   getTop10Ranks,
   getTopBluffersBySuccess,
   getTopSurvivalPlayers,
+  getTopQuickplayWins,
 } from '../src/stats/rank';
 
 export default function RankScreen() {
@@ -27,6 +28,7 @@ export default function RankScreen() {
   const [error, setError] = useState<string | null>(null);
   const [topBluffers, setTopBluffers] = useState<PlayerRank[]>([]);
   const [topSurvivors, setTopSurvivors] = useState<PlayerRank[]>([]);
+  const [topQuickWins, setTopQuickWins] = useState<PlayerRank[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,11 +38,12 @@ export default function RankScreen() {
         setLoading(true);
         setError(null);
 
-        const [rank, leaderboard, bluffers, survivors] = await Promise.all([
+        const [rank, leaderboard, bluffers, survivors, quickWinners] = await Promise.all([
           getMyRank(),
           getTop10Ranks(),
           getTopBluffersBySuccess(5),
           getTopSurvivalPlayers(5, 1),
+          getTopQuickplayWins(5, 1),
         ]);
 
         if (cancelled) return;
@@ -49,6 +52,7 @@ export default function RankScreen() {
         setTop10(leaderboard);
         setTopBluffers(bluffers);
         setTopSurvivors(survivors);
+        setTopQuickWins(quickWinners);
       } catch (err) {
         console.error('Failed to load rank data', err);
         if (!cancelled) {
@@ -221,6 +225,71 @@ export default function RankScreen() {
     );
   };
 
+  const renderQuickPlayWins = () => {
+    if (loading) {
+      return null; // covered by main loading state
+    }
+
+    return (
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Quick Play Wins – Top 5</Text>
+        {topQuickWins.length === 0 ? (
+          <Text style={styles.noDataText}>
+            No Quick Play data yet. Play a few Quick Play games to climb the leaderboard.
+          </Text>
+        ) : (
+          <>
+            {(() => {
+              const champ = topQuickWins[0];
+              const isMe = !!myRank && myRank.userId === champ.userId;
+
+              return (
+                <View style={styles.quickplayChampionContent}>
+                  <Text style={styles.quickplayChampionName}>
+                    Champion: {champ.username} {isMe ? '(that’s you!)' : ''}
+                  </Text>
+                  <Text style={styles.quickplayChampionStat}>
+                    Quick Play wins: {champ.quickplayWins}
+                  </Text>
+                </View>
+              );
+            })()}
+            <View style={styles.leaderboardContainer}>
+              {topQuickWins.map((p, index) => {
+                const isMe = !!myRank && myRank.userId === p.userId;
+                return (
+                  <View
+                    key={p.userId}
+                    style={[styles.leaderRow, isMe && styles.leaderRowMe]}
+                  >
+                    <Text style={styles.leaderRank}>#{index + 1}</Text>
+                    <View style={styles.leaderMiddle}>
+                      <Text
+                        style={styles.leaderName}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {p.username}
+                      </Text>
+                      <Text style={styles.leaderTier}>
+                        {p.quickplayWins} win{p.quickplayWins === 1 ? '' : 's'}
+                      </Text>
+                    </View>
+                    <View style={styles.leaderRight}>
+                      <Text style={styles.leaderGames}>
+                        {p.gamesPlayed} game{p.gamesPlayed === 1 ? '' : 's'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
+
   const renderSurvivalChampion = () => {
     if (loading) {
       return null; // covered by main loading state in the rank card
@@ -234,24 +303,56 @@ export default function RankScreen() {
             No Survival data yet. Push your streak in Inferno Survival mode to claim this title.
           </Text>
         ) : (
-          (() => {
-            const champ = topSurvivors[0];
-            const isMe = !!myRank && myRank.userId === champ.userId;
+          <>
+            {(() => {
+              const champ = topSurvivors[0];
+              const isMe = !!myRank && myRank.userId === champ.userId;
 
-            return (
-              <View style={styles.survivalChampionContent}>
-                <Text style={styles.survivalChampionName}>
-                  {champ.username} {isMe ? '(that’s you!)' : ''}
-                </Text>
-                <Text style={styles.survivalChampionStat}>
-                  Best Survival streak: {champ.survivalBest}
-                </Text>
-                <Text style={styles.survivalChampionStatSecondary}>
-                  Survival runs played: {champ.survivalRuns}
-                </Text>
-              </View>
-            );
-          })()
+              return (
+                <View style={styles.survivalChampionContent}>
+                  <Text style={styles.survivalChampionName}>
+                    {champ.username} {isMe ? '(that’s you!)' : ''}
+                  </Text>
+                  <Text style={styles.survivalChampionStat}>
+                    Best Survival streak: {champ.survivalBest}
+                  </Text>
+                  <Text style={styles.survivalChampionStatSecondary}>
+                    Survival runs played: {champ.survivalRuns}
+                  </Text>
+                </View>
+              );
+            })()}
+            <View style={styles.leaderboardContainer}>
+              {topSurvivors.map((p, index) => {
+                const isMe = !!myRank && myRank.userId === p.userId;
+                return (
+                  <View
+                    key={p.userId}
+                    style={[styles.leaderRow, isMe && styles.leaderRowMe]}
+                  >
+                    <Text style={styles.leaderRank}>#{index + 1}</Text>
+                    <View style={styles.leaderMiddle}>
+                      <Text
+                        style={styles.leaderName}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {p.username}
+                      </Text>
+                      <Text style={styles.leaderTier}>
+                        Streak: {p.survivalBest}
+                      </Text>
+                    </View>
+                    <View style={styles.leaderRight}>
+                      <Text style={styles.leaderGames}>
+                        {p.survivalRuns} run{p.survivalRuns === 1 ? '' : 's'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </>
         )}
       </View>
     );
@@ -266,6 +367,7 @@ export default function RankScreen() {
             {renderMyRankCard()}
             {renderLeaderboard()}
             {renderBluffLegend()}
+            {renderQuickPlayWins()}
             {renderSurvivalChampion()}
             <View style={styles.footer}>
               <StyledButton
@@ -469,6 +571,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#A0B4C0',
     marginTop: 2,
+  },
+  quickplayChampionContent: {
+    marginTop: 8,
+  },
+  quickplayChampionName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FE9902',
+    marginBottom: 4,
+  },
+  quickplayChampionStat: {
+    fontSize: 16,
+    color: '#FFFFFF',
   },
   survivalChampionContent: {
     marginTop: 8,

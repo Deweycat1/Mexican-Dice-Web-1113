@@ -15,6 +15,7 @@ export type PlayerRank = {
   percentile: number;
   lastMode: string | null;
   lastUpdatedAt: string;
+  quickplayWins: number;
 };
 
 export type RankTier =
@@ -50,6 +51,7 @@ type PlayerRankRow = {
   percentile: number;
   last_mode: string | null;
   last_updated_at: string;
+  quickplay_wins: number;
 };
 
 function mapRowToPlayerRank(row: PlayerRankRow): PlayerRank {
@@ -67,6 +69,7 @@ function mapRowToPlayerRank(row: PlayerRankRow): PlayerRank {
     percentile: row.percentile,
     lastMode: row.last_mode,
     lastUpdatedAt: row.last_updated_at,
+    quickplayWins: row.quickplay_wins,
   };
 }
 
@@ -157,6 +160,32 @@ export async function getTopSurvivalPlayers(
     return (data as PlayerRankRow[]).map(mapRowToPlayerRank);
   } catch (err) {
     console.error('Failed to get top survival players', err);
+    return [];
+  }
+}
+
+export async function getTopQuickplayWins(
+  limit = 5,
+  minWins = 1
+): Promise<PlayerRank[]> {
+  try {
+    const { data, error } = await supabase.rpc('get_top_quickplay_wins', {
+      p_limit: limit,
+      p_min_wins: minWins,
+    });
+
+    if (error) {
+      console.error('get_top_quickplay_wins error', error);
+      return [];
+    }
+
+    if (!data || !Array.isArray(data)) {
+      return [];
+    }
+
+    return (data as PlayerRankRow[]).map(mapRowToPlayerRank);
+  } catch (err) {
+    console.error('Failed to get top quick play wins', err);
     return [];
   }
 }
