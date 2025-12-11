@@ -361,10 +361,21 @@ export default function OnlineLobbyScreen() {
         throw existingError;
       }
 
+      console.log('[OnlineLobby][RandomMatch] existing waiting games for host', {
+        userId,
+        count: existingRows?.length ?? 0,
+        ids: existingRows?.map((g: any) => g.id) ?? [],
+      });
+
       const existing = (existingRows && existingRows[0]) as LobbyGame | undefined;
       if (existing) {
         await loadGames();
-        router.push(`/online/game-v2/${existing.id}` as const);
+        console.log('[OnlineLobby][RandomMatch] reusing existing waiting random game', {
+          id: existing.id,
+          host_id: existing.host_id,
+          guest_id: existing.guest_id,
+          status: existing.status,
+        });
         return;
       }
 
@@ -384,9 +395,19 @@ export default function OnlineLobbyScreen() {
         throw findError;
       }
 
+      console.log('[OnlineLobby][RandomMatch] candidate waiting games', {
+        userId,
+        count: candidates?.length ?? 0,
+        ids: candidates?.map((g: any) => g.id) ?? [],
+      });
+
       if (candidates && candidates.length > 0) {
-        console.log('[OnlineLobby][RandomMatch] Candidate rows', candidates);
         for (const candidate of candidates as LobbyGame[]) {
+          console.log('[OnlineLobby][RandomMatch] attempting to join candidate', {
+            candidateId: candidate.id,
+            candidateHostId: candidate.host_id,
+          });
+
           const { data: joinedRows, error: joinError } = await supabase
             .from('games_v2')
             .update({
@@ -401,16 +422,26 @@ export default function OnlineLobbyScreen() {
             .limit(1);
 
           if (joinError) {
-            console.error('[OnlineLobby][RandomMatch] Failed to join candidate', candidate.id, joinError);
+            console.error('[OnlineLobby][RandomMatch] join candidate failed', {
+              candidateId: candidate.id,
+              error: joinError,
+            });
             continue;
           }
 
           const joined = (joinedRows && joinedRows[0]) as LobbyGame | undefined;
+          if (!joined) {
+            console.log('[OnlineLobby][RandomMatch] join candidate returned no rows (likely race)', {
+              candidateId: candidate.id,
+            });
+          }
+
           if (joined) {
-            console.log('[OnlineLobby][RandomMatch] Successfully joined random match', {
+            console.log('[OnlineLobby][RandomMatch] joined random match successfully', {
               id: joined.id,
               host_id: joined.host_id,
               guest_id: joined.guest_id,
+              status: joined.status,
             });
             await loadGames();
             router.push(`/online/game-v2/${joined.id}` as const);
@@ -442,13 +473,15 @@ export default function OnlineLobbyScreen() {
         throw insertError ?? new Error('Unable to start random match.');
       }
 
-      console.log('[OnlineLobby][RandomMatch] Created new waiting random match', {
+      console.log('[OnlineLobby][RandomMatch] created new waiting random match', {
         id: newGame.id,
         host_id: newGame.host_id,
+        status: newGame.status,
       });
 
       await loadGames();
-      router.push(`/online/game-v2/${newGame.id}` as const);
+      // Stay in the lobby so the waiting match appears in the list.
+      return;
     } catch (err: any) {
       console.error('[OnlineLobby][RandomMatch] Find random match failed', err);
       Alert.alert('Could not find match', err?.message ?? 'Please try again.');
