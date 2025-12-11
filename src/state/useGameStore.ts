@@ -952,7 +952,24 @@ export const useGameStore = create<Store>((set, get) => {
 
       // Use baselineClaim for AI decisions (preserves original claim through reverses)
       const claimForAI = resolveActiveChallenge(baselineClaim, lastClaim);
-      const action = aiOpponent.decideAction('player', claimForAI, dicePair, roundIndexCounter, lastClaim);
+      const preventCallBluffEarlySurvival =
+        state.mode === 'survival' && (state.currentStreak ?? 0) < 5;
+      let action = aiOpponent.decideAction(
+        'player',
+        claimForAI,
+        dicePair,
+        roundIndexCounter,
+        lastClaim
+      );
+
+      // In Survival mode, during the first few streak points, avoid calling bluff
+      // so early rounds feel less punishing. Force a raise instead.
+      if (preventCallBluffEarlySurvival && action.type === 'call_bluff') {
+        const legalTruth = computeLegalTruth(lastClaim, actual);
+        const baseRaise =
+          legalTruth ? actual : nextHigherClaim(lastClaim ?? actual) ?? 21;
+        action = { type: 'raise', claim: baseRaise };
+      }
 
       if (action.type === 'call_bluff') {
         pendingCpuRaise = null;
