@@ -165,7 +165,7 @@ export default function OnlineMatchScreen() {
   })();
 
   const claimText = useMemo(() => {
-    return `Current claim: ${formatClaim(anyGame?.current_claim)} | Your roll: ${formatRoll(myRoll)}`;
+    return `Claim: ${formatClaim(anyGame?.current_claim)} | Your roll: ${formatRoll(myRoll)}`;
   }, [anyGame?.current_claim, myRoll]);
 
   const renderHistoryLine = (item: any) => {

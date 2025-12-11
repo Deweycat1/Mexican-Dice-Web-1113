@@ -595,7 +595,7 @@ export default function OnlineGameV2Screen() {
   }, [game?.host_score, game?.guest_score, myRole, hapticsEnabled]);
   const claimSummary = useMemo(() => {
     const winkSuffix = roundState.lastClaimHadWink ? ' 😉' : '';
-    return `Current claim: ${formatClaim(lastClaim)}${winkSuffix}     Your roll: ${formatRoll(myRoll)}`;
+    return `Claim: ${formatClaim(lastClaim)}${winkSuffix}`;
   }, [lastClaim, myRoll, roundState.lastClaimHadWink]);
   const isOpponentClaimPhase = useMemo(() => {
     if (!game) return false;

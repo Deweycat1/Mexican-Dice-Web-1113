@@ -838,10 +838,7 @@ export default function Game() {
                 >
                   <View style={styles.claimHeaderContainer}>
                     <Text style={styles.claimHeaderLine}>
-                      Current claim: {formatClaimSimple(lastClaim)}
-                    </Text>
-                    <Text style={styles.claimHeaderLine}>
-                      Your roll: {formatRollSimple(lastPlayerRoll)}
+                      Claim: {formatClaimSimple(lastClaim)}
                     </Text>
                   </View>
                 </View>

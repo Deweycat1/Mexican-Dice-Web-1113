@@ -146,7 +146,7 @@ export default function OnlineMatchScreen() {
     const rollPart = formatRoll(myRoll);
     return (
       <>
-        Current claim: {renderClaim(anyGame?.current_claim)} {'\n'}
+        Claim: {renderClaim(anyGame?.current_claim)} {'\n'}
         Your roll: {rollPart}
       </>
     );

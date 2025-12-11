@@ -768,7 +768,7 @@ export default function OnlineLobbyScreen() {
       (game.status === 'finished' && (game.host_id === userId || game.guest_id === userId));
 
     const cardContent = (
-      <View style={styles.gameCard}>
+          <View style={styles.gameCard}>
         <View style={styles.gameCardHeader}>
           <View style={styles.gameOpponentColumn}>
             <Text style={styles.gameOpponent}>{opponentName}</Text>
@@ -779,7 +779,7 @@ export default function OnlineLobbyScreen() {
           <View style={styles.currentClaimContainer}>
             {showCurrentClaim && claimDicePoints ? (
               <>
-                <Text style={styles.currentClaimLabel}>Current claim</Text>
+                <Text style={styles.currentClaimLabel}>Claim</Text>
                 <View style={styles.currentClaimDiceRow}>
                   <ScoreDie
                     points={claimDicePoints[0]}

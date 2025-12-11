@@ -815,11 +815,10 @@ export default function Survival() {
   const claimText = useMemo(() => {
     const hasClaim = lastClaimValue != null || lastPlayerRoll != null;
     if (!hasClaim) return null;
-    const rollPart = formatRollSimple(lastPlayerRoll);
     const claimPart = formatClaimSimple(lastClaimValue);
     return (
       <>
-        Current claim: {claimPart} Your roll: {rollPart}
+        Claim: {claimPart}
       </>
     );
   }, [lastClaimValue, lastPlayerRoll]);
