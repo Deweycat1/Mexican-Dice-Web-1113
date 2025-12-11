@@ -1271,10 +1271,8 @@ export default function OnlineGameV2Screen() {
                       style={styles.userAvatarImage}
                     />
                   </View>
-                  <Text style={styles.playerLabel}>
-                    Your{'\n'}Score
-                  </Text>
                   <ScoreDie points={myScore} style={styles.scoreDie} size={38} />
+                  <Text style={styles.playerLabel}>You</Text>
                 </View>
 
                 <View style={styles.titleColumn}>
@@ -1288,8 +1286,14 @@ export default function OnlineGameV2Screen() {
                       style={styles.rivalAvatarImage}
                     />
                   </View>
-                  <Text style={styles.playerLabel}>{opponentName}</Text>
                   <ScoreDie points={opponentScore} style={styles.scoreDie} size={38} />
+                  <Text
+                    style={styles.playerLabel}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {opponentName}
+                  </Text>
                 </View>
               </View>
 
@@ -1675,7 +1679,7 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 16,
     fontWeight: '700',
-    marginBottom: 4,
+    marginTop: 4,
   },
   titleColumn: {
     flex: 1,
