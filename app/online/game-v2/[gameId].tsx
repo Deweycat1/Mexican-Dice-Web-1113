@@ -1902,10 +1902,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   winkLabelLine: {
-    fontSize: 8,
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 12,
+    color: '#FFFFFF',
+    lineHeight: 18,
   },
   rematchWrapper: {
     flex: 1,
