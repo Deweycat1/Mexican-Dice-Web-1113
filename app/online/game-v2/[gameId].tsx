@@ -1502,7 +1502,24 @@ export default function OnlineGameV2Screen() {
                       styles.winkButton,
                       showAsActive ? styles.winkButtonActive : styles.winkButtonDisabled,
                     ]}
-                  />
+                  >
+                    <View style={styles.winkLabelContainer}>
+                      <Text
+                        style={styles.winkLabelLine}
+                        numberOfLines={1}
+                        ellipsizeMode="clip"
+                      >
+                        Send
+                      </Text>
+                      <Text
+                        style={styles.winkLabelLine}
+                        numberOfLines={1}
+                        ellipsizeMode="clip"
+                      >
+                        {`😉 (${winkUsesRemaining})`}
+                      </Text>
+                    </View>
+                  </StyledButton>
                 )}
 
                 <StyledButton
@@ -1879,6 +1896,16 @@ const styles = StyleSheet.create({
   winkButtonDisabled: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderColor: '#30363D',
+  },
+  winkLabelContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  winkLabelLine: {
+    fontSize: 8,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 12,
   },
   rematchWrapper: {
     flex: 1,
