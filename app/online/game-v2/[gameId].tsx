@@ -283,6 +283,26 @@ export default function OnlineGameV2Screen() {
   const prevScoresRef = useRef<{ host: number; guest: number } | null>(null);
   const prevHistoryLengthRef = useRef<number>(0);
   const historyInitializedRef = useRef(false);
+  const localHandledBluffBannerRef = useRef(false);
+
+  const showBluffResultBanner = useCallback(
+    (liar: boolean, iAmCaller: boolean) => {
+      if (liar) {
+        if (iAmCaller) {
+          setBanner({ type: 'got-em', text: 'You caught their bluff.' });
+        } else {
+          setBanner({ type: 'womp-womp', text: 'They caught your bluff.' });
+        }
+      } else {
+        if (iAmCaller) {
+          setBanner({ type: 'womp-womp', text: 'They told the truth.' });
+        } else {
+          setBanner({ type: 'got-em', text: "GOT 'EM!!!" });
+        }
+      }
+    },
+    [setBanner]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -766,45 +786,22 @@ export default function OnlineGameV2Screen() {
     if (!myRole) return;
     if (bluffNonce <= bluffResultNonceRef.current) return;
     bluffResultNonceRef.current = bluffNonce;
+
     const liar = !defenderTruth;
     const iAmCaller = myRole === caller;
 
-    if (liar) {
-      // Defender lied
-      if (iAmCaller) {
-        // I caught their bluff
-        setBanner({
-          type: 'got-em',
-          text: "You caught their bluff.",
-        });
-      } else {
-        // They caught my bluff
-        setBanner({
-          type: 'womp-womp',
-          text: "They caught your bluff.",
-        });
-      }
-    } else {
-      // Defender told the truth
-      if (iAmCaller) {
-        // I was wrong to call
-        setBanner({
-          type: 'womp-womp',
-          text: "They told the truth.",
-        });
-      } else {
-        // I was truthful and they were wrong
-        setBanner({
-          type: 'got-em',
-          text: "GOT 'EM!!!",
-        });
-      }
-    }
+    if (isRevealingBluff || revealDiceValues) return;
+    if (iAmCaller && localHandledBluffBannerRef.current) return;
+
+    showBluffResultBanner(liar, iAmCaller);
   }, [
     roundState.bluffResultNonce,
     roundState.lastBluffCaller,
     roundState.lastBluffDefenderTruth,
     myRole,
+    isRevealingBluff,
+    revealDiceValues,
+    showBluffResultBanner,
   ]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -1103,6 +1100,7 @@ export default function OnlineGameV2Screen() {
       roundState.lastAction === 'reverseVsMexican'
     );
     const liar = outcome === +1;
+    const iAmCaller = true;
     const loserRole = liar ? defendingRole : myRole;
     if (liar) {
       void playBluffCallSuccessHaptic(hapticsEnabled);
@@ -1123,6 +1121,8 @@ export default function OnlineGameV2Screen() {
     revealTimer.current = setTimeout(() => {
       setIsRevealingBluff(false);
       setRevealDiceValues(null);
+      localHandledBluffBannerRef.current = true;
+      showBluffResultBanner(liar, iAmCaller);
     }, 1800);
     const eventText = liar
       ? `${callerName} caught ${defenderName} bluffing!`
@@ -1170,7 +1170,22 @@ export default function OnlineGameV2Screen() {
         Alert.alert('Bluff call failed', err.message ?? 'Could not resolve bluff.');
       }
     }
-  }, [game, myRole, opponentRole, isMyTurn, lastClaim, isRevealAnimating, roundState, appendHistory, handleUpdate, hostName, guestName, userId, hapticsEnabled]);
+  }, [
+    game,
+    myRole,
+    opponentRole,
+    isMyTurn,
+    lastClaim,
+    isRevealAnimating,
+    roundState,
+    appendHistory,
+    handleUpdate,
+    hostName,
+    guestName,
+    userId,
+    hapticsEnabled,
+    showBluffResultBanner,
+  ]);
 
   const handleQuitGame = useCallback(() => {
     console.log('[OnlineGameV2] Leave Game pressed (no confirm)');
