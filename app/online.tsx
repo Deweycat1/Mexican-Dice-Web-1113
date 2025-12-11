@@ -631,6 +631,31 @@ export default function OnlineLobbyScreen() {
     return buckets;
   }, [games, userId]);
 
+  const friendYourTurnGames = useMemo(
+    () => sections.yourTurn.filter((g) => g.matchmaking_type !== 'random'),
+    [sections]
+  );
+  const randomYourTurnGames = useMemo(
+    () => sections.yourTurn.filter((g) => g.matchmaking_type === 'random'),
+    [sections]
+  );
+  const friendTheirTurnGames = useMemo(
+    () => sections.theirTurn.filter((g) => g.matchmaking_type !== 'random'),
+    [sections]
+  );
+  const randomTheirTurnGames = useMemo(
+    () => sections.theirTurn.filter((g) => g.matchmaking_type === 'random'),
+    [sections]
+  );
+  const friendCompletedGames = useMemo(
+    () => sections.completed.filter((g) => g.matchmaking_type !== 'random'),
+    [sections]
+  );
+  const randomCompletedGames = useMemo(
+    () => sections.completed.filter((g) => g.matchmaking_type === 'random'),
+    [sections]
+  );
+
   const renderGameCard = (game: LobbyGame) => {
     if (!userId) return null;
 
@@ -745,7 +770,12 @@ export default function OnlineLobbyScreen() {
     const cardContent = (
       <View style={styles.gameCard}>
         <View style={styles.gameCardHeader}>
-          <Text style={styles.gameOpponent}>{opponentName}</Text>
+          <View style={styles.gameOpponentColumn}>
+            <Text style={styles.gameOpponent}>{opponentName}</Text>
+            {game.matchmaking_type === 'random' && (
+              <Text style={styles.randomBadgeText}>Random match</Text>
+            )}
+          </View>
           <View style={styles.currentClaimContainer}>
             {showCurrentClaim && claimDicePoints ? (
               <>
@@ -819,6 +849,32 @@ export default function OnlineLobbyScreen() {
         <Text style={styles.emptyTextSmall}>{emptyText}</Text>
       ) : (
         data.map(renderGameCard)
+      )}
+    </View>
+  );
+
+  const renderSplitSection = (
+    title: string,
+    friendGames: LobbyGame[],
+    randomGames: LobbyGame[],
+    emptyText: string
+  ) => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {friendGames.length === 0 && randomGames.length === 0 ? (
+        <Text style={styles.emptyTextSmall}>{emptyText}</Text>
+      ) : (
+        <>
+          {friendGames.map(renderGameCard)}
+          {randomGames.length > 0 && (
+            <>
+              {friendGames.length > 0 && (
+                <Text style={styles.sectionSubTitle}>Random matches</Text>
+              )}
+              {randomGames.map(renderGameCard)}
+            </>
+          )}
+        </>
       )}
     </View>
   );
@@ -901,13 +957,24 @@ export default function OnlineLobbyScreen() {
               ) : (
                 <>
                   {renderSection('Challenges', sections.challenges, 'No new challenges yet.')}
-                  {renderSection('Your Turn', sections.yourTurn, 'No games where it’s your turn yet.')}
-                  {renderSection(
+                  {renderSplitSection(
+                    'Your Turn',
+                    friendYourTurnGames,
+                    randomYourTurnGames,
+                    'No games where it’s your turn yet.'
+                  )}
+                  {renderSplitSection(
                     'Their Turn',
-                    sections.theirTurn,
+                    friendTheirTurnGames,
+                    randomTheirTurnGames,
                     'No games waiting on your friends.'
                   )}
-                  {renderSection('Completed games', sections.completed, 'No completed games yet.')}
+                  {renderSplitSection(
+                    'Completed games',
+                    friendCompletedGames,
+                    randomCompletedGames,
+                    'No completed games yet.'
+                  )}
                 </>
               )}
             </View>
@@ -1081,6 +1148,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 10,
   },
+  sectionSubTitle: {
+    color: '#8B949E',
+    fontWeight: '700',
+    fontSize: 13,
+    marginTop: 6,
+    marginBottom: 4,
+  },
   emptyTextSmall: {
     color: '#8B949E',
     textAlign: 'center',
@@ -1098,6 +1172,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 4,
+  },
+  gameOpponentColumn: {
+    flexDirection: 'column',
   },
   currentClaimContainer: {
     alignItems: 'flex-end',
@@ -1118,6 +1195,12 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontWeight: '700',
     fontSize: 16,
+  },
+  randomBadgeText: {
+    color: '#53A7F3',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   gameStatus: {
     color: '#8B949E',
