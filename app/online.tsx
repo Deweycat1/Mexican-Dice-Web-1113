@@ -73,8 +73,8 @@ const isValidFriendUsername = (raw: string) => {
   if (!value) return false;
   if (value.length > MAX_USERNAME_LENGTH) return false;
 
-  // Only A–Z, a–z, spaces, and hyphens
-  const safePattern = /^[A-Za-z\s-]+$/;
+  // Updated to allow digits in ColorAnimalNN usernames (letters, numbers, spaces, hyphens).
+  const safePattern = /^[A-Za-z0-9\s-]+$/;
   return safePattern.test(value);
 };
 
@@ -263,7 +263,7 @@ export default function OnlineLobbyScreen() {
       if (!isValidFriendUsername(trimmed)) {
         Alert.alert(
           'Invalid username',
-          'Usernames can only contain letters, spaces, and hyphens, up to 40 characters.'
+          'Usernames can contain letters, numbers, spaces, and hyphens, up to 40 characters.'
         );
         return;
       }
