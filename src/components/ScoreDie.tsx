@@ -8,6 +8,7 @@ type ScoreDieProps = {
   style?: ViewStyle;
   size?: number;
   animationKey?: number;
+  animated?: boolean; // optional, defaults to true
 };
 
 /**
@@ -29,6 +30,7 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({
   style,
   size = SMALL_SCORE_DIE_BASE_SIZE,
   animationKey,
+  animated = true,
 }) => {
   const targetFace = useMemo(() => clampFace(points), [points]);
 
@@ -51,6 +53,12 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({
   useEffect(() => {
     if (targetFace === face) return;
 
+    if (!animated) {
+      setFace(targetFace);
+      rotation.setValue(0);
+      return;
+    }
+
     // Flip to 90 degrees, swap face at midpoint, then flip back to 0
     Animated.sequence([
       Animated.timing(rotation, {
@@ -71,7 +79,7 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({
     }, 150);
 
     return () => clearTimeout(timeout);
-  }, [targetFace, face, rotation]);
+  }, [targetFace, face, rotation, animated]);
 
   const rotateY = rotation.interpolate({
     inputRange: [0, 1],
@@ -79,10 +87,14 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({
   });
 
   useEffect(() => {
+    if (!animated) {
+      entryTranslateY.setValue(0);
+      return;
+    }
     if (typeof animationKey === 'number') {
       runEntryAnimation();
     }
-  }, [animationKey, runEntryAnimation]);
+  }, [animationKey, runEntryAnimation, animated, entryTranslateY]);
 
   return (
     <Animated.View

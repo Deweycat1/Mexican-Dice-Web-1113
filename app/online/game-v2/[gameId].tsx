@@ -1286,7 +1286,7 @@ export default function OnlineGameV2Screen() {
                       style={styles.userAvatarImage}
                     />
                   </View>
-                  <ScoreDie points={myScore} style={styles.scoreDie} size={38} />
+                  <ScoreDie points={myScore} style={styles.scoreDie} size={38} animated={false} />
                   <Text style={styles.playerLabel}>You</Text>
                 </View>
 
@@ -1301,7 +1301,7 @@ export default function OnlineGameV2Screen() {
                       style={styles.rivalAvatarImage}
                     />
                   </View>
-                  <ScoreDie points={opponentScore} style={styles.scoreDie} size={38} />
+                  <ScoreDie points={opponentScore} style={styles.scoreDie} size={38} animated={false} />
                   <Text
                     style={styles.playerLabel}
                     numberOfLines={1}
@@ -1680,7 +1680,10 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: Platform.select({
+      android: 'center',
+      default: 'flex-start',
+    }),
     justifyContent: 'space-between',
     marginBottom: 12,
   },
@@ -1828,7 +1831,7 @@ const styles = StyleSheet.create({
     }),
     marginTop: Platform.select({
       ios: -134,
-      android: -65,
+      android: 0,
       default: -134,
     }),
     marginBottom: Platform.select({
@@ -1849,7 +1852,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginTop: Platform.select({
       ios: -150,
-      android: -75,
+      android: 0,
       default: -150,
     }),
     position: 'relative',
