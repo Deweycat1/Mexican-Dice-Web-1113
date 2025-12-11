@@ -357,6 +357,7 @@ export default function OnlineLobbyScreen() {
         .limit(1);
 
       if (existingError) {
+        console.error('[OnlineLobby][RandomMatch] Existing waiting random game query failed', existingError);
         throw existingError;
       }
 
@@ -379,10 +380,12 @@ export default function OnlineLobbyScreen() {
         .limit(5);
 
       if (findError) {
+        console.error('[OnlineLobby][RandomMatch] Candidate random games query failed', findError);
         throw findError;
       }
 
       if (candidates && candidates.length > 0) {
+        console.log('[OnlineLobby][RandomMatch] Candidate rows', candidates);
         for (const candidate of candidates as LobbyGame[]) {
           const { data: joinedRows, error: joinError } = await supabase
             .from('games_v2')
@@ -398,12 +401,17 @@ export default function OnlineLobbyScreen() {
             .limit(1);
 
           if (joinError) {
-            console.warn('[OnlineLobby] Failed to join candidate', candidate.id, joinError);
+            console.error('[OnlineLobby][RandomMatch] Failed to join candidate', candidate.id, joinError);
             continue;
           }
 
           const joined = (joinedRows && joinedRows[0]) as LobbyGame | undefined;
           if (joined) {
+            console.log('[OnlineLobby][RandomMatch] Successfully joined random match', {
+              id: joined.id,
+              host_id: joined.host_id,
+              guest_id: joined.guest_id,
+            });
             await loadGames();
             router.push(`/online/game-v2/${joined.id}` as const);
             return;
@@ -434,10 +442,15 @@ export default function OnlineLobbyScreen() {
         throw insertError ?? new Error('Unable to start random match.');
       }
 
+      console.log('[OnlineLobby][RandomMatch] Created new waiting random match', {
+        id: newGame.id,
+        host_id: newGame.host_id,
+      });
+
       await loadGames();
       router.push(`/online/game-v2/${newGame.id}` as const);
     } catch (err: any) {
-      console.error('[OnlineLobby] Find random match failed', err);
+      console.error('[OnlineLobby][RandomMatch] Find random match failed', err);
       Alert.alert('Could not find match', err?.message ?? 'Please try again.');
     } finally {
       setFindingRandomMatch(false);
