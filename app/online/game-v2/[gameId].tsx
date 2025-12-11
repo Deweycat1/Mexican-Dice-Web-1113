@@ -120,6 +120,7 @@ type OnlineGameV2 = {
   rematch_requested_by_guest?: boolean;
   rematch_game_id?: string | null;
   parent_game_id?: string | null;
+  matchmaking_type?: 'friend' | 'random' | null;
 };
 
 const defaultRoundState: RoundState = {
@@ -174,6 +175,7 @@ async function createRematchFromGame(game: OnlineGameV2): Promise<OnlineGameRema
       guest_score: STARTING_SCORE,
       parent_game_id: parentGameId,
       round_state: defaultRoundState,
+      matchmaking_type: game.matchmaking_type ?? null,
     })
     .select('*')
     .single();
@@ -835,7 +837,7 @@ export default function OnlineGameV2Screen() {
     if (!game) return '';
     if (game.status === 'finished') return 'Match finished';
     if (!myRole) return 'You are not part of this match.';
-    if (!game.guest_id) return 'Waiting for your friend to join.';
+    if (!game.guest_id) return 'Waiting for an opponent to join.';
     if (isMyTurn) {
       if (myRoll == null) return 'Roll to see your dice.';
       if (mustBluff) return `You rolled ${formatRoll(myRoll)}. You must bluff with a higher claim.`;

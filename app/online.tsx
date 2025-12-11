@@ -54,11 +54,12 @@ type LobbyGame = {
   host_score: number | null;
   guest_score: number | null;
   current_player_id: string | null;
-   last_claim: number | string | null;
+  last_claim: number | string | null;
   updated_at: string;
   host?: { username: string | null };
   guest?: { username: string | null };
   round_state?: any;
+  matchmaking_type?: 'friend' | 'random' | null;
 };
 
 const friendlyHint =
@@ -88,6 +89,7 @@ export default function OnlineLobbyScreen() {
   const [myUsername, setMyUsername] = useState<string | null>(null);
   const [creatingMatch, setCreatingMatch] = useState(false);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
+  const [findingRandomMatch, setFindingRandomMatch] = useState(false);
   const [games, setGames] = useState<LobbyGame[]>([]);
   const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
   const [loadingGames, setLoadingGames] = useState(false);
@@ -304,6 +306,7 @@ export default function OnlineLobbyScreen() {
         last_roll_2: null,
         last_claim: null,
         round_state: INITIAL_ROUND_STATE,
+        matchmaking_type: 'friend',
       };
 
       const { data, error } = await supabase.from('games_v2').insert(payload).select('id').single();
@@ -322,6 +325,124 @@ export default function OnlineLobbyScreen() {
       setCreatingMatch(false);
     }
   }, [friendCode, getActiveGameCount, loadGames, router, userId]);
+
+  const handleFindRandomMatch = useCallback(async () => {
+    if (!userId) {
+      Alert.alert('Account missing', 'Please wait for your account to load.');
+      return;
+    }
+
+    setCreateMessage(null);
+    setFindingRandomMatch(true);
+
+    try {
+      // Enforce the same active game limit as friend matches
+      const activeCount = await getActiveGameCount(userId);
+      if (activeCount >= MAX_ACTIVE_GAMES) {
+        Alert.alert(
+          'Too many matches',
+          'You already have 5 active matches. Finish or delete one before starting a new one.'
+        );
+        return;
+      }
+
+      // 1) Do you already have a waiting random game as host?
+      const { data: existingRows, error: existingError } = await supabase
+        .from('games_v2')
+        .select('*')
+        .eq('host_id', userId)
+        .is('guest_id', null)
+        .eq('status', 'waiting')
+        .eq('matchmaking_type', 'random')
+        .limit(1);
+
+      if (existingError) {
+        throw existingError;
+      }
+
+      const existing = (existingRows && existingRows[0]) as LobbyGame | undefined;
+      if (existing) {
+        await loadGames();
+        router.push(`/online/game-v2/${existing.id}` as const);
+        return;
+      }
+
+      // 2) Try to join someone else's waiting random game
+      const { data: candidates, error: findError } = await supabase
+        .from('games_v2')
+        .select('*')
+        .eq('status', 'waiting')
+        .is('guest_id', null)
+        .eq('matchmaking_type', 'random')
+        .neq('host_id', userId)
+        .order('created_at', { ascending: true })
+        .limit(5);
+
+      if (findError) {
+        throw findError;
+      }
+
+      if (candidates && candidates.length > 0) {
+        for (const candidate of candidates as LobbyGame[]) {
+          const { data: joinedRows, error: joinError } = await supabase
+            .from('games_v2')
+            .update({
+              guest_id: userId,
+              status: 'in_progress',
+              current_player_id: candidate.host_id,
+            })
+            .eq('id', candidate.id)
+            .is('guest_id', null)
+            .eq('status', 'waiting')
+            .select('*')
+            .limit(1);
+
+          if (joinError) {
+            console.warn('[OnlineLobby] Failed to join candidate', candidate.id, joinError);
+            continue;
+          }
+
+          const joined = (joinedRows && joinedRows[0]) as LobbyGame | undefined;
+          if (joined) {
+            await loadGames();
+            router.push(`/online/game-v2/${joined.id}` as const);
+            return;
+          }
+        }
+      }
+
+      // 3) Nobody available to join, create a new waiting random game
+      const { data: newGame, error: insertError } = await supabase
+        .from('games_v2')
+        .insert({
+          host_id: userId,
+          guest_id: null,
+          status: 'waiting',
+          current_player_id: null,
+          host_score: STARTING_SCORE,
+          guest_score: STARTING_SCORE,
+          last_roll_1: null,
+          last_roll_2: null,
+          last_claim: null,
+          round_state: INITIAL_ROUND_STATE,
+          matchmaking_type: 'random',
+        })
+        .select('*')
+        .single();
+
+      if (insertError || !newGame) {
+        throw insertError ?? new Error('Unable to start random match.');
+      }
+
+      await loadGames();
+      router.push(`/online/game-v2/${newGame.id}` as const);
+    } catch (err: any) {
+      console.error('[OnlineLobby] Find random match failed', err);
+      Alert.alert('Could not find match', err?.message ?? 'Please try again.');
+    } finally {
+      setFindingRandomMatch(false);
+    }
+  }, [userId, getActiveGameCount, loadGames, router]);
 
   const refreshChallenges = useCallback(() => {
     console.log('[ONLINE] Refreshing challenges…');
@@ -712,6 +833,15 @@ export default function OnlineLobbyScreen() {
                     onPress={refreshChallenges}
                     style={[styles.primaryButton, styles.refreshButton]}
                     textStyle={styles.refreshButtonText}
+                  />
+                </View>
+                <View style={styles.startMatchRow}>
+                  <StyledButton
+                    label={findingRandomMatch ? 'Finding…' : 'Find Random Match'}
+                    onPress={handleFindRandomMatch}
+                    disabled={findingRandomMatch || !userId}
+                    style={[styles.primaryButton, styles.startMatchGreen]}
+                    textStyle={styles.startMatchGreenText}
                   />
                 </View>
                 {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
