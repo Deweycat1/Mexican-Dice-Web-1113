@@ -544,6 +544,10 @@ export const useGameStore = create<Store>((set, get) => {
           const newBest = Math.max(s.bestStreak || 0, prevStreak);
           void saveBestStreak(newBest);
           set({ bestStreak: newBest, isSurvivalOver: true });
+          // Award global record breaker badge only when this run beats the known global best
+          if (prevStreak > (s.globalBest || 0)) {
+            void awardBadge('inferno_record_breaker');
+          }
           // record streak end event using the final streak value
           pushSurvivalEvent(`💀 Streak ended at ${prevStreak}`);
           // Submit the streak to global best
@@ -606,9 +610,6 @@ export const useGameStore = create<Store>((set, get) => {
             }
             if (newStreak >= 20) {
               void awardBadge('true_survivor_20');
-            }
-            if (newBest > prevBest) {
-              void awardBadge('inferno_record_breaker');
             }
             if (newBest >= 20) {
               void awardBadge('inferno_immortal');

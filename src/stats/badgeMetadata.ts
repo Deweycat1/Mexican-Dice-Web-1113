@@ -12,7 +12,7 @@ export const BADGE_METADATA: Record<BadgeId, BadgeMeta> = {
     id: 'inferno_record_breaker',
     title: 'Inferno Record Breaker',
     icon: '🔥', // new best Inferno streak
-    description: 'Set a new streak record in Inferno Survival mode.',
+    description: 'Set a new global streak record in Inferno Survival mode.',
   },
   inferno_streak_5: {
     id: 'inferno_streak_5',
