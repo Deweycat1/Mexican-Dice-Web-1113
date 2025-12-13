@@ -2,6 +2,8 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +17,8 @@ import { BadgeMeta, getBadgeMeta } from '../src/stats/badgeMetadata';
 export default function BadgesScreen() {
   const router = useRouter();
   const [badges, setBadges] = useState<BadgeMeta[] | null>(null);
+  const [selectedBadge, setSelectedBadge] = useState<BadgeMeta | null>(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,10 +83,17 @@ export default function BadgesScreen() {
       ) : (
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.listContent}>
           {badges.map((badge) => (
-            <View key={badge.id} style={styles.badgeRow}>
+            <Pressable
+              key={badge.id}
+              onPress={() => {
+                setSelectedBadge(badge);
+                setIsModalVisible(true);
+              }}
+              style={styles.badgeRow}
+            >
               <Text style={styles.badgeIcon}>{badge.icon}</Text>
               <Text style={styles.badgeTitle}>{badge.title}</Text>
-            </View>
+            </Pressable>
           ))}
         </ScrollView>
       )}
@@ -92,6 +103,43 @@ export default function BadgesScreen() {
         onPress={() => router.push('/statistics')}
         style={styles.backButton}
       />
+
+      <Modal
+        visible={isModalVisible && !!selectedBadge}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setIsModalVisible(false);
+          setSelectedBadge(null);
+        }}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => {
+            setIsModalVisible(false);
+            setSelectedBadge(null);
+          }}
+        >
+          <View style={styles.modalContent}>
+            {selectedBadge && (
+              <>
+                <Text style={styles.modalIcon}>{selectedBadge.icon}</Text>
+                <Text style={styles.modalTitle}>{selectedBadge.title}</Text>
+                <Text style={styles.modalDescription}>{selectedBadge.description}</Text>
+                <Pressable
+                  style={styles.modalCloseButton}
+                  onPress={() => {
+                    setIsModalVisible(false);
+                    setSelectedBadge(null);
+                  }}
+                >
+                  <Text style={styles.modalCloseButtonText}>Close</Text>
+                </Pressable>
+              </>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -102,7 +150,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F262A',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 40,
+    paddingTop: 20,
     paddingHorizontal: 24,
   },
   title: {
@@ -166,5 +214,51 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 24,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#2A3136',
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#30363D',
+    alignItems: 'center',
+  },
+  modalIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#F0F6FC',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalCloseButton: {
+    marginTop: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    backgroundColor: '#53A7F3',
+  },
+  modalCloseButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0B1419',
+  },
 });
-
