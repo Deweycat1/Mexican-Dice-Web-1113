@@ -1730,6 +1730,7 @@ const styles = StyleSheet.create({
       default: 18,
     }),
     fontWeight: '800',
+    alignSelf: 'center',
     textAlign: 'center',
     marginBottom: 6,
     marginTop: Platform.select({
