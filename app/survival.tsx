@@ -1418,18 +1418,21 @@ export default function Survival() {
                   variant="ghost"
                   onPress={() => setSettingsOpen(true)}
                   style={[styles.btn, styles.newGameBtn]}
+                  textStyle={styles.footerButtonTextSmall}
                 />
                 <StyledButton
                   label="Menu"
                   variant="ghost"
                   onPress={() => router.push('/')}
                   style={[styles.btn, styles.menuBtnBlueOutline]}
+                  textStyle={styles.footerButtonTextSmall}
                 />
                 <StyledButton
                   label="Rules"
                   variant="ghost"
                   onPress={() => setRulesOpen(true)}
                   style={[styles.btn, styles.newGameBtn]}
+                  textStyle={styles.footerButtonTextSmall}
                 />
               </View>
             </View>
@@ -2227,6 +2230,9 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontSize: 16,
     fontWeight: '600',
+  },
+  footerButtonTextSmall: {
+    fontSize: 14,
   },
   screenOverlay: {
     position: 'absolute',

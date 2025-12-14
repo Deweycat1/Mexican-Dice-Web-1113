@@ -1033,18 +1033,21 @@ export default function Game() {
                   variant="ghost"
                   onPress={() => setSettingsOpen(true)}
                   style={[styles.btn, styles.newGameBtn]}
+                  textStyle={styles.footerButtonTextSmall}
                 />
                 <StyledButton
                   label="Menu"
                   variant="ghost"
                   onPress={() => router.push('/')}
                   style={[styles.btn, styles.menuBtnBlueOutline]}
+                  textStyle={styles.footerButtonTextSmall}
                 />
                 <StyledButton
                   label="Rules"
                   variant="ghost"
                   onPress={() => setRulesOpen(true)}
                   style={[styles.btn, styles.newGameBtn]}
+                  textStyle={styles.footerButtonTextSmall}
                 />
               </View>
             </View>
@@ -1657,6 +1660,9 @@ const styles = StyleSheet.create({
   settingsBtn: {
     borderWidth: 2,
     borderColor: '#53A7F3',
+  },
+  footerButtonTextSmall: {
+    fontSize: 14,
   },
   // End-of-game banner styles
   endBannerContainer: {
