@@ -73,7 +73,7 @@ export default function AboutScreen() {
 
               <View style={styles.featureCard}>
                 <IceEmojiIcon size={28} style={styles.featureIconImage} />
-                <Text style={styles.featureTitle}>Ice...Cool Strategy</Text>
+                <Text style={styles.featureTitle}>Ice Cold Strategy</Text>
                 <Text style={styles.featureBody}>
                   Bluff, call, and read patterns in your opponents’ claims to stay one step ahead.
                 </Text>
@@ -107,32 +107,40 @@ export default function AboutScreen() {
             <Text style={styles.sectionTitle}>How It Works</Text>
             <View style={styles.stepsContainer}>
               <View style={styles.stepCard}>
-                <Text style={styles.stepNumber}>1</Text>
-                <Text style={styles.stepTitle}>Roll the dice</Text>
-                <Text style={styles.stepBody}>
-                  Each turn starts with a hidden roll behind your claim.
-                </Text>
+                <View style={styles.stepNumberColumn}>
+                  <Text style={styles.stepNumber}>1</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>Roll the dice</Text>
+                  <Text style={styles.stepBody}>
+                    Each turn starts with a hidden roll behind your claim.
+                  </Text>
+                </View>
               </View>
               <View style={styles.stepCard}>
-                <Text style={styles.stepNumber}>2</Text>
-                <Text style={styles.stepTitle}>Make your claim</Text>
-                <Text style={styles.stepBody}>
-                  Tell the truth or bluff a higher value...your opponent only sees what you say.
-                </Text>
+                <View style={styles.stepNumberColumn}>
+                  <Text style={styles.stepNumber}>2</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>Make your claim</Text>
+                  <Text style={styles.stepBody}>
+                    Tell the truth or bluff a higher value...your opponent only sees what you say.
+                  </Text>
+                </View>
               </View>
               <View style={styles.stepCard}>
-                <Text style={styles.stepNumber}>3</Text>
-                <Text style={styles.stepTitle}>Beat it or call it</Text>
-                <Text style={styles.stepBody}>
-                  Your opponent must claim something stronger or call your bluff and face the
-                  consequences.
-                </Text>
+                <View style={styles.stepNumberColumn}>
+                  <Text style={styles.stepNumber}>3</Text>
+                </View>
+                <View style={styles.stepContent}>
+                  <Text style={styles.stepTitle}>Beat it or call it</Text>
+                  <Text style={styles.stepBody}>
+                    Your opponent must claim something stronger or call your bluff and face the
+                    consequences.
+                  </Text>
+                </View>
               </View>
             </View>
-            <Text style={styles.sectionBody}>
-              In Survival, you only have so many points to lose. See how long you can last before
-              the inferno finally catches up.
-            </Text>
           </View>
 
           {/* Built to Grow */}
@@ -315,9 +323,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   stepsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     rowGap: 12,
     marginBottom: 8,
   },
@@ -325,15 +331,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F262A',
     borderRadius: 14,
     paddingVertical: 12,
-    paddingHorizontal: 12,
-    width: '48%',
-    minWidth: 150,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    width: '100%',
+  },
+  stepNumberColumn: {
+    width: 32,
+    alignItems: 'center',
+    marginRight: 10,
   },
   stepNumber: {
     fontSize: 18,
     fontWeight: '800',
     color: '#FE9902',
-    marginBottom: 4,
+    marginBottom: 0,
+  },
+  stepContent: {
+    flex: 1,
   },
   stepTitle: {
     fontSize: 15,

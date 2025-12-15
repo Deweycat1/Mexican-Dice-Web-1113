@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';
 
 export default function SupportScreen() {
+  const router = useRouter();
   const handleEmailPress = () => {
     void Linking.openURL('mailto:admin@infernodice.com');
   };
@@ -39,24 +40,34 @@ export default function SupportScreen() {
             </Pressable>
           </View>
 
-          {/* Useful Links (buttons only, no heading) */}
+          {/* Useful Links */}
           <View style={styles.section}>
-            <View style={styles.linkList}>
-              <Link href="/privacy" asChild>
-                <Pressable
-                  style={({ pressed }) => [styles.linkButton, pressed && styles.linkButtonPressed]}
-                >
-                  <Text style={styles.linkButtonText}>Privacy Policy</Text>
-                </Pressable>
-              </Link>
+            <View style={styles.footerButtonsRow}>
+              <Pressable
+                onPress={() => router.push('/privacy')}
+                style={({ pressed }) =>
+                  StyleSheet.flatten([
+                    styles.menuButton,
+                    styles.footerButtonInline,
+                    pressed && styles.menuButtonPressed,
+                  ])
+                }
+              >
+                <Text style={styles.menuButtonText}>Privacy Policy</Text>
+              </Pressable>
 
-              <Link href="/about" asChild>
-                <Pressable
-                  style={({ pressed }) => [styles.linkButton, pressed && styles.linkButtonPressed]}
-                >
-                  <Text style={styles.linkButtonText}>About InfernoDice</Text>
-                </Pressable>
-              </Link>
+              <Pressable
+                onPress={() => router.push('/about')}
+                style={({ pressed }) =>
+                  StyleSheet.flatten([
+                    styles.menuButton,
+                    styles.footerButtonInline,
+                    pressed && styles.menuButtonPressed,
+                  ])
+                }
+              >
+                <Text style={styles.menuButtonText}>About InfernoDice</Text>
+              </Pressable>
             </View>
           </View>
 
@@ -68,16 +79,19 @@ export default function SupportScreen() {
             </Text>
           </View>
 
-          <Link href="/" asChild>
+          <View style={styles.backHomeContainer}>
             <Pressable
-              style={({ pressed }) => [
-                styles.backHomeButton,
-                pressed && styles.backHomeButtonPressed,
-              ]}
+              onPress={() => router.push('/')}
+              style={({ pressed }) =>
+                StyleSheet.flatten([
+                  styles.menuButton,
+                  pressed && styles.menuButtonPressed,
+                ])
+              }
             >
-              <Text style={styles.backHomeButtonText}>Back to Home</Text>
+              <Text style={styles.menuButtonText}>Back to Home</Text>
             </Pressable>
-          </Link>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -160,49 +174,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     textAlign: 'center',
   },
-  linkList: {
-    marginTop: 4,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-  },
-  linkRowPressed: {
-    opacity: 0.85,
-  },
-  linkLabel: {
-    fontSize: 15,
-    color: '#C9D1D9',
-    fontWeight: '600',
-  },
-  linkChevron: {
-    fontSize: 18,
-    color: '#6E7681',
-  },
-  linkButton: {
-    marginTop: 8,
-    minHeight: 44,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#FE9902',
-    borderWidth: 2,
-    borderColor: '#B26B01',
-    alignItems: 'center',
-    justifyContent: 'center',
-    // @ts-ignore - boxShadow is web-only
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
-  },
-  linkButtonPressed: {
-    opacity: 0.9,
-  },
-  linkButtonText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#53A7F3',
-  },
   footerNoteContainer: {
     marginTop: 6,
     paddingHorizontal: 4,
@@ -212,24 +183,41 @@ const styles = StyleSheet.create({
     color: '#8B949E',
     textAlign: 'center',
   },
-  backHomeButton: {
-    marginTop: 16,
-    minHeight: 44,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+  footerButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  menuButton: {
     backgroundColor: '#53A7F3',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 30,
     borderWidth: 2,
     borderColor: '#1C75BC',
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
+    // @ts-ignore - boxShadow is web-only
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
   },
-  backHomeButtonPressed: {
-    opacity: 0.9,
+  footerButtonInline: {
+    marginHorizontal: 8,
+    alignSelf: 'auto',
   },
-  backHomeButtonText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0B1419',
+  menuButtonPressed: {
+    opacity: 0.85,
+  },
+  menuButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  backHomeContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
