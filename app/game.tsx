@@ -158,6 +158,7 @@ export default function Game() {
   const [shouldRevealCpuDice, setShouldRevealCpuDice] = useState(false);
   const [rivalBluffBannerVisible, setRivalBluffBannerVisible] = useState(false);
   const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | 'social' | null>(null);
+  const [rivalBluffBannerSecondary, setRivalBluffBannerSecondary] = useState<string | null>(null);
   const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
@@ -319,10 +320,11 @@ export default function Game() {
     return styles.bluffBannerFail;
   }, [rivalBluffBannerType]);
 
-  const currentBluffBannerText = useMemo(() => {
+  const currentBluffBannerPrimary = useMemo(() => {
     if (rivalBluffBannerType === 'social') return '🍻 SOCIAL!!! 🍻';
-    if (rivalBluffBannerType === 'got-em') return "GOT 'EM!!!!";
-    return 'WOMP WOMP';
+    if (rivalBluffBannerType === 'got-em') return "GOT 'EM!!!";
+    if (rivalBluffBannerType === 'womp-womp') return 'WOMP WOMP';
+    return '';
   }, [rivalBluffBannerType]);
 
   const claimOptions = useMemo(
@@ -512,10 +514,36 @@ export default function Game() {
   }, [gameOver, showEndBanner]);
 
   const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp' | 'social') => {
+    setRivalBluffBannerSecondary(null);
+
+    if (type === 'got-em') {
+      const options = [
+        'They were bluffing.',
+        'Caught the lie.',
+        'Bluff exposed.',
+        'Nice call.',
+        'Too bold.',
+      ];
+      const pick = options[Math.floor(Math.random() * options.length)];
+      setRivalBluffBannerSecondary(pick);
+    } else if (type === 'womp-womp') {
+      const options = [
+        'They were telling the truth.',
+        'Clean roll.',
+        'No bluff there.',
+        'Bit too early.',
+        'Solid claim.',
+      ];
+      const pick = options[Math.floor(Math.random() * options.length)];
+      setRivalBluffBannerSecondary(pick);
+    } else {
+      setRivalBluffBannerSecondary(null);
+    }
+
     setRivalBluffBannerType(type);
     setRivalBluffBannerVisible(true);
     rivalBluffBannerOpacity.stopAnimation();
-    rivalBluffBannerScale.stopAnimation?.();
+    rivalBluffBannerScale.stopAnimation();
     rivalBluffBannerOpacity.setValue(0);
     rivalBluffBannerScale.setValue(0.92);
 
@@ -549,6 +577,7 @@ export default function Game() {
       setRivalBluffBannerVisible(false);
       rivalBluffBannerScale.setValue(1);
       setRivalBluffBannerType(null);
+      setRivalBluffBannerSecondary(null);
     });
   }, [rivalBluffBannerOpacity, rivalBluffBannerScale]);
 
@@ -775,9 +804,16 @@ export default function Game() {
                   currentBluffBannerStyle,
                 ]}
               >
-                <Text style={styles.gotEmBannerText}>
-                  {currentBluffBannerText}
-                </Text>
+                {!!currentBluffBannerPrimary && (
+                  <Text style={styles.gotEmBannerText}>
+                    {currentBluffBannerPrimary}
+                  </Text>
+                )}
+                {rivalBluffBannerType !== 'social' && !!rivalBluffBannerSecondary && (
+                  <Text style={styles.gotEmBannerTextSecondary}>
+                    {rivalBluffBannerSecondary}
+                  </Text>
+                )}
               </View>
             </Animated.View>
           )}
@@ -1498,6 +1534,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: 0.6,
+    textAlign: 'center',
+  },
+  gotEmBannerTextSecondary: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginTop: 2,
   },
   footer: {
     alignItems: 'center',
