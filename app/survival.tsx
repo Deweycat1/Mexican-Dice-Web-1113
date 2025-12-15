@@ -263,6 +263,7 @@ export default function Survival() {
   const [plusOneAmount, setPlusOneAmount] = useState(1);
   const plusOneFlashTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const plusOneFlashTickRef = useRef(0);
+  const pendingCpuBluffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Animation refs for micro animations
   const streakScaleAnim = useRef(new Animated.Value(1)).current;
@@ -907,11 +908,11 @@ export default function Survival() {
 
   const showCpuRevealDice =
     !isGameOver &&
-    turn === 'player' &&
     lastCpuRoll !== null &&
     lastClaim !== null &&
     lastPlayerRoll === null &&
-    shouldRevealCpuDice;
+    shouldRevealCpuDice &&
+    (turn === 'player' || pendingCpuBluffResolution);
 
   const currentBluffBannerStyle = useMemo(() => {
     if (rivalBluffBannerType === 'social') return styles.bluffBannerSocial;
@@ -940,6 +941,63 @@ export default function Survival() {
       setShouldRevealCpuDice(false);
     }
   }, [turn, lastCpuRoll, lastClaim]);
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('[SURVIVAL DEBUG] pendingCpuBluffResolution changed', {
+        pendingCpuBluffResolution,
+        turn,
+        shouldRevealCpuDice,
+        isRevealAnimating,
+        lastClaim,
+        lastPlayerRoll,
+        lastCpuRoll,
+      });
+    }
+  }, [pendingCpuBluffResolution, turn, shouldRevealCpuDice, isRevealAnimating, lastClaim, lastPlayerRoll, lastCpuRoll]);
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('[SURVIVAL DEBUG] isRevealAnimating changed', {
+        pendingCpuBluffResolution,
+        turn,
+        shouldRevealCpuDice,
+        isRevealAnimating,
+        lastClaim,
+        lastPlayerRoll,
+        lastCpuRoll,
+      });
+    }
+  }, [isRevealAnimating, pendingCpuBluffResolution, turn, shouldRevealCpuDice, lastClaim, lastPlayerRoll, lastCpuRoll]);
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('[SURVIVAL DEBUG] turn changed', {
+        pendingCpuBluffResolution,
+        turn,
+        shouldRevealCpuDice,
+        isRevealAnimating,
+        lastClaim,
+        lastPlayerRoll,
+        lastCpuRoll,
+      });
+    }
+  }, [turn, pendingCpuBluffResolution, shouldRevealCpuDice, isRevealAnimating, lastClaim, lastPlayerRoll, lastCpuRoll]);
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log('[SURVIVAL DEBUG] showCpuRevealDice changed', {
+        showCpuRevealDice,
+        pendingCpuBluffResolution,
+        turn,
+        shouldRevealCpuDice,
+        isRevealAnimating,
+        lastClaim,
+        lastPlayerRoll,
+        lastCpuRoll,
+      });
+    }
+  }, [showCpuRevealDice, pendingCpuBluffResolution, turn, shouldRevealCpuDice, isRevealAnimating, lastClaim, lastPlayerRoll, lastCpuRoll]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -1151,6 +1209,10 @@ export default function Survival() {
       setPendingCpuBluffResolution(false);
       setShouldRevealCpuDice(false);
     }
+    if (pendingCpuBluffTimeoutRef.current) {
+      clearTimeout(pendingCpuBluffTimeoutRef.current);
+      pendingCpuBluffTimeoutRef.current = null;
+    }
   }, [pendingCpuBluffResolution, callBluff]);
 
   const handleSocialRevealComplete = useCallback(() => {
@@ -1158,6 +1220,50 @@ export default function Survival() {
     setSocialRevealHidden(true);
     setIsRevealAnimating(false);
   }, []);
+
+  useEffect(() => {
+    if (!pendingCpuBluffResolution) {
+      if (pendingCpuBluffTimeoutRef.current) {
+        clearTimeout(pendingCpuBluffTimeoutRef.current);
+        pendingCpuBluffTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    if (pendingCpuBluffTimeoutRef.current) {
+      clearTimeout(pendingCpuBluffTimeoutRef.current);
+    }
+
+    pendingCpuBluffTimeoutRef.current = setTimeout(() => {
+      setPendingCpuBluffResolution((prev) => {
+        if (!prev) return prev;
+        if (__DEV__) {
+          console.log('[SURVIVAL DEBUG] Fallback resolving pending CPU bluff', {
+            turn,
+            pendingCpuBluffResolution: prev,
+            shouldRevealCpuDice,
+            isRevealAnimating,
+            lastClaim,
+            lastPlayerRoll,
+            lastCpuRoll,
+          });
+        }
+        callBluff();
+        setIsRevealAnimating(false);
+        setShouldRevealCpuDice(false);
+        return false;
+      });
+    }, 1200);
+  }, [
+    pendingCpuBluffResolution,
+    callBluff,
+    turn,
+    shouldRevealCpuDice,
+    isRevealAnimating,
+    lastClaim,
+    lastPlayerRoll,
+    lastCpuRoll,
+  ]);
 
   useEffect(() => {
     const nonce = cpuSocialRevealNonce;
