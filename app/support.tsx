@@ -39,21 +39,22 @@ export default function SupportScreen() {
             </Pressable>
           </View>
 
-          {/* Useful Links */}
+          {/* Useful Links (buttons only, no heading) */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Useful Links</Text>
             <View style={styles.linkList}>
               <Link href="/privacy" asChild>
-                <Pressable style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}>
-                  <Text style={styles.linkLabel}>Privacy Policy</Text>
-                  <Text style={styles.linkChevron}>›</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.linkButton, pressed && styles.linkButtonPressed]}
+                >
+                  <Text style={styles.linkButtonText}>Privacy Policy</Text>
                 </Pressable>
               </Link>
 
               <Link href="/about" asChild>
-                <Pressable style={({ pressed }) => [styles.linkRow, pressed && styles.linkRowPressed]}>
-                  <Text style={styles.linkLabel}>About InfernoDice</Text>
-                  <Text style={styles.linkChevron}>›</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.linkButton, pressed && styles.linkButtonPressed]}
+                >
+                  <Text style={styles.linkButtonText}>About InfernoDice</Text>
                 </Pressable>
               </Link>
             </View>
@@ -66,6 +67,17 @@ export default function SupportScreen() {
               few business days.
             </Text>
           </View>
+
+          <Link href="/" asChild>
+            <Pressable
+              style={({ pressed }) => [
+                styles.backHomeButton,
+                pressed && styles.backHomeButtonPressed,
+              ]}
+            >
+              <Text style={styles.backHomeButtonText}>Back to Home</Text>
+            </Pressable>
+          </Link>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -169,6 +181,28 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#6E7681',
   },
+  linkButton: {
+    marginTop: 8,
+    minHeight: 44,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#FE9902',
+    borderWidth: 2,
+    borderColor: '#B26B01',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // @ts-ignore - boxShadow is web-only
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
+  },
+  linkButtonPressed: {
+    opacity: 0.9,
+  },
+  linkButtonText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#53A7F3',
+  },
   footerNoteContainer: {
     marginTop: 6,
     paddingHorizontal: 4,
@@ -178,5 +212,24 @@ const styles = StyleSheet.create({
     color: '#8B949E',
     textAlign: 'center',
   },
+  backHomeButton: {
+    marginTop: 16,
+    minHeight: 44,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#53A7F3',
+    borderWidth: 2,
+    borderColor: '#1C75BC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backHomeButtonPressed: {
+    opacity: 0.9,
+  },
+  backHomeButtonText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0B1419',
+  },
 });
-
