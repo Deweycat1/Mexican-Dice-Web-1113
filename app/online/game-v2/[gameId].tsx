@@ -54,6 +54,7 @@ import { supabase } from '../../../src/lib/supabase';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import { awardBadge } from '../../../src/stats/badges';
 import { updateRankFromGameResult } from '../../../src/stats/rank';
+import { initPushNotifications } from '../../../src/lib/pushNotifications';
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -324,6 +325,12 @@ export default function OnlineGameV2Screen() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    console.log('[ONLINE GAME] initializing push notifications', { userId });
+    void initPushNotifications({ userId, router });
+  }, [userId, router]);
 
   useEffect(() => {
     if (!normalizedGameId) {

@@ -1,0 +1,223 @@
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.1';
+
+type TurnPayload = {
+  gameId?: string;
+  targetUserId?: string;
+};
+
+type GameRecord = {
+  id: string;
+  host_id: string;
+  guest_id: string | null;
+  last_claim: number | string | null;
+  status: 'waiting' | 'in_progress' | 'finished' | 'cancelled';
+};
+
+type UserPushToken = {
+  user_id: string;
+  expo_push_token: string;
+  platform: string | null;
+  is_enabled: boolean;
+};
+
+type ExpoPushResponse = {
+  data?: {
+    status: 'ok' | 'error';
+    id?: string;
+    message?: string;
+    details?: {
+      error?: string;
+    };
+  }[];
+  errors?: unknown;
+};
+
+serve(async (req: Request): Promise<Response> => {
+  if (req.method !== 'POST') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+
+  const secretHeader = req.headers.get('X-Turn-Secret');
+  const expectedSecret = Deno.env.get('TURN_SECRET');
+
+  if (!expectedSecret || secretHeader !== expectedSecret) {
+    console.warn('[push-turn] unauthorized request - missing or invalid secret');
+    return new Response(JSON.stringify({ error: 'unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  let payload: TurnPayload;
+  try {
+    payload = (await req.json()) as TurnPayload;
+  } catch (err) {
+    console.error('[push-turn] failed to parse JSON body', err);
+    return new Response(JSON.stringify({ error: 'invalid_json' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { gameId, targetUserId } = payload;
+
+  if (!gameId || !targetUserId) {
+    console.warn('[push-turn] missing required fields', { gameId, targetUserId });
+    return new Response(JSON.stringify({ error: 'missing_fields' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.error('[push-turn] missing Supabase env vars');
+    return new Response(JSON.stringify({ error: 'server_misconfigured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  const { data: tokens, error: tokensError } = await supabaseClient
+    .from('user_push_tokens')
+    .select('*')
+    .eq('user_id', targetUserId)
+    .eq('is_enabled', true);
+
+  if (tokensError) {
+    console.error('[push-turn] failed to load user tokens', tokensError);
+    return new Response(JSON.stringify({ error: 'token_query_failed' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const enabledTokens = (tokens as UserPushToken[] | null) ?? [];
+
+  if (enabledTokens.length === 0) {
+    console.log('[push-turn] no enabled tokens for user', { targetUserId });
+    return new Response(JSON.stringify({ ok: true, sent: 0 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const { data: game, error: gameError } = await supabaseClient
+    .from('games_v2')
+    .select('id,host_id,guest_id,last_claim,status')
+    .eq('id', gameId)
+    .single();
+
+  if (gameError || !game) {
+    console.error('[push-turn] failed to load game', { gameId, error: gameError });
+    return new Response(JSON.stringify({ error: 'game_not_found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const gameRecord = game as GameRecord;
+
+  if (gameRecord.status !== 'in_progress') {
+    console.log('[push-turn] game not in progress, skipping push', {
+      gameId,
+      status: gameRecord.status,
+    });
+    return new Response(JSON.stringify({ ok: true, sent: 0 }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const lastClaim = gameRecord.last_claim;
+  const hasLastClaim = lastClaim !== null && lastClaim !== undefined && `${lastClaim}`.trim().length > 0;
+
+  const title = 'Your turn';
+  const body = hasLastClaim
+    ? `Opponent claimed ${lastClaim}. Beat it or call bluff.`
+    : "It's your move.";
+
+  const messages = enabledTokens.map((token) => ({
+    to: token.expo_push_token,
+    title,
+    body,
+    data: { gameId },
+  }));
+
+  try {
+    const expoResponse = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(messages),
+    });
+
+    const expoJson = (await expoResponse.json()) as ExpoPushResponse;
+
+    const results = expoJson.data ?? [];
+    let sentCount = 0;
+
+    for (let i = 0; i < results.length; i += 1) {
+      const result = results[i];
+      const token = enabledTokens[i];
+
+      if (!result) continue;
+
+      if (result.status === 'ok') {
+        sentCount += 1;
+        continue;
+      }
+
+      const errorCode = result.details?.error ?? '';
+      const message = result.message ?? '';
+
+      console.warn('[push-turn] Expo push error for token', {
+        token: token.expo_push_token,
+        errorCode,
+        message,
+      });
+
+      if (errorCode === 'DeviceNotRegistered' || message.includes('DeviceNotRegistered')) {
+        const { error: disableError } = await supabaseClient
+          .from('user_push_tokens')
+          .update({ is_enabled: false })
+          .eq('user_id', targetUserId)
+          .eq('expo_push_token', token.expo_push_token);
+
+        if (disableError) {
+          console.error('[push-turn] failed to disable token', {
+            token: token.expo_push_token,
+            error: disableError,
+          });
+        } else {
+          console.log('[push-turn] disabled invalid token', {
+            token: token.expo_push_token,
+          });
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ ok: true, sent: sentCount }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    console.error('[push-turn] failed to send Expo push', err);
+    return new Response(JSON.stringify({ error: 'expo_push_failed' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+});
+
