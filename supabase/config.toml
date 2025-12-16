@@ -1,0 +1,3 @@
+[functions.push-turn-notification]
+verify_jwt = false
+
