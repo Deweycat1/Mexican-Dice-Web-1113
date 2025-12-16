@@ -19,21 +19,25 @@ import { playDiceRollSound } from '../lib/diceRollSound';
 import { useSettingsStore } from './useSettingsStore';
 
 import {
-    categorizeClaim,
-    claimMatchesRoll,
-    compareClaims,
-    isAlwaysClaimable,
-    isChallengeClaim,
-    isLegalRaise,
-    isMexican,
-    isReverseOf,
-    nextHigherClaim,
-    normalizeRoll,
-    resolveActiveChallenge,
-    resolveBluff
+  categorizeClaim,
+  claimMatchesRoll,
+  compareClaims,
+  isAlwaysClaimable,
+  isChallengeClaim,
+  isLegalRaise,
+  isMexican,
+  isReverseOf,
+  nextHigherClaim,
+  normalizeRoll,
+  resolveActiveChallenge,
+  resolveBluff,
 } from '../engine/mexican';
 import { formatCallBluffMessage } from '../utils/narration';
-import { updatePersonalStatsOnGamePlayed } from '../stats/personalStats';
+import {
+  incrementPersonalRollCount,
+  incrementSuccessfulBluffs,
+  updatePersonalStatsOnGamePlayed,
+} from '../stats/personalStats';
 import { awardBadge, incrementBluffCaught } from '../stats/badges';
 import { updateRankFromGameResult } from '../stats/rank';
 
@@ -821,6 +825,13 @@ export const useGameStore = create<Store>((set, get) => {
       })();
     }
 
+    // TODO: Lifetime "successful bluff" tracking for the player currently has
+    // no unambiguous signal in this resolution path. When caller === 'cpu'
+    // and callerWasCorrect is false, the defender (player) was truthful,
+    // so there was no bluff. Counting uncalled bluffs that later lead to a win
+    // would require explicit engine support to mark "player bluff succeeded".
+    // Once that exists, we can call incrementSuccessfulBluffs() at that point.
+
     const callerName = caller === 'player' ? 'You' : 'Infernoman';
     const defenderName = prevBy === 'player' ? 'You' : 'Infernoman';
     const defenderToldTruth = !liar;
@@ -1196,6 +1207,7 @@ export const useGameStore = create<Store>((set, get) => {
 
       // Record roll statistics (async, non-blocking)
       void recordRollStat(actual);
+      void incrementPersonalRollCount(actual);
       
       // Start timing player's turn
       const turnStartTime = Date.now();

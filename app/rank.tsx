@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import StyledButton from '../src/components/StyledButton';
+import { getPersonalStats, PersonalStats } from '../src/stats/personalStats';
 import type { PlayerRank } from '../src/stats/rank';
 import {
   getMyRank,
@@ -20,6 +21,8 @@ import {
   getTopQuickplayWins,
 } from '../src/stats/rank';
 
+const formatDays = (value: number) => `${value} ${value === 1 ? 'day' : 'days'}`;
+
 export default function RankScreen() {
   const router = useRouter();
   const [myRank, setMyRank] = useState<PlayerRank | null>(null);
@@ -29,6 +32,9 @@ export default function RankScreen() {
   const [topBluffers, setTopBluffers] = useState<PlayerRank[]>([]);
   const [topSurvivors, setTopSurvivors] = useState<PlayerRank[]>([]);
   const [topQuickWins, setTopQuickWins] = useState<PlayerRank[]>([]);
+  const [personalStats, setPersonalStats] = useState<PersonalStats | null>(null);
+  const [personalStatsLoading, setPersonalStatsLoading] = useState(true);
+  const [personalStatsError, setPersonalStatsError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +77,38 @@ export default function RankScreen() {
       cancelled = true;
     };
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadPersonalStats = async () => {
+        try {
+          setPersonalStatsLoading(true);
+          setPersonalStatsError(null);
+          const data = await getPersonalStats();
+          if (isActive) {
+            setPersonalStats(data);
+          }
+        } catch (err) {
+          console.error('Failed to load personal stats', err);
+          if (isActive) {
+            setPersonalStatsError('Unable to load your stats right now.');
+          }
+        } finally {
+          if (isActive) {
+            setPersonalStatsLoading(false);
+          }
+        }
+      };
+
+      void loadPersonalStats();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   const renderMyRankCard = () => {
     if (loading) {
@@ -140,6 +178,60 @@ export default function RankScreen() {
             <Text style={styles.rankStatValue}>{myRank.survivalBest}</Text>
           </View>
         </View>
+
+        <View style={styles.sectionDivider} />
+        {personalStatsLoading ? (
+          <View style={styles.centerContent}>
+            <ActivityIndicator color="#FE9902" />
+            <Text style={styles.loadingText}>Loading your stats...</Text>
+          </View>
+        ) : personalStatsError ? (
+          <Text style={styles.errorText}>{personalStatsError}</Text>
+        ) : !personalStats ? (
+          <Text style={styles.noDataText}>
+            No personal stats yet. Play a few games to start tracking your progress.
+          </Text>
+        ) : (
+          <>
+            <Text style={styles.sectionLabel}>PERSONAL STATS</Text>
+            <View style={styles.rankStatsRow}>
+              <View style={styles.rankStatItem}>
+                <Text style={styles.rankStatLabel}>Total Games</Text>
+                <Text style={styles.rankStatValue}>{personalStats.totalGamesPlayed}</Text>
+              </View>
+              <View style={styles.rankStatItem}>
+                <Text style={styles.rankStatLabel}>Daily Streak</Text>
+                <Text style={styles.rankStatValue}>
+                  {formatDays(personalStats.currentDailyStreak)}
+                </Text>
+              </View>
+              <View style={styles.rankStatItem}>
+                <Text style={styles.rankStatLabel}>Days Played</Text>
+                <Text style={styles.rankStatValue}>{personalStats.totalDaysPlayed}</Text>
+              </View>
+              <View style={styles.rankStatItem}>
+                <Text style={styles.rankStatLabel}>Bluff Calls Won</Text>
+                <Text style={styles.rankStatValue}>
+                  {typeof myRank.correctBluffEvents === 'number'
+                    ? myRank.correctBluffEvents
+                    : '—'}
+                </Text>
+              </View>
+              <View style={styles.rankStatItem}>
+                <Text style={styles.rankStatLabel}>Most Common Roll</Text>
+                <Text style={styles.rankStatValue}>
+                  {personalStats.mostCommonRollLifetime ?? '—'}
+                </Text>
+              </View>
+              <View style={styles.rankStatItem}>
+                <Text style={styles.rankStatLabel}>Successful Bluffs</Text>
+                <Text style={styles.rankStatValue}>
+                  {personalStats.successfulBluffsLifetime}
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
       </View>
     );
   };
@@ -602,5 +694,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#A0B4C0',
     marginTop: 2,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: 'rgba(48, 54, 61, 0.6)',
+    marginVertical: 8,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#53A7F3',
+    letterSpacing: 1,
+    marginTop: 12,
+    marginBottom: 6,
+    textAlign: 'left',
+    alignSelf: 'flex-start',
   },
 });

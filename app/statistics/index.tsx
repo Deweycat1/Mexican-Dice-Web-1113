@@ -21,7 +21,7 @@ export default function StatisticsMenuScreen() {
           />
           <StyledButton
             label="Your Stats"
-            onPress={() => router.push('/your-stats')}
+            onPress={() => router.push('/rank')}
             style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonGold]}
           />
           <StyledButton
