@@ -174,16 +174,24 @@ export async function getTopQuickplayWins(
       p_min_wins: minWins,
     });
 
+    if (!error && data && Array.isArray(data) && data.length > 0) {
+      return (data as PlayerRankRow[]).map(mapRowToPlayerRank);
+    }
+
     if (error) {
       console.error('get_top_quickplay_wins error', error);
+    }
+
+    // Fallback: derive quick play wins leaderboard from general rank data
+    const ranks = await getTop10Ranks();
+    if (!ranks.length) {
       return [];
     }
 
-    if (!data || !Array.isArray(data)) {
-      return [];
-    }
-
-    return (data as PlayerRankRow[]).map(mapRowToPlayerRank);
+    return ranks
+      .filter((r) => (r.quickplayWins ?? 0) >= minWins)
+      .sort((a, b) => (b.quickplayWins ?? 0) - (a.quickplayWins ?? 0))
+      .slice(0, limit);
   } catch (err) {
     console.error('Failed to get top quick play wins', err);
     return [];

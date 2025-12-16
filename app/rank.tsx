@@ -18,10 +18,35 @@ import {
   getTop10Ranks,
   getTopBluffersBySuccess,
   getTopSurvivalPlayers,
-  getTopQuickplayWins,
 } from '../src/stats/rank';
 
 const formatDays = (value: number) => `${value} ${value === 1 ? 'day' : 'days'}`;
+
+const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
+const hexToRgb = (hex: string) => {
+  const h = hex.replace('#', '');
+  const bigint = parseInt(h, 16);
+  return {
+    r: (bigint >> 16) & 255,
+    g: (bigint >> 8) & 255,
+    b: bigint & 255,
+  };
+};
+const rgbToHex = (r: number, g: number, b: number) =>
+  `#${[r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+
+const getTopPercentColor = (topPercent: number) => {
+  const t = clamp01((topPercent - 1) / 99);
+  const blue = hexToRgb('#53A7F3');
+  const red = hexToRgb('#FF4D4D');
+
+  const r = lerp(blue.r, red.r, t);
+  const g = lerp(blue.g, red.g, t);
+  const b = lerp(blue.b, red.b, t);
+
+  return rgbToHex(r, g, b);
+};
 
 export default function RankScreen() {
   const router = useRouter();
@@ -31,7 +56,6 @@ export default function RankScreen() {
   const [error, setError] = useState<string | null>(null);
   const [topBluffers, setTopBluffers] = useState<PlayerRank[]>([]);
   const [topSurvivors, setTopSurvivors] = useState<PlayerRank[]>([]);
-  const [topQuickWins, setTopQuickWins] = useState<PlayerRank[]>([]);
   const [personalStats, setPersonalStats] = useState<PersonalStats | null>(null);
   const [personalStatsLoading, setPersonalStatsLoading] = useState(true);
   const [personalStatsError, setPersonalStatsError] = useState<string | null>(null);
@@ -44,12 +68,11 @@ export default function RankScreen() {
         setLoading(true);
         setError(null);
 
-        const [rank, leaderboard, bluffers, survivors, quickWinners] = await Promise.all([
+        const [rank, leaderboard, bluffers, survivors] = await Promise.all([
           getMyRank(),
           getTop10Ranks(),
           getTopBluffersBySuccess(5),
           getTopSurvivalPlayers(5, 1),
-          getTopQuickplayWins(5, 1),
         ]);
 
         if (cancelled) return;
@@ -58,7 +81,6 @@ export default function RankScreen() {
         setTop10(leaderboard);
         setTopBluffers(bluffers);
         setTopSurvivors(survivors);
-        setTopQuickWins(quickWinners);
       } catch (err) {
         console.error('Failed to load rank data', err);
         if (!cancelled) {
@@ -155,7 +177,18 @@ export default function RankScreen() {
           <View style={styles.rankTierBlock}>
             <Text style={styles.rankTierText}>{tier}</Text>
             <Text style={styles.rankRatingText}>{myRank.infernoRating}</Text>
-            <Text style={styles.rankSubText}>Top {topPercent}% of players worldwide</Text>
+            <Text style={[styles.rankSubText, styles.rankSubTextBold]}>
+              Top{' '}
+              <Text
+                style={[
+                  styles.rankSubTextBold,
+                  { color: getTopPercentColor(topPercent) },
+                ]}
+              >
+                {topPercent}%
+              </Text>{' '}
+              of players worldwide
+            </Text>
           </View>
         </View>
         <View style={styles.rankStatsRow}>
@@ -317,71 +350,6 @@ export default function RankScreen() {
     );
   };
 
-  const renderQuickPlayWins = () => {
-    if (loading) {
-      return null; // covered by main loading state
-    }
-
-    return (
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Quick Play Wins – Top 5</Text>
-        {topQuickWins.length === 0 ? (
-          <Text style={styles.noDataText}>
-            No Quick Play data yet. Play a few Quick Play games to climb the leaderboard.
-          </Text>
-        ) : (
-          <>
-            {(() => {
-              const champ = topQuickWins[0];
-              const isMe = !!myRank && myRank.userId === champ.userId;
-
-              return (
-                <View style={styles.quickplayChampionContent}>
-                  <Text style={styles.quickplayChampionName}>
-                    Champion: {champ.username} {isMe ? '(that’s you!)' : ''}
-                  </Text>
-                  <Text style={styles.quickplayChampionStat}>
-                    Quick Play wins: {champ.quickplayWins}
-                  </Text>
-                </View>
-              );
-            })()}
-            <View style={styles.leaderboardContainer}>
-              {topQuickWins.map((p, index) => {
-                const isMe = !!myRank && myRank.userId === p.userId;
-                return (
-                  <View
-                    key={p.userId}
-                    style={[styles.leaderRow, isMe && styles.leaderRowMe]}
-                  >
-                    <Text style={styles.leaderRank}>#{index + 1}</Text>
-                    <View style={styles.leaderMiddle}>
-                      <Text
-                        style={styles.leaderName}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        {p.username}
-                      </Text>
-                      <Text style={styles.leaderTier}>
-                        {p.quickplayWins} win{p.quickplayWins === 1 ? '' : 's'}
-                      </Text>
-                    </View>
-                    <View style={styles.leaderRight}>
-                      <Text style={styles.leaderGames}>
-                        {p.gamesPlayed} game{p.gamesPlayed === 1 ? '' : 's'}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </>
-        )}
-      </View>
-    );
-  };
-
   const renderSurvivalChampion = () => {
     if (loading) {
       return null; // covered by main loading state in the rank card
@@ -459,7 +427,6 @@ export default function RankScreen() {
             {renderMyRankCard()}
             {renderLeaderboard()}
             {renderBluffLegend()}
-            {renderQuickPlayWins()}
             {renderSurvivalChampion()}
             <View style={styles.footer}>
               <StyledButton
@@ -572,6 +539,9 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textAlign: 'center',
   },
+  rankSubTextBold: {
+    fontWeight: '800',
+  },
   rankStatsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -663,19 +633,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#A0B4C0',
     marginTop: 2,
-  },
-  quickplayChampionContent: {
-    marginTop: 8,
-  },
-  quickplayChampionName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FE9902',
-    marginBottom: 4,
-  },
-  quickplayChampionStat: {
-    fontSize: 16,
-    color: '#FFFFFF',
   },
   survivalChampionContent: {
     marginTop: 8,
