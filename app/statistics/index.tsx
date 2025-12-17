@@ -14,10 +14,9 @@ export default function StatisticsMenuScreen() {
         <Text style={styles.title}>Statistics</Text>
         <View style={styles.buttonGroup}>
           <StyledButton
-            label="Global Stats"
-            onPress={() => router.push('/stats')}
-            variant="primary"
-            style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonRed]}
+            label="Badges"
+            onPress={() => router.push('/badges')}
+            style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonGreen]}
           />
           <StyledButton
             label="Rank & Leaderboard"
@@ -25,9 +24,10 @@ export default function StatisticsMenuScreen() {
             style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonGold]}
           />
           <StyledButton
-            label="Badges"
-            onPress={() => router.push('/badges')}
-            style={[styles.menuButton, styles.buttonSpacing]}
+            label="Global Stats"
+            onPress={() => router.push('/stats')}
+            variant="primary"
+            style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonRed]}
           />
           <StyledButton
             label="Back to Menu"
