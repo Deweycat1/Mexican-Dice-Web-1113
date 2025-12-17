@@ -35,6 +35,15 @@ npm run reset-project
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
+## Android releases (Play Store)
+
+Before uploading any new Android build to Google Play, make sure the `expo.android.versionCode` has been bumped to a new integer:
+
+- Run `npm run android:versioncode:bump` to increment `versionCode` in `app.json`.
+- Then run `npm run android:build` (or your existing EAS build command) to create a new `.aab` with the updated versionCode.
+
+Every Play Store upload must use a versionCode that has never been used before.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:
