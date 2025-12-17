@@ -1,3 +1,6 @@
 [functions.push-turn-notification]
 verify_jwt = false
 
+[functions.push-game-request]
+verify_jwt = false
+

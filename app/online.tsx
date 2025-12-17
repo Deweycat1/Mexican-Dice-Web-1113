@@ -340,6 +340,14 @@ export default function OnlineLobbyScreen() {
         throw error ?? new Error('Unable to create match');
       }
 
+      try {
+        await supabase.functions.invoke('push-game-request-auth', {
+          body: { targetUserId: guestId, gameId: data.id },
+        });
+      } catch (pushError) {
+        console.warn('[OnlineLobby] push-game-request-auth failed', pushError);
+      }
+
       setFriendCode('');
       setCreateMessage(`Match started with ${friendlyName ?? 'your friend'}.`);
       await loadGames();
