@@ -40,9 +40,16 @@ This command will move the starter code to the **app-example** directory and cre
 Before uploading any new Android build to Google Play, make sure the `expo.android.versionCode` has been bumped to a new integer:
 
 - Run `npm run android:versioncode:bump` to increment `versionCode` in `app.json`.
+- Run `npm run android:versioncode:check` to verify the resolved Expo config is using a valid Android `versionCode` (and not an old value like `19`).
 - Then run `npm run android:build` (or your existing EAS build command) to create a new `.aab` with the updated versionCode.
 
 Every Play Store upload must use a versionCode that has never been used before.
+
+If the Expo builds dashboard still shows an outdated Android version (for example, `1.0.2 (19)`), run:
+
+- `npm run android:versioncode:check`
+
+and fix any issues it reports with your config resolution before triggering a new EAS Android build.
 
 ## Learn more
 

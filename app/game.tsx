@@ -14,6 +14,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import BluffModal from '../src/components/BluffModal';
 import DialogBanner from '../src/components/DialogBanner';
@@ -40,6 +41,12 @@ import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/li
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
+import ScreenshotTutorial from '../src/tutorial/ScreenshotTutorial';
+
+const TUTORIAL_SEEN_KEY = 'tutorial_seen_v1';
+// Set to true temporarily if you want to force the tutorial
+// to show again for testing. Leave as false in production.
+const FORCE_SHOW_TUTORIAL = false;
 
 // ---------- helpers ----------
 function formatClaimDetailed(value: number | null | undefined): string {
@@ -152,6 +159,7 @@ export default function Game() {
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
@@ -221,6 +229,34 @@ export default function Game() {
     stopSurvival();
     // stopSurvival reference from Zustand is stable; run once on mount only
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateTutorial = async () => {
+      if (FORCE_SHOW_TUTORIAL) {
+        if (isMounted) setShowTutorial(true);
+        return;
+      }
+
+      try {
+        const stored = await AsyncStorage.getItem(TUTORIAL_SEEN_KEY);
+        if (!stored && isMounted) {
+          setShowTutorial(true);
+        }
+      } catch {
+        if (isMounted) {
+          setShowTutorial(true);
+        }
+      }
+    };
+
+    void hydrateTutorial();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const [playerHi, playerLo] = facesFromRoll(lastPlayerRoll);
@@ -747,6 +783,23 @@ export default function Game() {
     outputRange: [-10, 0],
   });
 
+  const handleTutorialReplay = useCallback(() => {
+    setRulesOpen(false);
+    setShowTutorial(true);
+  }, []);
+
+  const handleTutorialDone = useCallback(() => {
+    setShowTutorial(false);
+    const persist = async () => {
+      try {
+        await AsyncStorage.setItem(TUTORIAL_SEEN_KEY, '1');
+      } catch {
+        // ignore persistence failures; tutorial will show again next launch
+      }
+    };
+    void persist();
+  }, []);
+
   return (
     <View style={styles.root}>
       <FeltBackground>
@@ -1176,6 +1229,14 @@ export default function Game() {
                 <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
                   <RulesContent />
                 </ScrollView>
+                <View style={styles.rulesActions}>
+                  <StyledButton
+                    label="Quick Play Tutorial"
+                    variant="primary"
+                    onPress={handleTutorialReplay}
+                    style={styles.rulesTutorialButton}
+                  />
+                </View>
               </View>
             </View>
           </Modal>
@@ -1248,6 +1309,8 @@ export default function Game() {
           </Modal>
 
         </SafeAreaView>
+
+        <ScreenshotTutorial visible={showTutorial} onDone={handleTutorialDone} />
       </FeltBackground>
     </View>
   );
@@ -1657,6 +1720,9 @@ const styles = StyleSheet.create({
     borderColor: '#B26B01',
     borderWidth: 2,
   },
+  rulesActions: {
+    marginTop: 16,
+  },
   rulesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1678,6 +1744,11 @@ const styles = StyleSheet.create({
   },
   rulesScroll: {
     maxHeight: '100%',
+  },
+  rulesTutorialButton: {
+    backgroundColor: '#FE9902',
+    borderColor: '#FFEA70',
+    borderWidth: 2,
   },
   settingsRow: {
     flexDirection: 'row',
