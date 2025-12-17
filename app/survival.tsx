@@ -282,6 +282,8 @@ export default function Survival() {
   const vortexPulseAnim = useRef(new Animated.Value(0)).current;
   const bluffResultNonceRef = useRef(0);
   const bluffResultInitializedRef = useRef(false);
+  const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchdogLastKickKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isFocused) return;
@@ -315,6 +317,7 @@ export default function Survival() {
 
   const {
     // survival controls
+    mode,
     lastClaim,
     lastAction,
     baselineClaim,
@@ -346,6 +349,7 @@ export default function Survival() {
     bestStreak,
     globalBest,
     isSurvivalOver,
+    cpuTurn,
   } = useGameStore();
 
   // pulsing animation for the caption/title to add adrenaline
@@ -385,6 +389,64 @@ export default function Survival() {
   const streakFlashAnim = useRef(new Animated.Value(1)).current;
   const prevStreakRef = useRef(currentStreak);
 
+  const logSurvivalSnapshot = useCallback(
+    (tag: string) => {
+      if (!__DEV__) return;
+      // Structured snapshot to help diagnose stuck states
+      console.log('[SURVIVAL][SNAPSHOT]', {
+        tag,
+        mode,
+        turn,
+        turnLock,
+        isBusy,
+        gameOver,
+        lastClaim,
+        baselineClaim,
+        lastPlayerRoll,
+        lastCpuRoll,
+        currentStreak,
+        isSurvivalOver,
+        rollingAnim,
+        isRolling,
+        claimPickerOpen,
+        cpuDiceRevealed,
+        pendingCpuBluffResolution,
+        shouldRevealCpuDice,
+        isRevealAnimating,
+        showSocialReveal,
+        historyModalOpen,
+        rulesOpen,
+        settingsOpen,
+        introVisible,
+      });
+    },
+    [
+      baselineClaim,
+      claimPickerOpen,
+      cpuDiceRevealed,
+      currentStreak,
+      gameOver,
+      historyModalOpen,
+      introVisible,
+      isBusy,
+      isRevealAnimating,
+      isRolling,
+      isSurvivalOver,
+      lastClaim,
+      lastCpuRoll,
+      lastPlayerRoll,
+      mode,
+      pendingCpuBluffResolution,
+      rollingAnim,
+      rulesOpen,
+      settingsOpen,
+      shouldRevealCpuDice,
+      showSocialReveal,
+      turn,
+      turnLock,
+    ]
+  );
+
   useEffect(() => {
     // if streak increased, trigger a subtle brightening flash
     if (currentStreak > prevStreakRef.current) {
@@ -397,6 +459,75 @@ export default function Survival() {
     }
     prevStreakRef.current = currentStreak;
   }, [currentStreak, streakFlashAnim]);
+
+  // Watchdog to recover from a stalled CPU turn in Survival mode
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (mode !== 'survival') return;
+
+    // Clear any existing timer if conditions are not suitable
+    if (turn !== 'cpu' || gameOver !== null || turnLock || isBusy) {
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+      return;
+    }
+
+    const key = `turn=${turn}|claim=${lastClaim ?? 'none'}|cpuRoll=${lastCpuRoll ?? 'none'}`;
+
+    // If we already kicked this exact stalled state, don't schedule again
+    if (watchdogLastKickKeyRef.current === key) {
+      return;
+    }
+
+    if (watchdogTimerRef.current) {
+      clearTimeout(watchdogTimerRef.current);
+    }
+
+    watchdogTimerRef.current = setTimeout(() => {
+      watchdogTimerRef.current = null;
+      watchdogLastKickKeyRef.current = key;
+      if (__DEV__) {
+        console.log('[SURVIVAL][WATCHDOG] Stuck CPU turn detected', {
+          key,
+          mode,
+          turn,
+          turnLock,
+          isBusy,
+          gameOver,
+          lastClaim,
+          baselineClaim,
+          lastPlayerRoll,
+          lastCpuRoll,
+          currentStreak,
+          isSurvivalOver,
+        });
+        logSurvivalSnapshot('watchdog');
+      }
+      cpuTurn();
+    }, 1800);
+
+    return () => {
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+    };
+  }, [
+    baselineClaim,
+    cpuTurn,
+    currentStreak,
+    gameOver,
+    isBusy,
+    isSurvivalOver,
+    lastClaim,
+    lastCpuRoll,
+    logSurvivalSnapshot,
+    mode,
+    turn,
+    turnLock,
+  ]);
 
   useEffect(() => {
     // clear previous animation
@@ -958,46 +1089,27 @@ export default function Survival() {
 
   useEffect(() => {
     if (__DEV__) {
-      console.log('[SURVIVAL DEBUG] isRevealAnimating changed', {
-        pendingCpuBluffResolution,
+      console.log('[SURVIVAL][LOCK]', {
+        turnLock,
+        isBusy,
         turn,
-        shouldRevealCpuDice,
-        isRevealAnimating,
-        lastClaim,
-        lastPlayerRoll,
-        lastCpuRoll,
+        gameOver,
       });
+      logSurvivalSnapshot('lock-change');
     }
-  }, [isRevealAnimating, pendingCpuBluffResolution, turn, shouldRevealCpuDice, lastClaim, lastPlayerRoll, lastCpuRoll]);
+  }, [turnLock, isBusy, turn, gameOver, logSurvivalSnapshot]);
 
   useEffect(() => {
     if (__DEV__) {
-      console.log('[SURVIVAL DEBUG] turn changed', {
-        pendingCpuBluffResolution,
+      console.log('[SURVIVAL][TURN]', {
         turn,
-        shouldRevealCpuDice,
-        isRevealAnimating,
-        lastClaim,
-        lastPlayerRoll,
-        lastCpuRoll,
+        gameOver,
+        turnLock,
+        isBusy,
       });
+      logSurvivalSnapshot('turn-change');
     }
-  }, [turn, pendingCpuBluffResolution, shouldRevealCpuDice, isRevealAnimating, lastClaim, lastPlayerRoll, lastCpuRoll]);
-
-  useEffect(() => {
-    if (__DEV__) {
-      console.log('[SURVIVAL DEBUG] showCpuRevealDice changed', {
-        showCpuRevealDice,
-        pendingCpuBluffResolution,
-        turn,
-        shouldRevealCpuDice,
-        isRevealAnimating,
-        lastClaim,
-        lastPlayerRoll,
-        lastCpuRoll,
-      });
-    }
-  }, [showCpuRevealDice, pendingCpuBluffResolution, turn, shouldRevealCpuDice, isRevealAnimating, lastClaim, lastPlayerRoll, lastCpuRoll]);
+  }, [turn, gameOver, turnLock, isBusy, logSurvivalSnapshot]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -1121,6 +1233,20 @@ export default function Survival() {
   }, [bluffResultNonce, lastBluffCaller, lastBluffDefenderTruth, triggerRivalBluffBanner]);
 
   function handleRollOrClaim() {
+    if (__DEV__) {
+      console.log('[SURVIVAL][ACTION] handleRollOrClaim:start', {
+        turn,
+        gameOver,
+        isBusy,
+        turnLock,
+        isSurvivalOver,
+        hasRolled,
+        mustBluff,
+        lastPlayerRoll,
+        lastClaimValue,
+      });
+      logSurvivalSnapshot('handleRollOrClaim:start');
+    }
     if (controlsDisabled || isRevealAnimating) {
       console.log('SURVIVAL: handleRollOrClaim blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
       return;
@@ -1129,11 +1255,23 @@ export default function Survival() {
     if (hasRolled && !mustBluff && lastPlayerRoll != null) {
       console.log('SURVIVAL: claiming current roll', { claim: lastPlayerRoll, lastClaimValue });
       playerClaim(lastPlayerRoll);
+      if (__DEV__) {
+        console.log('[SURVIVAL][ACTION] handleRollOrClaim:end (claimed roll)', {
+          claim: lastPlayerRoll,
+        });
+        logSurvivalSnapshot('handleRollOrClaim:end-claim');
+      }
       return;
     }
 
     if (hasRolled && mustBluff) {
       console.log('SURVIVAL: must bluff, cannot auto-claim', { lastClaimValue });
+      if (__DEV__) {
+        console.log('[SURVIVAL][ACTION] handleRollOrClaim:end (must bluff)', {
+          lastClaimValue,
+        });
+        logSurvivalSnapshot('handleRollOrClaim:end-must-bluff');
+      }
       return;
     }
 
@@ -1141,6 +1279,12 @@ export default function Survival() {
     setRollingAnim(true);
     playerRoll();
     setTimeout(() => setRollingAnim(false), 400);
+    if (__DEV__) {
+      console.log('[SURVIVAL][ACTION] handleRollOrClaim:end (rolled)', {
+        turn,
+      });
+      logSurvivalSnapshot('handleRollOrClaim:end-roll');
+    }
   }
 
   const handlePrimaryAction = useCallback(() => {
@@ -1159,6 +1303,18 @@ export default function Survival() {
       : 'Roll';
 
   function handleCallBluff() {
+    if (__DEV__) {
+      console.log('[SURVIVAL][ACTION] handleCallBluff:start', {
+        turn,
+        gameOver,
+        isBusy,
+        turnLock,
+        isSurvivalOver,
+        lastClaim,
+        lastCpuRoll,
+      });
+      logSurvivalSnapshot('handleCallBluff:start');
+    }
     if (controlsDisabled) {
       console.log('SURVIVAL: call bluff blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
       return;
@@ -1189,17 +1345,45 @@ export default function Survival() {
     } else if (rivalToldTruth === true) {
       triggerRivalBluffBanner('womp-womp');
     }
+    if (__DEV__) {
+      console.log('[SURVIVAL][ACTION] handleCallBluff:end', {
+        rivalToldTruth,
+      });
+      logSurvivalSnapshot('handleCallBluff:end');
+    }
   }
 
   function handleOpenBluff() {
+    if (__DEV__) {
+      console.log('[SURVIVAL][ACTION] handleOpenBluff:start', {
+        controlsDisabled,
+        claimPickerOpen,
+      });
+      logSurvivalSnapshot('handleOpenBluff:start');
+    }
     if (controlsDisabled) return;
     setClaimPickerOpen(true);
+    if (__DEV__) {
+      console.log('[SURVIVAL][ACTION] handleOpenBluff:end');
+      logSurvivalSnapshot('handleOpenBluff:end');
+    }
   }
 
   function handleSelectClaim(claim: number) {
+    if (__DEV__) {
+      console.log('[SURVIVAL][ACTION] handleSelectClaim:start', {
+        claim,
+        controlsDisabled,
+      });
+      logSurvivalSnapshot('handleSelectClaim:start');
+    }
     if (controlsDisabled) return;
     playerClaim(claim);
     setClaimPickerOpen(false);
+    if (__DEV__) {
+      console.log('[SURVIVAL][ACTION] handleSelectClaim:end', { claim });
+      logSurvivalSnapshot('handleSelectClaim:end');
+    }
   }
 
   const handleCpuRevealComplete = useCallback(() => {

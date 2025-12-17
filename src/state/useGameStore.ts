@@ -63,6 +63,11 @@ void loadAiState<ReturnType<typeof aiOpponent.state>>().then((state) => {
 let roundIndexCounter = 0;
 let pendingCpuRaise: { claim: number; roll: DicePair; normalized: number } | null = null;
 
+// Dev-only counters to measure softened call_bluff behavior in Survival streak 5–8
+let surv_5_8_totalWouldCall = 0;
+let surv_5_8_keptCall = 0;
+let surv_5_8_overrodeToRaise = 0;
+
 const persistAiState = () => {
   void saveAiState(aiOpponent.state());
 };
@@ -964,8 +969,6 @@ export const useGameStore = create<Store>((set, get) => {
 
       // Use baselineClaim for AI decisions (preserves original claim through reverses)
       const claimForAI = resolveActiveChallenge(baselineClaim, lastClaim);
-      const preventCallBluffEarlySurvival =
-        state.mode === 'survival' && (state.currentStreak ?? 0) < 5;
       let action = aiOpponent.decideAction(
         'player',
         claimForAI,
@@ -974,13 +977,54 @@ export const useGameStore = create<Store>((set, get) => {
         lastClaim
       );
 
-      // In Survival mode, during the first few streak points, avoid calling bluff
-      // so early rounds feel less punishing. Force a raise instead.
-      if (preventCallBluffEarlySurvival && action.type === 'call_bluff') {
-        const legalTruth = computeLegalTruth(lastClaim, actual);
-        const baseRaise =
-          legalTruth ? actual : nextHigherClaim(lastClaim ?? actual) ?? 21;
-        action = { type: 'raise', claim: baseRaise };
+      const streak = state.currentStreak ?? 0;
+      const isSurvival = state.mode === 'survival';
+
+      if (isSurvival && action.type === 'call_bluff') {
+        const inSoftBand = streak >= 5 && streak < 8;
+        const inNoCallBand = streak < 5;
+
+        if (__DEV__ && inSoftBand) {
+          surv_5_8_totalWouldCall += 1;
+        }
+
+        let keepCall = true;
+
+        if (inNoCallBand) {
+          // Streak < 5: never call bluff, always soften to a raise
+          keepCall = false;
+        } else if (inSoftBand) {
+          // Streak 5–7: keep call only ~40% of the time
+          keepCall = Math.random() < 0.4;
+        }
+
+        if (inSoftBand && __DEV__) {
+          if (keepCall) {
+            surv_5_8_keptCall += 1;
+          } else {
+            surv_5_8_overrodeToRaise += 1;
+          }
+
+          if (surv_5_8_totalWouldCall > 0 && surv_5_8_totalWouldCall % 10 === 0) {
+            const keptRate =
+              surv_5_8_totalWouldCall > 0
+                ? surv_5_8_keptCall / surv_5_8_totalWouldCall
+                : 0;
+            console.log('[survival-ai] streak5-8 call_bluff stats', {
+              wouldCall: surv_5_8_totalWouldCall,
+              kept: surv_5_8_keptCall,
+              overrode: surv_5_8_overrodeToRaise,
+              keptRate,
+            });
+          }
+        }
+
+        if (!keepCall) {
+          const legalTruth = computeLegalTruth(lastClaim, actual);
+          const baseRaise =
+            legalTruth ? actual : nextHigherClaim(lastClaim ?? actual) ?? 21;
+          action = { type: 'raise', claim: baseRaise };
+        }
       }
 
       if (action.type === 'call_bluff') {
