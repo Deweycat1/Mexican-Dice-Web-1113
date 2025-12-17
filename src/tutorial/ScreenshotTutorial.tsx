@@ -8,13 +8,13 @@ type Props = {
 };
 
 const PAGES = [
-  require('../../assets/images/tutorial/page1.png'),
-  require('../../assets/images/tutorial/page2.png'),
-  require('../../assets/images/tutorial/page3.png'),
-  require('../../assets/images/tutorial/page4.png'),
-  require('../../assets/images/tutorial/page5.png'),
-  require('../../assets/images/tutorial/page6.png'),
-  require('../../assets/images/tutorial/page7.png'),
+  require('../../assets/images/tutorial/Page1.png'),
+  require('../../assets/images/tutorial/Page2.png'),
+  require('../../assets/images/tutorial/Page3.png'),
+  require('../../assets/images/tutorial/Page4.png'),
+  require('../../assets/images/tutorial/Page5.png'),
+  require('../../assets/images/tutorial/Page6.png'),
+  require('../../assets/images/tutorial/Page7.png'),
 ] as const;
 
 export function ScreenshotTutorial({ visible, onDone }: Props) {
