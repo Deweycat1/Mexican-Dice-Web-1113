@@ -156,23 +156,55 @@ serve(async (req: Request): Promise<Response> => {
 
   console.log('[push-turn] computed badgeCount', { targetUserId, badgeCount });
 
+  let opponentUserId: string | null = null;
+
+  if (targetUserId === gameRecord.host_id) {
+    opponentUserId = gameRecord.guest_id;
+  } else if (targetUserId === gameRecord.guest_id) {
+    opponentUserId = gameRecord.host_id;
+  }
+
+  let opponentUsername = 'Opponent';
+
+  if (opponentUserId) {
+    try {
+      const { data: opponent, error: opponentError } = await supabaseClient
+        .from('users')
+        .select('username')
+        .eq('id', opponentUserId)
+        .single();
+
+      if (!opponentError && opponent && typeof opponent.username === 'string' && opponent.username.trim().length > 0) {
+        opponentUsername = opponent.username;
+      }
+    } catch {
+      // Best-effort only; fall back to "Opponent"
+    }
+  }
+
+  console.log('[push-turn] opponent context', { targetUserId, opponentUserId, opponentUsername });
+
   const lastClaim = gameRecord.last_claim;
   const hasLastClaim = lastClaim !== null && lastClaim !== undefined && `${lastClaim}`.trim().length > 0;
 
   const title = 'Your turn';
   const body = hasLastClaim
-    ? `Opponent claimed ${lastClaim}. Beat it or call bluff.`
+    ? `${opponentUsername} claimed ${lastClaim}. Beat it or call bluff.`
     : "It's your move.";
 
   const messages = enabledTokens.map((token) => ({
     to: token.expo_push_token,
     title,
     body,
+    channelId: 'turns',
     badge: badgeCount,
     data: { gameId, badgeCount },
   }));
 
   try {
+    console.log('[push-turn] expo messages sample', messages?.[0]);
+    console.log('[push-turn] expo messages count', messages?.length);
+
     const expoResponse = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: {

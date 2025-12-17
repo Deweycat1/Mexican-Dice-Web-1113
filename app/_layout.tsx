@@ -2,7 +2,7 @@ import { Analytics } from '@vercel/analytics/react';
 import * as Notifications from 'expo-notifications';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import Head from 'expo-router/head';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import 'react-native-gesture-handler';
 import 'react-native-reanimated';
@@ -11,9 +11,12 @@ import { ensureUserProfile } from '../src/lib/auth';
 import { initPushNotifications } from '../src/lib/pushNotifications';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 
+const ANDROID_TURN_CHANNEL_ID = 'turns';
+
 export default function RootLayout() {
   const pathname = usePathname();
   const router = useRouter();
+  const didHandleInitialNotification = useRef(false);
   const musicEnabled = useSettingsStore((state) => state.musicEnabled);
 
   // Ensure web root/background fills viewport and uses the dark gunmetal base
@@ -85,7 +88,7 @@ export default function RootLayout() {
   }, [router]);
 
   useEffect(() => {
-    if (Platform.OS !== 'ios') return;
+    if (Platform.OS === 'web') return;
 
     let receivedSubscription: Notifications.Subscription | undefined;
     let responseSubscription: Notifications.Subscription | undefined;
@@ -103,7 +106,9 @@ export default function RootLayout() {
           router.push('/online');
         }
 
-        await Notifications.setBadgeCountAsync(0);
+        if (Platform.OS === 'ios') {
+          await Notifications.setBadgeCountAsync(0);
+        }
       } catch (err) {
         if (__DEV__) {
           console.warn('[RootLayout] Error handling notification response', err);
@@ -112,6 +117,24 @@ export default function RootLayout() {
     };
 
     (async () => {
+      if (Platform.OS === 'android') {
+        try {
+          await Notifications.setNotificationChannelAsync(ANDROID_TURN_CHANNEL_ID, {
+            name: 'Turns',
+            importance: Notifications.AndroidImportance.MAX,
+            sound: 'default',
+            enableVibrate: true,
+            vibrationPattern: [0, 250, 250, 250],
+            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+            showBadge: true,
+          });
+        } catch (err) {
+          if (__DEV__) {
+            console.warn('[RootLayout] Failed to configure Android notification channel', err);
+          }
+        }
+      }
+
       try {
         await Notifications.requestPermissionsAsync({
           ios: {
@@ -122,13 +145,14 @@ export default function RootLayout() {
         });
       } catch (err) {
         if (__DEV__) {
-          console.warn('[RootLayout] Failed to request iOS notification permissions', err);
+          console.warn('[RootLayout] Failed to request notification permissions', err);
         }
       }
 
       try {
         const lastResponse = await Notifications.getLastNotificationResponseAsync();
-        if (lastResponse) {
+        if (lastResponse && !didHandleInitialNotification.current) {
+          didHandleInitialNotification.current = true;
           await handleNotificationResponse(lastResponse);
         }
       } catch (err) {
@@ -139,15 +163,24 @@ export default function RootLayout() {
 
       receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
         try {
-          const data = notification.request.content.data as { badgeCount?: number } | undefined;
-          const fromData = typeof data?.badgeCount === 'number' ? data.badgeCount : undefined;
+          const data = notification.request.content.data as { badgeCount?: number | string } | undefined;
+          const rawBadge = data?.badgeCount;
+          let fromData: number | undefined;
+          if (typeof rawBadge === 'number') {
+            fromData = rawBadge;
+          } else if (typeof rawBadge === 'string') {
+            const parsed = Number(rawBadge);
+            if (Number.isFinite(parsed)) {
+              fromData = parsed;
+            }
+          }
           const fromContent =
             typeof notification.request.content.badge === 'number'
               ? notification.request.content.badge
               : undefined;
           const badgeCount = fromData ?? fromContent;
 
-          if (typeof badgeCount === 'number') {
+          if (Platform.OS === 'ios' && typeof badgeCount === 'number') {
             void Notifications.setBadgeCountAsync(badgeCount);
           }
         } catch (err) {

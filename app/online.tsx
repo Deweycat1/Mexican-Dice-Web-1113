@@ -1,9 +1,11 @@
 import * as Clipboard from 'expo-clipboard';
+import * as Notifications from 'expo-notifications';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -93,6 +95,17 @@ export default function OnlineLobbyScreen() {
   const [games, setGames] = useState<LobbyGame[]>([]);
   const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
   const [loadingGames, setLoadingGames] = useState(false);
+
+  const onClearBadge = useCallback(async () => {
+    if (Platform.OS !== 'ios') return;
+    try {
+      await Notifications.setBadgeCountAsync(0);
+      Alert.alert('Badge cleared');
+    } catch (e) {
+      if (__DEV__) console.warn('[online] failed to clear badge', e);
+      Alert.alert('Could not clear badge');
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -938,16 +951,26 @@ export default function OnlineLobbyScreen() {
                   />
                 </View>
                 <View style={styles.startMatchRow}>
-                  <StyledButton
-                    label={findingRandomMatch ? 'Finding…' : 'Find Random Match'}
-                    onPress={handleFindRandomMatch}
-                    disabled={findingRandomMatch || !userId}
-                    style={[styles.primaryButton, styles.startMatchGreen]}
-                    textStyle={styles.startMatchGreenText}
-                  />
-                </View>
-                {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
+              <StyledButton
+                label={findingRandomMatch ? 'Finding…' : 'Find Random Match'}
+                onPress={handleFindRandomMatch}
+                disabled={findingRandomMatch || !userId}
+                style={[styles.primaryButton, styles.startMatchGreen]}
+                textStyle={styles.startMatchGreenText}
+              />
+            </View>
+            {Platform.OS === 'ios' && (
+              <View style={styles.startMatchRow}>
+                <StyledButton
+                  label="Clear badge"
+                  onPress={onClearBadge}
+                  style={[styles.primaryButton, styles.refreshButton]}
+                  textStyle={styles.refreshButtonText}
+                />
               </View>
+            )}
+            {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
+          </View>
 
               {loadingGames ? (
                 <View style={styles.loadingMatches}>
