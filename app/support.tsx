@@ -61,12 +61,13 @@ export default function SupportScreen() {
                 style={({ pressed }) =>
                   StyleSheet.flatten([
                     styles.menuButton,
+                    styles.menuButtonRed,
                     styles.footerButtonInline,
                     pressed && styles.menuButtonPressed,
                   ])
                 }
               >
-                <Text style={styles.menuButtonText}>About InfernoDice</Text>
+                <Text style={styles.menuButtonText}>About</Text>
               </Pressable>
             </View>
           </View>
@@ -170,7 +171,7 @@ const styles = StyleSheet.create({
   },
   primaryCtaText: {
     color: '#1B1D1F',
-    fontSize: 15,
+    fontSize: 11.25,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -206,12 +207,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     alignSelf: 'auto',
   },
+  menuButtonRed: {
+    backgroundColor: '#B33636',
+    borderColor: '#7A2424',
+  },
   menuButtonPressed: {
     opacity: 0.85,
   },
   menuButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 13.5,
     fontWeight: '700',
     textAlign: 'center',
   },

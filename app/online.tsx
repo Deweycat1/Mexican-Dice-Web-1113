@@ -944,33 +944,23 @@ export default function OnlineLobbyScreen() {
                     textStyle={styles.startMatchGreenText}
                   />
                   <StyledButton
-                    label="Refresh Challenges"
-                    onPress={refreshChallenges}
+                    label={findingRandomMatch ? 'Finding…' : 'Find Random Match'}
+                    onPress={handleFindRandomMatch}
+                    disabled={findingRandomMatch || !userId}
                     style={[styles.primaryButton, styles.refreshButton]}
                     textStyle={styles.refreshButtonText}
                   />
                 </View>
                 <View style={styles.startMatchRow}>
-              <StyledButton
-                label={findingRandomMatch ? 'Finding…' : 'Find Random Match'}
-                onPress={handleFindRandomMatch}
-                disabled={findingRandomMatch || !userId}
-                style={[styles.primaryButton, styles.startMatchGreen]}
-                textStyle={styles.startMatchGreenText}
-              />
-            </View>
-            {Platform.OS === 'ios' && (
-              <View style={styles.startMatchRow}>
-                <StyledButton
-                  label="Clear badge"
-                  onPress={onClearBadge}
-                  style={[styles.primaryButton, styles.refreshButton]}
-                  textStyle={styles.refreshButtonText}
-                />
+                  <StyledButton
+                    label="Refresh Challenges"
+                    onPress={refreshChallenges}
+                    style={[styles.primaryButton, styles.openMatchYourTurn, { flex: 1 }]}
+                    textStyle={styles.openMatchYourTurnText}
+                  />
+                </View>
+                {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
               </View>
-            )}
-            {createMessage && <Text style={styles.shareHint}>{createMessage}</Text>}
-          </View>
 
               {loadingGames ? (
                 <View style={styles.loadingMatches}>
@@ -1009,6 +999,11 @@ export default function OnlineLobbyScreen() {
                 <Text style={styles.mainMenuButtonText}>Menu</Text>
               </Pressable>
             </Link>
+            {Platform.OS === 'ios' && (
+              <Pressable style={[styles.mainMenuButton, styles.refreshButton]} onPress={onClearBadge}>
+                <Text style={styles.mainMenuButtonText}>Clear Notifications</Text>
+              </Pressable>
+            )}
           </View>
         </ScrollView>
       </FeltBackground>

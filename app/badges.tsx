@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1F262A',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 20,
+    paddingTop: 50,
     paddingHorizontal: 24,
   },
   title: {

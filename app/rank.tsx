@@ -41,11 +41,28 @@ const getTopPercentColor = (topPercent: number) => {
   const blue = hexToRgb('#53A7F3');
   const red = hexToRgb('#FF4D4D');
 
-  const r = lerp(blue.r, red.r, t);
-  const g = lerp(blue.g, red.g, t);
-  const b = lerp(blue.b, red.b, t);
+  const r = lerp(red.r, blue.r, t);
+  const g = lerp(red.g, blue.g, t);
+  const b = lerp(red.b, blue.b, t);
 
   return rgbToHex(r, g, b);
+};
+
+const getTierColor = (tier: string) => {
+  switch (tier) {
+    case 'Inferno':
+      return '#FF4D4D';
+    case 'Blaze':
+      return '#FF7A1A';
+    case 'Ember':
+      return '#FE9902';
+    case 'Cinder':
+      return '#F2C94C';
+    case 'Ash':
+      return '#53A7F3';
+    default:
+      return '#53A7F3';
+  }
 };
 
 export default function RankScreen() {
@@ -182,7 +199,7 @@ export default function RankScreen() {
               <Text
                 style={[
                   styles.rankSubTextBold,
-                  { color: getTopPercentColor(topPercent) },
+                  { color: getTierColor(tier) },
                 ]}
               >
                 {topPercent}%

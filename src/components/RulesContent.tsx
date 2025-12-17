@@ -11,15 +11,32 @@ export function RulesContent({ containerStyle, textColor = '#E6FFE6' }: Props) {
   return (
     <View style={[styles.container, containerStyle]}>
       <Text style={[styles.heading, colorStyle]}>General Gameplay</Text>
-      <Text style={[styles.paragraph, colorStyle]}>
-        Roll two dice and read them as a two-digit number with the higher die first (3 and 5 → 53).
+      <Text style={[styles.bullet, colorStyle]}>
+        • Roll two dice and read them as a two-digit number, with the higher die first
       </Text>
-      <Text style={[styles.paragraph, colorStyle]}>
-        Doubles beat all mixed rolls (11 beats 66), and Special Rolls are explained below.
+      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
+        • Example: rolling a 3 and a 5 is read as 53
       </Text>
-      <Text style={[styles.paragraph, colorStyle]}>
-        After you roll, you make a claim to the next player - either truthful or a bluff. You may claim any roll that matches or beats
-        the last claim, or you may claim a Special Roll (21 or 31). You cannot bluff a 41.
+      <Text style={[styles.bullet, colorStyle]}>
+        • Doubles beat mixed (11 &gt; 65)
+      </Text>
+      <Text style={[styles.bullet, colorStyle]}>
+        • After rolling, you must make a claim
+      </Text>
+      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
+        • Claim the value you actually rolled, or
+      </Text>
+      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
+        • Bluff by claiming a higher value
+      </Text>
+      <Text style={[styles.bullet, colorStyle]}>
+        • The next player must choose to:
+      </Text>
+      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
+        • Beat your claim, or
+      </Text>
+      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
+        • Call your bluff
       </Text>
 
       <Text style={[styles.heading, colorStyle]}>Special Rolls</Text>
@@ -113,6 +130,9 @@ const styles = StyleSheet.create({
   bullet: {
     fontSize: 14,
     marginLeft: 12,
+  },
+  subBullet: {
+    marginLeft: 22,
   },
 });
 
