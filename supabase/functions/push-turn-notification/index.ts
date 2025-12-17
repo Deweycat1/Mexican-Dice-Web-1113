@@ -15,10 +15,7 @@ type GameRecord = {
 };
 
 type UserPushToken = {
-  user_id: string;
   expo_push_token: string;
-  platform: string | null;
-  is_enabled: boolean;
 };
 
 type ExpoPushResponse = {
@@ -90,7 +87,7 @@ serve(async (req: Request): Promise<Response> => {
 
   const { data: tokens, error: tokensError } = await supabaseClient
     .from('user_push_tokens')
-    .select('*')
+    .select('expo_push_token')
     .eq('user_id', targetUserId)
     .eq('is_enabled', true);
 
@@ -139,6 +136,26 @@ serve(async (req: Request): Promise<Response> => {
     });
   }
 
+  let badgeCount = 0;
+
+  try {
+    const { count, error: badgeError } = await supabaseClient
+      .from('games_v2')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'in_progress')
+      .eq('current_player_id', targetUserId);
+
+    if (badgeError) {
+      console.error('[push-turn] failed to compute badge count', badgeError);
+    } else if (typeof count === 'number') {
+      badgeCount = count;
+    }
+  } catch (err) {
+    console.error('[push-turn] unexpected error computing badge count', err);
+  }
+
+  console.log('[push-turn] computed badgeCount', { targetUserId, badgeCount });
+
   const lastClaim = gameRecord.last_claim;
   const hasLastClaim = lastClaim !== null && lastClaim !== undefined && `${lastClaim}`.trim().length > 0;
 
@@ -151,7 +168,8 @@ serve(async (req: Request): Promise<Response> => {
     to: token.expo_push_token,
     title,
     body,
-    data: { gameId },
+    badge: badgeCount,
+    data: { gameId, badgeCount },
   }));
 
   try {
@@ -220,4 +238,3 @@ serve(async (req: Request): Promise<Response> => {
     });
   }
 });
-

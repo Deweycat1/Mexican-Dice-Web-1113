@@ -1,5 +1,5 @@
-// app/_layout.tsx
 import { Analytics } from '@vercel/analytics/react';
+import * as Notifications from 'expo-notifications';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import Head from 'expo-router/head';
 import React, { useEffect } from 'react';
@@ -82,6 +82,90 @@ export default function RootLayout() {
         }
       }
     })();
+  }, [router]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+
+    let receivedSubscription: Notifications.Subscription | undefined;
+    let responseSubscription: Notifications.Subscription | undefined;
+
+    const handleNotificationResponse = async (
+      response: Notifications.NotificationResponse
+    ): Promise<void> => {
+      try {
+        const data = response.notification.request.content.data as { gameId?: string } | undefined;
+        const gameId = data?.gameId;
+
+        if (gameId) {
+          router.push(`/online/game-v2/${gameId}`);
+        } else {
+          router.push('/online');
+        }
+
+        await Notifications.setBadgeCountAsync(0);
+      } catch (err) {
+        if (__DEV__) {
+          console.warn('[RootLayout] Error handling notification response', err);
+        }
+      }
+    };
+
+    (async () => {
+      try {
+        await Notifications.requestPermissionsAsync({
+          ios: {
+            allowAlert: true,
+            allowSound: true,
+            allowBadge: true,
+          },
+        });
+      } catch (err) {
+        if (__DEV__) {
+          console.warn('[RootLayout] Failed to request iOS notification permissions', err);
+        }
+      }
+
+      try {
+        const lastResponse = await Notifications.getLastNotificationResponseAsync();
+        if (lastResponse) {
+          await handleNotificationResponse(lastResponse);
+        }
+      } catch (err) {
+        if (__DEV__) {
+          console.warn('[RootLayout] Error handling last notification response', err);
+        }
+      }
+
+      receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+        try {
+          const data = notification.request.content.data as { badgeCount?: number } | undefined;
+          const fromData = typeof data?.badgeCount === 'number' ? data.badgeCount : undefined;
+          const fromContent =
+            typeof notification.request.content.badge === 'number'
+              ? notification.request.content.badge
+              : undefined;
+          const badgeCount = fromData ?? fromContent;
+
+          if (typeof badgeCount === 'number') {
+            void Notifications.setBadgeCountAsync(badgeCount);
+          }
+        } catch (err) {
+          if (__DEV__) {
+            console.warn('[RootLayout] Error handling notification receipt', err);
+          }
+        }
+      });
+
+      responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        void handleNotificationResponse(response);
+      });
+    })();
+
+    return () => {
+      receivedSubscription?.remove();
+      responseSubscription?.remove();
+    };
   }, [router]);
 
   return (

@@ -121,21 +121,6 @@ export async function initPushNotifications({ userId, router }: InitPushNotifica
     } else {
       console.log('[push] upserted push token successfully');
     }
-
-    Notifications.addNotificationResponseReceivedListener((response) => {
-      try {
-        const gameId = (response.notification.request.content.data as { gameId?: string } | undefined)
-          ?.gameId;
-        if (gameId) {
-          console.log('[push] notification tapped, navigating to game', { gameId });
-          router.push(`/online/game-v2/${gameId}`);
-        } else {
-          console.log('[push] notification tapped with no gameId in payload');
-        }
-      } catch (err) {
-        console.error('[push] error handling notification tap', err);
-      }
-    });
   } catch (err) {
     console.error('[push] error initializing notifications', err);
   }
