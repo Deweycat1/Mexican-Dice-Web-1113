@@ -96,6 +96,19 @@ export default function OnlineLobbyScreen() {
   const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
   const [loadingGames, setLoadingGames] = useState(false);
 
+  const handleClearAndroidBadges = useCallback(async () => {
+    try {
+      await Notifications.dismissAllNotificationsAsync();
+      try {
+        await Notifications.setBadgeCountAsync(0);
+      } catch {}
+      Alert.alert('Badge notifications have been cleared');
+    } catch (err) {
+      if (__DEV__) console.warn('[online] failed to clear android notifications', err);
+      Alert.alert('Could not clear notifications');
+    }
+  }, []);
+
   const onClearBadge = useCallback(async () => {
     if (Platform.OS !== 'ios') return;
     try {
@@ -999,11 +1012,21 @@ export default function OnlineLobbyScreen() {
                 <Text style={styles.mainMenuButtonText}>Menu</Text>
               </Pressable>
             </Link>
-            {Platform.OS === 'ios' && (
-              <Pressable style={[styles.mainMenuButton, styles.refreshButton]} onPress={onClearBadge}>
+            {Platform.OS === 'ios' ? (
+              <Pressable
+                style={[styles.mainMenuButton, styles.refreshButton]}
+                onPress={onClearBadge}
+              >
                 <Text style={styles.mainMenuButtonText}>Clear Notifications</Text>
               </Pressable>
-            )}
+            ) : Platform.OS === 'android' ? (
+              <Pressable
+                style={[styles.mainMenuButton, styles.refreshButton]}
+                onPress={handleClearAndroidBadges}
+              >
+                <Text style={styles.mainMenuButtonText}>Clear Notifications</Text>
+              </Pressable>
+            ) : null}
           </View>
         </ScrollView>
       </FeltBackground>
@@ -1252,7 +1275,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   openMatchYourTurnText: {
-    color: '#1B1D1F',
+    color: '#FFFFFF',
     fontWeight: '800',
   },
   swipeDeleteContainer: {
