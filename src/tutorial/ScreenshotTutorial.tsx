@@ -31,6 +31,10 @@ export function ScreenshotTutorial({ visible, onDone }: Props) {
     onDone();
   }, [onDone]);
 
+  const handlePrev = useCallback(() => {
+    setIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  }, []);
+
   const handleNext = useCallback(() => {
     if (index < PAGES.length - 1) {
       setIndex((prev) => Math.min(prev + 1, PAGES.length - 1));
@@ -48,7 +52,7 @@ export function ScreenshotTutorial({ visible, onDone }: Props) {
     >
       <View style={styles.backdrop}>
         <SafeAreaView style={styles.safeArea} pointerEvents="box-none">
-          <Pressable style={styles.fullscreenPressable} onPress={handleNext}>
+          <View style={styles.fullscreenPressable}>
             <View style={styles.imageWrapper}>
               <Image
                 source={PAGES[index]}
@@ -61,7 +65,9 @@ export function ScreenshotTutorial({ visible, onDone }: Props) {
                 {index + 1} / {PAGES.length}
               </Text>
             </View>
-          </Pressable>
+            <Pressable style={styles.tapOverlayLeft} onPress={handlePrev} />
+            <Pressable style={styles.tapOverlayRight} onPress={handleNext} />
+          </View>
         </SafeAreaView>
       </View>
     </Modal>
@@ -91,6 +97,20 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  tapOverlayLeft: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: '20%',
+  },
+  tapOverlayRight: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    width: '20%',
   },
   pagerContainer: {
     position: 'absolute',

@@ -1464,50 +1464,40 @@ export default function OnlineGameV2Screen() {
                   label="Leave"
                   variant="ghost"
                   onPress={handleQuitGame}
-                  style={[styles.btn, styles.goldOutlineButton]}
+                  style={[styles.btn, styles.bottomRowButton, styles.goldOutlineButton]}
                 />
 
                 {showRematchButton ? (
                   <View style={styles.rematchWrapper}>
                     <StyledButton
-                      label={rematchButtonLabel}
+                      label={
+                        waitingForRematch || isRequestingRematch
+                          ? 'Waiting…'
+                          : 'Rematch'
+                      }
                       variant="ghost"
                       onPress={handleRematchPress}
                       disabled={!myRole || hasRequestedRematch || isRequestingRematch}
                       style={[
                         styles.btn,
+                        styles.bottomRowButton,
                         styles.winkButton,
                         !myRole || hasRequestedRematch || isRequestingRematch
                           ? styles.winkButtonDisabled
                           : styles.winkButtonActive,
                       ]}
+                      textStyle={styles.rematchLabel}
                     >
                       {opponentWantsRematch && !hasRequestedRematch ? (
-                        <View style={styles.rematchAcceptLabelContainer}>
-                          <Text
-                            style={styles.rematchAcceptLine1}
-                            numberOfLines={1}
-                            ellipsizeMode="clip"
-                          >
+                        <View style={styles.rematchLinesContainer}>
+                          <Text style={[styles.rematchLabel, styles.rematchLabelAccept]}>
                             Accept
                           </Text>
-                          <Text
-                            style={styles.rematchAcceptLine2}
-                            numberOfLines={1}
-                            ellipsizeMode="clip"
-                          >
+                          <Text style={[styles.rematchLabel, styles.rematchLabelAccept]}>
                             Rematch
                           </Text>
                         </View>
-                      ) : (
-                        <Text
-                          style={styles.rematchButtonText}
-                          numberOfLines={1}
-                          ellipsizeMode="clip"
-                        >
-                          {waitingForRematch || isRequestingRematch ? 'Waiting…' : 'Rematch'}
-                        </Text>
-                      )}
+                      ) : undefined}
                     </StyledButton>
                   </View>
                 ) : (
@@ -1548,7 +1538,7 @@ export default function OnlineGameV2Screen() {
                   label="Rules"
                   variant="ghost"
                   onPress={() => setRulesOpen(true)}
-                  style={[styles.btn, styles.goldOutlineButton]}
+                  style={[styles.btn, styles.bottomRowButton, styles.goldOutlineButton]}
                 />
               </View>
             </View>
@@ -1938,27 +1928,29 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'stretch',
   },
-  rematchButtonText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  rematchAcceptLabelContainer: {
-    alignItems: 'center',
+  bottomRowButton: {
+    minHeight: 44,
     justifyContent: 'center',
   },
-  rematchAcceptLine1: {
-    fontSize: 11,
-    fontWeight: '700',
+  rematchLabel: {
+    fontSize: Platform.select({
+      ios: 8.5,
+      android: 6,
+      default: 8.5,
+    }),
     textAlign: 'center',
-    lineHeight: 18,
+    fontWeight: '800',
   },
-  rematchAcceptLine2: {
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: -2,
-    lineHeight: 14,
+  rematchLabelAccept: {
+    fontSize: Platform.select({
+      ios: 8.5,
+      android: 7.5,
+      default: 8.5,
+    }),
+  },
+  rematchLinesContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   finishedBox: {
     marginTop: 24,
