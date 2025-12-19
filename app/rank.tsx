@@ -182,6 +182,7 @@ export default function RankScreen() {
     const tier = getRankTier(myRank.infernoRating);
     const percentile = myRank.percentile ?? 0;
     const topPercent = Math.max(1, 100 - Math.round(percentile * 100));
+    const percentColor = getTopPercentColor(topPercent);
     const winRate =
       myRank.gamesPlayed > 0
         ? Math.round((myRank.wins / myRank.gamesPlayed) * 100)
@@ -199,7 +200,8 @@ export default function RankScreen() {
               <Text
                 style={[
                   styles.rankSubTextBold,
-                  { color: getTierColor(tier) },
+                  styles.rankPercent,
+                  { color: percentColor },
                 ]}
               >
                 {topPercent}%
@@ -557,6 +559,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rankSubTextBold: {
+    fontWeight: '800',
+  },
+  rankPercent: {
     fontWeight: '800',
   },
   rankStatsRow: {
