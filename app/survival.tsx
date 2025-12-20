@@ -1909,7 +1909,7 @@ export default function Survival() {
             <View style={styles.modalCenter}>
               <View style={styles.letterModalContent}>
                 <Text style={styles.letterModalTitle}>Inferno Letter!</Text>
-                <Text style={styles.letterModalMessage}>You rolled a real 21.</Text>
+                <Text style={styles.letterModalMessage}>You rolled an Inferno!</Text>
                 <Text style={styles.letterModalLetter}>
                   {infernoLetterModalSlot ? getInfernoSlotChar(infernoLetterModalSlot) : ''}
                 </Text>
@@ -1919,7 +1919,7 @@ export default function Survival() {
                 {infernoLetterModalIsIntro && (
                   <Text style={styles.letterModalBody}>
                     Collect letters by rolling real 21s in Inferno Mode. Fill INFERNO to unlock a
-                    badge. Stored on this device.
+                    badge.
                   </Text>
                 )}
                 <StyledButton
