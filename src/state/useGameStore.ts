@@ -753,11 +753,11 @@ export const useGameStore = create<Store>((set, get) => {
     }
   };
 
-  const computeLegalTruth = (prev: number | null, actual: number) => {
+  const computeLegalTruth = (activeChallenge: number | null, actual: number) => {
     if (isAlwaysClaimable(actual)) return true;
-    if (prev == null) return true;
-    if (isReverseOf(prev, actual)) return true;
-    return compareClaims(actual, prev) >= 0;
+    if (activeChallenge == null) return true;
+    if (isReverseOf(activeChallenge, actual)) return true;
+    return compareClaims(actual, activeChallenge) >= 0;
   };
 
   const processCallBluff = (caller: Turn) => {
@@ -1020,9 +1020,10 @@ export const useGameStore = create<Store>((set, get) => {
         }
 
         if (!keepCall) {
-          const legalTruth = computeLegalTruth(lastClaim, actual);
+          const activeChallenge = resolveActiveChallenge(state.baselineClaim, lastClaim);
+          const legalTruth = computeLegalTruth(activeChallenge, actual);
           const baseRaise =
-            legalTruth ? actual : nextHigherClaim(lastClaim ?? actual) ?? 21;
+            legalTruth ? actual : nextHigherClaim(activeChallenge ?? actual) ?? 21;
           action = { type: 'raise', claim: baseRaise };
         }
       }
@@ -1038,7 +1039,8 @@ export const useGameStore = create<Store>((set, get) => {
         return;
       }
 
-      const legalTruth = computeLegalTruth(lastClaim, actual);
+      const activeChallenge = resolveActiveChallenge(state.baselineClaim, lastClaim);
+      const legalTruth = computeLegalTruth(activeChallenge, actual);
       let claim = action.claim;
 
       if (claim === 41 && actual !== 41) {
@@ -1046,11 +1048,10 @@ export const useGameStore = create<Store>((set, get) => {
       }
 
       // Check if we're in Mexican lockdown (either direct 21, or 31 from reverseVsMexican)
-      const activeChallenge = resolveActiveChallenge(state.baselineClaim, lastClaim);
       const inMexicanLockdown = isMexican(activeChallenge) || state.lastAction === 'reverseVsMexican';
       
       // Use baselineClaim for legality checks (preserves original claim through reverses)
-      const claimToCheck = resolveActiveChallenge(state.baselineClaim, lastClaim);
+      const claimToCheck = activeChallenge;
       
       if (inMexicanLockdown) {
         // In Mexican lockdown, only 21, 31, 41 are legal
@@ -1247,7 +1248,8 @@ export const useGameStore = create<Store>((set, get) => {
       set({ isRolling: true });
 
       const { normalized: actual } = rollDice();
-      const legalTruth = computeLegalTruth(state.lastClaim, actual);
+      const activeChallenge = resolveActiveChallenge(state.baselineClaim, state.lastClaim);
+      const legalTruth = computeLegalTruth(activeChallenge, actual);
 
       // Record roll statistics (async, non-blocking)
       void recordRollStat(actual);
