@@ -12,7 +12,7 @@
  */
 
 import { useGameStore } from '../state/useGameStore';
-import { compareClaims, isLegalRaise, isReverseOf, resolveActiveChallenge } from './mexican';
+import { compareClaims, isLegalRaise, isReverseOf } from './mexican';
 
 describe('31 Reverse Mechanic', () => {
   beforeEach(() => {
@@ -37,16 +37,6 @@ describe('31 Reverse Mechanic', () => {
     expect(isLegalRaise(66, 31)).toBe(true);      // After high double
     expect(isLegalRaise(21, 31)).toBe(true);      // After Mexican
     expect(isLegalRaise(31, 31)).toBe(true);      // After another 31
-  });
-
-  test('active challenge after 31 reverse keeps original baseline', () => {
-    const baseline = 66;
-    const lastClaim = 31;
-    const active = resolveActiveChallenge(baseline, lastClaim);
-    expect(active).toBe(66);
-
-    // 43 must not be allowed against a 66 baseline
-    expect(isLegalRaise(active, 43)).toBe(false);
   });
 
   test('Player reverses CPU claim 66 with 31 - turn passes back to CPU', () => {

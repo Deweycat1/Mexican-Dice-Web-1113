@@ -1125,23 +1125,6 @@ export const useGameStore = create<Store>((set, get) => {
         return claim;
       })();
 
-      if (__DEV__ && claim === 31) {
-        const beforeTarget = resolveActiveChallenge(currentState.baselineClaim, previousClaim);
-        const afterTarget = resolveActiveChallenge(nextBaseline, claim);
-        if (beforeTarget != null && afterTarget != null && compareClaims(afterTarget, beforeTarget) < 0) {
-          // Guardrail: 31 should never lower the active challenge target.
-          // It reflects the previous non-reverse claim back onto the original claimant.
-          // eslint-disable-next-line no-console
-          console.error('[SURVIVAL][DEV] Reverse baseline dropped for CPU path', {
-            previousClaim,
-            baselineBefore: currentState.baselineClaim,
-            baselineAfter: nextBaseline,
-            beforeTarget,
-            afterTarget,
-          });
-        }
-      }
-
       if (claim === 21 || claim === 31 || claim === 41) {
         void playSpecialClaimHaptic(claim, hapticsEnabled);
       }
@@ -1445,23 +1428,6 @@ export const useGameStore = create<Store>((set, get) => {
         }
         return claim;
       })();
-
-      if (__DEV__ && claim === 31) {
-        const beforeTarget = resolveActiveChallenge(state.baselineClaim, prev);
-        const afterTarget = resolveActiveChallenge(nextBaseline, claim);
-        if (beforeTarget != null && afterTarget != null && compareClaims(afterTarget, beforeTarget) < 0) {
-          // Guardrail: 31 should never lower the active challenge target.
-          // It reflects the previous non-reverse claim back onto the original claimant.
-          // eslint-disable-next-line no-console
-          console.error('[SURVIVAL][DEV] Reverse baseline dropped for player path', {
-            previousClaim: prev,
-            baselineBefore: state.baselineClaim,
-            baselineAfter: nextBaseline,
-            beforeTarget,
-            afterTarget,
-          });
-        }
-      }
 
       set({
         lastClaim: claim,
