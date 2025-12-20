@@ -44,6 +44,12 @@ export const BADGE_METADATA: Record<BadgeId, BadgeMeta> = {
     icon: '👑',
     description: 'Reach an all-time best Inferno Survival streak of 20 or more.',
   },
+  inferno_letter_collector: {
+    id: 'inferno_letter_collector',
+    title: 'Inferno Letter Collector',
+    icon: '🔠',
+    description: 'Collect all 7 Inferno letters in Inferno Mode.',
+  },
   pure_honesty: {
     id: 'pure_honesty',
     title: 'Pure Honesty',
@@ -85,12 +91,6 @@ export const BADGE_METADATA: Record<BadgeId, BadgeMeta> = {
     title: 'Bluff Catcher III',
     icon: '👁️',
     description: "Correctly call Infernoman's bluff at least twenty times.",
-  },
-  inferno_letter_collector: {
-    id: 'inferno_letter_collector',
-    title: 'Fire Master',
-    icon: '🔤',
-    description: 'Collect all 7 Inferno letters in Inferno Mode.',
   },
 };
 

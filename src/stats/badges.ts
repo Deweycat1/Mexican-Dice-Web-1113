@@ -7,14 +7,14 @@ export type BadgeId =
   | 'first_survivor'
   | 'true_survivor_20'
   | 'inferno_immortal'
+  | 'inferno_letter_collector'
   | 'pure_honesty'
   | 'silent_strategist'
   | 'welcome_back_7_days'
   | 'inferno_week_7_day_streak'
   | 'bluff_catcher_5'
   | 'bluff_catcher_10'
-  | 'bluff_catcher_20'
-  | 'inferno_letter_collector';
+  | 'bluff_catcher_20';
 
 export type BadgeState = {
   id: BadgeId;

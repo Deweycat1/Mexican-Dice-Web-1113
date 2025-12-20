@@ -27,17 +27,6 @@ import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay
 import StyledButton from '../src/components/StyledButton';
 import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
 import {
-  INFERNO_LETTERS,
-  type InfernoLetter,
-  getProgressCount as getInfernoLettersProgressCount,
-  hasSeenInfernoLettersIntro,
-  isComplete as infernoLettersComplete,
-  loadCollectedLetters,
-  pickMissingLetter,
-  saveCollectedLetters,
-  setSeenInfernoLettersIntro,
-} from '../src/survival/infernoLetters';
-import {
   compareClaims,
   isAlwaysClaimable,
   isReverseOf,
@@ -52,6 +41,17 @@ import { MEXICAN_ICON } from '../src/lib/constants';
 import { awardBadge } from '../src/stats/badges';
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
+import {
+  INFERNO_SLOTS,
+  InfernoSlotId,
+  getProgressCount,
+  hasSeenInfernoLettersIntro,
+  isComplete,
+  loadCollectedLetters,
+  pickMissingSlot,
+  saveCollectedLetters,
+  setSeenInfernoLettersIntro,
+} from '../src/survival/infernoLetters';
 import { DICE_SPACING, DIE_SIZE } from '../src/theme/dice';
 
 function formatClaimDetailed(value: number | null | undefined): string {
@@ -77,6 +77,14 @@ function facesFromRoll(value: number | null | undefined): readonly [number | nul
   if (typeof value !== 'number' || Number.isNaN(value)) return [null, null] as const;
   const [hi, lo] = splitClaim(value);
   return [hi, lo] as const;
+}
+function getMissingInfernoSlots(collected: Set<InfernoSlotId>): InfernoSlotId[] {
+  return INFERNO_SLOTS.filter((slot) => !collected.has(slot.id)).map((slot) => slot.id);
+}
+
+function getInfernoSlotChar(id: InfernoSlotId): string {
+  const slot = INFERNO_SLOTS.find((entry) => entry.id === id);
+  return slot ? slot.char : '';
 }
 
 const DICE_JIGGLE_SMALL = DIE_SIZE * 0.05;
@@ -253,17 +261,12 @@ export default function Survival() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [introVisible, setIntroVisible] = useState(false);
-
-  // Inferno letters state
-  const [lettersStateLoaded, setLettersStateLoaded] = useState(false);
-  const [collectedLetters, setCollectedLetters] = useState<Set<InfernoLetter>>(new Set());
-  const [lettersIntroSeen, setLettersIntroSeen] = useState(false);
-  const [letterModalVisible, setLetterModalVisible] = useState(false);
-  const [awardedLetter, setAwardedLetter] = useState<InfernoLetter | null>(null);
-  const [letterProgress, setLetterProgress] = useState(0);
-  const [isFirstLetterAward, setIsFirstLetterAward] = useState(false);
-  const letterAttemptUsedRef = useRef(false);
-  const prevPlayerRollRef = useRef<number | null>(null);
+  const [collectedSlots, setCollectedSlots] = useState<Set<InfernoSlotId>>(new Set());
+  const [infernoIntroSeen, setInfernoIntroSeen] = useState(false);
+  const [infernoLetterModalOpen, setInfernoLetterModalOpen] = useState(false);
+  const [infernoLetterModalSlot, setInfernoLetterModalSlot] = useState<InfernoSlotId | null>(null);
+  const [infernoLetterModalProgress, setInfernoLetterModalProgress] = useState(0);
+  const [infernoLetterModalIsIntro, setInfernoLetterModalIsIntro] = useState(false);
 
   // Milestone tracking state
   const [hasShown5, setHasShown5] = useState(false);
@@ -307,32 +310,8 @@ export default function Survival() {
   const bluffResultInitializedRef = useRef(false);
   const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watchdogLastKickKeyRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const [storedLetters, introSeen] = await Promise.all([
-          loadCollectedLetters(),
-          hasSeenInfernoLettersIntro(),
-        ]);
-        if (!isMounted) return;
-        setCollectedLetters(storedLetters);
-        setLettersIntroSeen(introSeen);
-      } catch {
-        if (!isMounted) return;
-        setCollectedLetters(new Set());
-        setLettersIntroSeen(false);
-      } finally {
-        if (isMounted) {
-          setLettersStateLoaded(true);
-        }
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const letterAttemptUsedRef = useRef(false);
+  const lastProcessedRollRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isFocused) return;
@@ -340,73 +319,25 @@ export default function Survival() {
     setIntroVisible(true);
   }, [isFocused, hasSeenSurvivalIntro]);
 
-  const handleInfernoRollForLetters = useCallback(async () => {
-    if (letterAttemptUsedRef.current) return;
-    if (!lettersStateLoaded) return;
-    letterAttemptUsedRef.current = true;
-
-    const current = new Set(collectedLetters);
-    const progressBefore = getInfernoLettersProgressCount(current);
-
-    // If already complete, nothing to do
-    if (infernoLettersComplete(current)) {
-      return;
-    }
-
-    let nextLetter: InfernoLetter | null = null;
-    let isFirst = false;
-
-    if (!lettersIntroSeen) {
-      // First-ever eligible 21: guaranteed award
-      nextLetter = pickMissingLetter(current);
-      if (!nextLetter) return;
-      current.add(nextLetter);
-      isFirst = true;
-      setLettersIntroSeen(true);
-      void setSeenInfernoLettersIntro();
-    } else {
-      // Subsequent runs: 25% chance to attempt an award
-      if (Math.random() >= 0.25) {
-        return;
+  useEffect(() => {
+    let isMounted = true;
+    const loadInfernoLetters = async () => {
+      const [letters, introSeen] = await Promise.all([
+        loadCollectedLetters(),
+        hasSeenInfernoLettersIntro(),
+      ]);
+      if (!isMounted) return;
+      setCollectedSlots(letters);
+      setInfernoIntroSeen(introSeen);
+      if (isComplete(letters)) {
+        void awardBadge('inferno_letter_collector');
       }
-
-      const totalSlots = INFERNO_LETTERS.length;
-      const currentProgress = getInfernoLettersProgressCount(current);
-      const missingSlots = totalSlots - currentProgress;
-
-      if (missingSlots <= 0) {
-        return;
-      }
-
-      if (missingSlots === 1) {
-        // Frustrating tail: final slot gated by extra 5%
-        if (Math.random() >= 0.05) {
-          return;
-        }
-      }
-
-      nextLetter = pickMissingLetter(current);
-      if (!nextLetter) return;
-      current.add(nextLetter);
-    }
-
-    const progressAfter = getInfernoLettersProgressCount(current);
-    if (!nextLetter || progressAfter <= progressBefore) {
-      return;
-    }
-
-    setCollectedLetters(current);
-    setAwardedLetter(nextLetter);
-    setLetterProgress(progressAfter);
-    setIsFirstLetterAward(isFirst);
-    setLetterModalVisible(true);
-
-    void saveCollectedLetters(current);
-
-    if (infernoLettersComplete(current)) {
-      void awardBadge('inferno_letter_collector');
-    }
-  }, [collectedLetters, lettersIntroSeen, lettersStateLoaded]);
+    };
+    void loadInfernoLetters();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const startPlusOneFlash = useCallback((increment: number) => {
     if (plusOneFlashTimerRef.current) {
@@ -431,6 +362,52 @@ export default function Survival() {
       }
     }, PLUS_ONE_FLASH_INTERVAL);
   }, []);
+
+  const attemptInfernoLetterAward = useCallback(async () => {
+    const missingSlots = getMissingInfernoSlots(collectedSlots);
+
+    if (!infernoIntroSeen) {
+      const picked = pickMissingSlot(collectedSlots);
+      if (!picked) {
+        await setSeenInfernoLettersIntro();
+        setInfernoIntroSeen(true);
+        return;
+      }
+      const next = new Set(collectedSlots);
+      next.add(picked);
+      await saveCollectedLetters(next);
+      await setSeenInfernoLettersIntro();
+      setCollectedSlots(next);
+      setInfernoIntroSeen(true);
+      setInfernoLetterModalSlot(picked);
+      setInfernoLetterModalProgress(getProgressCount(next));
+      setInfernoLetterModalIsIntro(true);
+      setInfernoLetterModalOpen(true);
+      if (isComplete(next)) {
+        void awardBadge('inferno_letter_collector');
+      }
+      return;
+    }
+
+    if (Math.random() >= 0.25) return;
+    if (missingSlots.length === 0) return;
+    if (missingSlots.length === 1 && Math.random() >= 0.05) return;
+
+    const picked = pickMissingSlot(collectedSlots);
+    if (!picked) return;
+
+    const next = new Set(collectedSlots);
+    next.add(picked);
+    await saveCollectedLetters(next);
+    setCollectedSlots(next);
+    setInfernoLetterModalSlot(picked);
+    setInfernoLetterModalProgress(getProgressCount(next));
+    setInfernoLetterModalIsIntro(false);
+    setInfernoLetterModalOpen(true);
+    if (isComplete(next)) {
+      void awardBadge('inferno_letter_collector');
+    }
+  }, [collectedSlots, infernoIntroSeen]);
 
   const {
     // survival controls
@@ -1183,6 +1160,19 @@ export default function Survival() {
   useEffect(() => setClaimPickerOpen(false), [turn]);
 
   useEffect(() => {
+    if (lastPlayerRoll == null) {
+      lastProcessedRollRef.current = null;
+      return;
+    }
+    if (lastPlayerRoll === lastProcessedRollRef.current) return;
+    lastProcessedRollRef.current = lastPlayerRoll;
+    if (lastPlayerRoll !== 21) return;
+    if (letterAttemptUsedRef.current) return;
+    letterAttemptUsedRef.current = true;
+    void attemptInfernoLetterAward();
+  }, [lastPlayerRoll, attemptInfernoLetterAward]);
+
+  useEffect(() => {
     if (turn === 'player') {
       setCpuDiceRevealed(false);
       setPendingCpuBluffResolution(false);
@@ -1227,21 +1217,6 @@ export default function Survival() {
       logSurvivalSnapshot('turn-change');
     }
   }, [turn, gameOver, turnLock, isBusy, logSurvivalSnapshot]);
-
-  // Reset per-run Inferno letter attempt when a fresh Survival run starts
-  useEffect(() => {
-    if (
-      mode === 'survival' &&
-      !isSurvivalOver &&
-      currentStreak === 0 &&
-      lastClaim == null &&
-      lastPlayerRoll == null &&
-      lastCpuRoll == null
-    ) {
-      letterAttemptUsedRef.current = false;
-      prevPlayerRollRef.current = null;
-    }
-  }, [mode, isSurvivalOver, currentStreak, lastClaim, lastPlayerRoll, lastCpuRoll]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -1421,6 +1396,8 @@ export default function Survival() {
 
   const handlePrimaryAction = useCallback(() => {
     if (streakEnded) {
+      letterAttemptUsedRef.current = false;
+      lastProcessedRollRef.current = null;
       restartSurvival();
       return;
     }
@@ -1581,20 +1558,6 @@ export default function Survival() {
     lastCpuRoll,
   ]);
 
-  // Watch for real 21 rolls in Survival mode (player-only)
-  useEffect(() => {
-    if (mode !== 'survival') return;
-    const prev = prevPlayerRollRef.current;
-    if (lastPlayerRoll == null || lastPlayerRoll === prev) {
-      prevPlayerRollRef.current = lastPlayerRoll;
-      return;
-    }
-    if (lastPlayerRoll === 21) {
-      void handleInfernoRollForLetters();
-    }
-    prevPlayerRollRef.current = lastPlayerRoll;
-  }, [lastPlayerRoll, mode, handleInfernoRollForLetters]);
-
   useEffect(() => {
     const nonce = cpuSocialRevealNonce;
     const dice = cpuSocialDice;
@@ -1629,6 +1592,8 @@ export default function Survival() {
       if (__DEV__) {
         console.log('SURVIVAL: screen focused');
       }
+      letterAttemptUsedRef.current = false;
+      lastProcessedRollRef.current = null;
       startSurvival();
       return () => {
         if (__DEV__) {
@@ -1705,20 +1670,18 @@ export default function Survival() {
             {/* HEADER */}
             <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
               <Animated.View style={[styles.titleRow, { transform: [{ scale: pulseAnim }] }]}>
-                <View style={styles.infernoTitleLettersRow}>
-                  {INFERNO_LETTERS.map((letter, index) => (
-                    <Text
-                      key={`${letter}-${index}`}
-                      style={[
-                        styles.title,
-                        styles.titleSegment,
-                        collectedLetters.has(letter) && styles.infernoLetterCollected,
-                      ]}
-                    >
-                      {letter}
-                    </Text>
-                  ))}
-                </View>
+                {INFERNO_SLOTS.map((slot, index) => (
+                  <Text
+                    key={`${slot.id}-${index}`}
+                    style={[
+                      styles.title,
+                      styles.titleLetter,
+                      collectedSlots.has(slot.id) && styles.titleLetterCollected,
+                    ]}
+                  >
+                    {`${slot.char}${index < INFERNO_SLOTS.length - 1 ? ' ' : ''}`}
+                  </Text>
+                ))}
               </Animated.View>
               <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
               {claimText ? (
@@ -1936,6 +1899,39 @@ export default function Survival() {
             onShowSocial={() => handleSelectClaim(41)}
           />
 
+          <Modal
+            visible={infernoLetterModalOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setInfernoLetterModalOpen(false)}
+          >
+            <View style={styles.modalBackdrop} />
+            <View style={styles.modalCenter}>
+              <View style={styles.letterModalContent}>
+                <Text style={styles.letterModalTitle}>Inferno Letter!</Text>
+                <Text style={styles.letterModalMessage}>You rolled a real 21.</Text>
+                <Text style={styles.letterModalLetter}>
+                  {infernoLetterModalSlot ? getInfernoSlotChar(infernoLetterModalSlot) : ''}
+                </Text>
+                <Text style={styles.letterModalProgress}>
+                  {infernoLetterModalProgress}/7 collected
+                </Text>
+                {infernoLetterModalIsIntro && (
+                  <Text style={styles.letterModalBody}>
+                    Collect letters by rolling real 21s in Inferno Mode. Fill INFERNO to unlock a
+                    badge. Stored on this device.
+                  </Text>
+                )}
+                <StyledButton
+                  label="Nice"
+                  variant="success"
+                  onPress={() => setInfernoLetterModalOpen(false)}
+                  style={[styles.btn, styles.menuActionButtonSuccess]}
+                />
+              </View>
+            </View>
+          </Modal>
+
           {/* EXPANDABLE HISTORY MODAL */}
           <Modal
             visible={historyModalOpen}
@@ -2069,51 +2065,6 @@ export default function Survival() {
                     ios_backgroundColor="#4A4E54"
                   />
                 </View>
-              </View>
-            </View>
-          </Modal>
-
-          <Modal
-            visible={letterModalVisible && !!awardedLetter}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setLetterModalVisible(false)}
-          >
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={() => {
-                setLetterModalVisible(false);
-              }}
-            />
-            <View style={styles.modalCenter}>
-              <View style={styles.modalContent}>
-                {awardedLetter && (
-                  <>
-                    <Text style={[styles.modalTitle, styles.infernoLetterTitle]}>
-                      {isFirstLetterAward ? 'Inferno Letters Unlocked!' : 'Inferno Letter Earned!'}
-                    </Text>
-                    <View style={styles.modalBody}>
-                      {isFirstLetterAward && (
-                        <Text style={styles.modalMessage}>
-                          Collect letters by rolling real 21s in Inferno Mode. Fill INFERNO to unlock a badge.
-                        </Text>
-                      )}
-                      <Text style={[styles.modalMessage, styles.infernoLetterCongrats]}>
-                        {isFirstLetterAward ? 'You found your first letter:' : 'You found a letter:'}
-                      </Text>
-                      <Text style={styles.infernoLetterBig}>{awardedLetter}</Text>
-                      <Text style={styles.infernoLetterProgress}>
-                        {letterProgress}/{INFERNO_LETTERS.length} collected
-                      </Text>
-                    </View>
-                    <StyledButton
-                      label="Nice"
-                      variant="success"
-                      onPress={() => setLetterModalVisible(false)}
-                      style={[styles.btn, styles.menuActionButtonSuccess]}
-                    />
-                  </>
-                )}
               </View>
             </View>
           </Modal>
@@ -2314,19 +2265,17 @@ const styles = StyleSheet.create({
   titleSegment: {
     marginHorizontal: 4,
   },
+  titleLetter: {
+    marginHorizontal: 2,
+  },
+  titleLetterCollected: {
+    color: '#FE9902',
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
-  },
-  infernoTitleLettersRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infernoLetterCollected: {
-    color: '#FE9902',
   },
   scoreLine: {
     color: '#F0F6FC',
@@ -2655,6 +2604,50 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     zIndex: 1001,
   },
+  letterModalContent: {
+    backgroundColor: '#161B22',
+    borderRadius: 12,
+    padding: 20,
+    width: '85%',
+    borderColor: '#30363D',
+    borderWidth: 2,
+    zIndex: 1001,
+    alignItems: 'center',
+  },
+  letterModalTitle: {
+    color: '#F0F6FC',
+    fontWeight: '800',
+    fontSize: 20,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  letterModalMessage: {
+    color: '#F0F6FC',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  letterModalLetter: {
+    color: '#FE9902',
+    fontSize: 64,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginVertical: 6,
+  },
+  letterModalProgress: {
+    color: '#F0F6FC',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  letterModalBody: {
+    color: '#F0F6FC',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 14,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2665,7 +2658,6 @@ const styles = StyleSheet.create({
     color: '#F0F6FC',
     fontWeight: '800',
     fontSize: 18,
-    textAlign: 'center',
   },
   modalBody: {
     marginBottom: 8,
@@ -2675,28 +2667,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
-  },
-  infernoLetterTitle: {
-    alignSelf: 'center',
-    textAlign: 'center',
-    width: '100%',
-  },
-  infernoLetterCongrats: {
-    marginTop: 12,
-  },
-  infernoLetterBig: {
-    marginTop: 8,
-    fontSize: 56,
-    fontWeight: '900',
-    textAlign: 'center',
-    color: '#FE9902',
-  },
-  infernoLetterProgress: {
-    marginTop: 8,
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: '#F0F6FC',
   },
   closeButton: {
     padding: 8,

@@ -1,36 +1,79 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const INFERNO_LETTERS = ['I', 'N', 'F', 'E', 'R', 'N', 'O'] as const;
+export const INFERNO_SLOTS = [
+  { id: 'I', char: 'I' },
+  { id: 'N1', char: 'N' },
+  { id: 'F', char: 'F' },
+  { id: 'E', char: 'E' },
+  { id: 'R', char: 'R' },
+  { id: 'N2', char: 'N' },
+  { id: 'O', char: 'O' },
+] as const;
 
-export type InfernoLetter = (typeof INFERNO_LETTERS)[number];
+export type InfernoSlotId = (typeof INFERNO_SLOTS)[number]['id'];
 
-const LETTERS_KEY = 'inferno_letters_v1';
+const LETTERS_KEY_V1 = 'inferno_letters_v1';
+const LETTERS_KEY_V2 = 'inferno_letters_v2';
 const INTRO_SEEN_KEY = 'inferno_letters_intro_seen_v1';
 
-export async function loadCollectedLetters(): Promise<Set<InfernoLetter>> {
+const SLOT_ID_SET = new Set<InfernoSlotId>(INFERNO_SLOTS.map((slot) => slot.id));
+
+function normalizeSlotId(value: unknown): InfernoSlotId | null {
+  if (typeof value !== 'string') return null;
+  return SLOT_ID_SET.has(value as InfernoSlotId) ? (value as InfernoSlotId) : null;
+}
+
+async function migrateV1ToV2(): Promise<Set<InfernoSlotId>> {
   try {
-    const raw = await AsyncStorage.getItem(LETTERS_KEY);
+    const raw = await AsyncStorage.getItem(LETTERS_KEY_V1);
     if (!raw) return new Set();
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return new Set();
 
-    const set = new Set<InfernoLetter>();
+    const set = new Set<InfernoSlotId>();
     for (const value of parsed) {
-      if (typeof value === 'string' && (INFERNO_LETTERS as readonly string[]).includes(value)) {
-        set.add(value as InfernoLetter);
+      if (typeof value !== 'string') continue;
+      if (value === 'N') {
+        set.add('N1');
+        continue;
+      }
+      if (SLOT_ID_SET.has(value as InfernoSlotId)) {
+        set.add(value as InfernoSlotId);
       }
     }
+
+    await AsyncStorage.setItem(LETTERS_KEY_V2, JSON.stringify(Array.from(set)));
     return set;
+  } catch {
+    return new Set();
+  }
+}
+
+export async function loadCollectedLetters(): Promise<Set<InfernoSlotId>> {
+  try {
+    const raw = await AsyncStorage.getItem(LETTERS_KEY_V2);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const set = new Set<InfernoSlotId>();
+        for (const value of parsed) {
+          const slotId = normalizeSlotId(value);
+          if (slotId) set.add(slotId);
+        }
+        return set;
+      }
+    }
+    return await migrateV1ToV2();
   } catch {
     // Swallow storage errors; treat as no letters collected
     return new Set();
   }
 }
 
-export async function saveCollectedLetters(collected: Set<InfernoLetter>): Promise<void> {
+export async function saveCollectedLetters(collected: Set<InfernoSlotId>): Promise<void> {
   try {
     const arr = Array.from(collected);
-    await AsyncStorage.setItem(LETTERS_KEY, JSON.stringify(arr));
+    await AsyncStorage.setItem(LETTERS_KEY_V2, JSON.stringify(arr));
   } catch {
     // Swallow storage errors
   }
@@ -53,29 +96,19 @@ export async function setSeenInfernoLettersIntro(): Promise<void> {
   }
 }
 
-export function getProgressCount(collected: Set<InfernoLetter>): number {
-  // Progress counts each letter slot in "INFERNO", so the repeated
-  // "N" contributes two slots once "N" is collected.
-  let count = 0;
-  for (const letter of INFERNO_LETTERS) {
-    if (collected.has(letter)) {
-      count += 1;
-    }
-  }
-  return count;
+export function getProgressCount(collected: Set<InfernoSlotId>): number {
+  return collected.size;
 }
 
-export function isComplete(collected: Set<InfernoLetter>): boolean {
-  return getProgressCount(collected) >= INFERNO_LETTERS.length;
+export function isComplete(collected: Set<InfernoSlotId>): boolean {
+  return collected.size === INFERNO_SLOTS.length;
 }
 
-export function pickMissingLetter(collected: Set<InfernoLetter>): InfernoLetter | null {
-  // Build a list of missing unique letters (so the repeated "N"
-  // is treated as a single letter type for selection).
-  const missing: InfernoLetter[] = [];
-  for (const letter of INFERNO_LETTERS) {
-    if (!collected.has(letter) && !missing.includes(letter)) {
-      missing.push(letter);
+export function pickMissingSlot(collected: Set<InfernoSlotId>): InfernoSlotId | null {
+  const missing: InfernoSlotId[] = [];
+  for (const slot of INFERNO_SLOTS) {
+    if (!collected.has(slot.id)) {
+      missing.push(slot.id);
     }
   }
 
@@ -85,4 +118,3 @@ export function pickMissingLetter(collected: Set<InfernoLetter>): InfernoLetter 
   const idx = Math.floor(Math.random() * missing.length);
   return missing[idx];
 }
-

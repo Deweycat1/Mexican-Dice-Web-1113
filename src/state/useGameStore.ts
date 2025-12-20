@@ -1115,7 +1115,7 @@ export const useGameStore = create<Store>((set, get) => {
         void trackAggression('rival', true);
       }
 
-      // Update baseline logic: preserve baseline through reverses.
+      // Update baseline logic: preserve baseline through reverses
       const currentState = get();
       const nextBaseline = (() => {
         if (claim === 41) return null;
@@ -1420,7 +1420,7 @@ export const useGameStore = create<Store>((set, get) => {
         void trackAggression('player', true);
       }
 
-      // Update baseline logic: preserve baseline through reverses.
+      // Update baseline logic: preserve baseline through reverses
       const nextBaseline = (() => {
         if (claim === 41) return null;
         if (claim === 31) {
