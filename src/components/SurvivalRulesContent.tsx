@@ -108,6 +108,11 @@ export default function SurvivalRulesContent() {
       <Text style={styles.bullet}>• Your Best (your personal record)</Text>
       <Text style={styles.bullet}>• Global Best (top streak across all players)</Text>
       <Text style={styles.paragraph}>Climb as high as you can and try to survive long enough to break the global record.</Text>
+
+      <Text style={styles.heading}>Inferno Letters</Text>
+      <Text style={styles.paragraph}>
+        Roll a real 21 (Mexican) in Inferno Mode to sometimes earn letters that light up INFERNO. Collect all 7 on this device to unlock a badge.
+      </Text>
     </View>
   );
 }

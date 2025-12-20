@@ -13,7 +13,8 @@ export type BadgeId =
   | 'inferno_week_7_day_streak'
   | 'bluff_catcher_5'
   | 'bluff_catcher_10'
-  | 'bluff_catcher_20';
+  | 'bluff_catcher_20'
+  | 'inferno_letter_collector';
 
 export type BadgeState = {
   id: BadgeId;

@@ -86,6 +86,12 @@ export const BADGE_METADATA: Record<BadgeId, BadgeMeta> = {
     icon: '👁️',
     description: "Correctly call Infernoman's bluff at least twenty times.",
   },
+  inferno_letter_collector: {
+    id: 'inferno_letter_collector',
+    title: 'Fire Master',
+    icon: '🔤',
+    description: 'Collect all 7 Inferno letters in Inferno Mode.',
+  },
 };
 
 export function getBadgeMeta(id: BadgeId): BadgeMeta {
