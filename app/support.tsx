@@ -25,16 +25,20 @@ export default function SupportScreen() {
           </View>
 
           {/* Contact */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Contact Us</Text>
-            <Text style={styles.sectionBody}>
+          <View style={[styles.section, styles.contactSection]}>
+            <Text style={[styles.sectionTitle, styles.contactTitle]}>Contact Us</Text>
+            <Text style={[styles.sectionBody, styles.contactBody]}>
               If you run into any issues, have feedback, or want to report a bug, please email us
               and we&apos;ll get back to you as soon as we can.
             </Text>
 
             <Pressable
               onPress={handleEmailPress}
-              style={({ pressed }) => [styles.primaryCta, pressed && styles.primaryCtaPressed]}
+              style={({ pressed }) => [
+                styles.primaryCta,
+                styles.primaryCtaCentered,
+                pressed && styles.primaryCtaPressed,
+              ]}
             >
               <Text style={styles.primaryCtaText}>Email InfernoDice Support</Text>
             </Pressable>
@@ -141,6 +145,15 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 18,
   },
+  contactSection: {
+    alignItems: 'center',
+  },
+  contactTitle: {
+    textAlign: 'center',
+  },
+  contactBody: {
+    textAlign: 'center',
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '800',
@@ -165,6 +178,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     // @ts-ignore - boxShadow is web-only
     boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
+  },
+  primaryCtaCentered: {
+    alignSelf: 'center',
   },
   primaryCtaPressed: {
     opacity: 0.9,
