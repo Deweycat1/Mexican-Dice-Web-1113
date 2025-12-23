@@ -363,11 +363,37 @@ export default function Survival() {
     }, PLUS_ONE_FLASH_INTERVAL);
   }, []);
 
+  const getScaledInfernoLetterChance = (progress: number) => {
+    switch (progress) {
+      case 1:
+        return 0.8;
+      case 2:
+        return 0.7;
+      case 3:
+        return 0.6;
+      case 4:
+        return 0.5;
+      case 5:
+        return 0.4;
+      case 6:
+        return 0.3;
+      default:
+        return 0;
+    }
+  };
+
   const attemptInfernoLetterAward = useCallback(async () => {
     const missingSlots = getMissingInfernoSlots(collectedSlots);
 
     if (!infernoIntroSeen) {
-      const picked = pickMissingSlot(collectedSlots);
+      let eligible = missingSlots.filter((slotId) => slotId !== 'I' && slotId !== 'O');
+      if (eligible.length === 0) {
+        eligible = missingSlots;
+      }
+      const picked =
+        eligible.length > 0
+          ? eligible[Math.floor(Math.random() * eligible.length)]
+          : null;
       if (!picked) {
         await setSeenInfernoLettersIntro();
         setInfernoIntroSeen(true);
@@ -389,7 +415,9 @@ export default function Survival() {
       return;
     }
 
-    if (Math.random() >= 0.25) return;
+    const progress = collectedSlots.size;
+    const baseChance = getScaledInfernoLetterChance(progress);
+    if (Math.random() >= baseChance) return;
     if (missingSlots.length === 0) return;
     if (missingSlots.length === 1 && Math.random() >= 0.05) return;
 
