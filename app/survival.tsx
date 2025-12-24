@@ -1946,7 +1946,7 @@ export default function Survival() {
                 </Text>
                 {infernoLetterModalIsIntro && (
                   <Text style={styles.letterModalBody}>
-                    Collect letters by rolling real 21s in Inferno Mode. Fill INFERNO to unlock a
+                    Collect letters by rolling 21s in Inferno Mode. Fill INFERNO to unlock a
                     badge.
                   </Text>
                 )}

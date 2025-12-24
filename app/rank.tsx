@@ -210,27 +210,6 @@ export default function RankScreen() {
             </Text>
           </View>
         </View>
-        <View style={styles.rankStatsRow}>
-          <View style={styles.rankStatItem}>
-            <Text style={styles.rankStatLabel}>Games Played</Text>
-            <Text style={styles.rankStatValue}>{myRank.gamesPlayed}</Text>
-          </View>
-          <View style={styles.rankStatItem}>
-            <Text style={styles.rankStatLabel}>Wins / Losses</Text>
-            <Text style={styles.rankStatValue}>
-              {myRank.wins} / {myRank.losses}
-            </Text>
-          </View>
-          <View style={styles.rankStatItem}>
-            <Text style={styles.rankStatLabel}>Win Rate</Text>
-            <Text style={styles.rankStatValue}>{winRate}%</Text>
-          </View>
-          <View style={styles.rankStatItem}>
-            <Text style={styles.rankStatLabel}>Best Survival Streak</Text>
-            <Text style={styles.rankStatValue}>{myRank.survivalBest}</Text>
-          </View>
-        </View>
-
         <View style={styles.sectionDivider} />
         {personalStatsLoading ? (
           <View style={styles.centerContent}>
@@ -269,21 +248,29 @@ export default function RankScreen() {
                     : '—'}
                 </Text>
               </View>
-              <View style={styles.rankStatItem}>
-                <Text style={styles.rankStatLabel}>Most Common Roll</Text>
-                <Text style={styles.rankStatValue}>
-                  {personalStats.mostCommonRollLifetime ?? '—'}
-                </Text>
-              </View>
-              <View style={styles.rankStatItem}>
-                <Text style={styles.rankStatLabel}>Successful Bluffs</Text>
-                <Text style={styles.rankStatValue}>
-                  {personalStats.successfulBluffsLifetime}
-                </Text>
-              </View>
             </View>
           </>
         )}
+        <View style={styles.rankStatsRow}>
+          <View style={styles.rankStatItem}>
+            <Text style={styles.rankStatLabel}>Games Played</Text>
+            <Text style={styles.rankStatValue}>{myRank.gamesPlayed}</Text>
+          </View>
+          <View style={styles.rankStatItem}>
+            <Text style={styles.rankStatLabel}>Wins / Losses</Text>
+            <Text style={styles.rankStatValue}>
+              {myRank.wins} / {myRank.losses}
+            </Text>
+          </View>
+          <View style={styles.rankStatItem}>
+            <Text style={styles.rankStatLabel}>Win Rate</Text>
+            <Text style={styles.rankStatValue}>{winRate}%</Text>
+          </View>
+          <View style={styles.rankStatItem}>
+            <Text style={styles.rankStatLabel}>Best Survival Streak</Text>
+            <Text style={styles.rankStatValue}>{myRank.survivalBest}</Text>
+          </View>
+        </View>
       </View>
     );
   };
@@ -686,7 +673,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginTop: 12,
     marginBottom: 6,
-    textAlign: 'left',
-    alignSelf: 'flex-start',
+    textAlign: 'center',
+    alignSelf: 'center',
   },
 });
