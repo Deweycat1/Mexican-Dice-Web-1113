@@ -1,6 +1,6 @@
 import { Link } from 'expo-router';
 import React from 'react';
-import { Image, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';
@@ -22,14 +22,14 @@ export default function AboutScreen() {
 
             <View style={styles.heroCtaRow}>
               <Link href="/game" asChild>
-                <View style={styles.primaryCta}>
+                <Pressable style={styles.primaryCta}>
                   <Text style={styles.primaryCtaText}>Play InfernoDice</Text>
-                </View>
+                </Pressable>
               </Link>
               <Link href="/rules" asChild>
-                <View style={styles.secondaryCta}>
+                <Pressable style={styles.secondaryCta}>
                   <Text style={styles.secondaryCtaText}>How to Play</Text>
-                </View>
+                </Pressable>
               </Link>
             </View>
           </View>
@@ -173,9 +173,9 @@ export default function AboutScreen() {
               For details on how we handle data and analytics, read our Privacy Policy.
             </Text>
             <Link href="/privacy" asChild>
-              <View style={styles.privacyLinkButton}>
+              <Pressable style={styles.privacyLinkButton}>
                 <Text style={styles.privacyLinkText}>View Privacy Policy</Text>
-              </View>
+              </Pressable>
             </Link>
           </View>
         </View>
