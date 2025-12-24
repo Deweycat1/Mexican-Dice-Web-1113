@@ -27,14 +27,25 @@ export default function AnimatedDiceReveal({
       : !hidden; // iOS / web: preserve existing behavior
   const [showActual, setShowActual] = useState(initialShowActual);
   const rotation = useRef(new Animated.Value(0)).current;
+  const revealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (revealTimeoutRef.current) {
+      clearTimeout(revealTimeoutRef.current);
+      revealTimeoutRef.current = null;
+    }
+
     if (hidden) {
       // Reset to hidden state
       rotation.stopAnimation();
       rotation.setValue(0);
       setShowActual(false);
-      return;
+      return () => {
+        if (revealTimeoutRef.current) {
+          clearTimeout(revealTimeoutRef.current);
+          revealTimeoutRef.current = null;
+        }
+      };
     }
 
     // Start flip sequence
@@ -50,11 +61,17 @@ export default function AnimatedDiceReveal({
     }).start(({ finished }) => {
       if (finished) {
         // Delay after animation completes before calling callback
-        setTimeout(() => {
+        revealTimeoutRef.current = setTimeout(() => {
           if (onRevealComplete) onRevealComplete();
         }, 1700);
       }
     });
+    return () => {
+      if (revealTimeoutRef.current) {
+        clearTimeout(revealTimeoutRef.current);
+        revealTimeoutRef.current = null;
+      }
+    };
   }, [hidden, onRevealComplete, rotation]);
 
   // Interpolate rotateY for 3D flip effect
