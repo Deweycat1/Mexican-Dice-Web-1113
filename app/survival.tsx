@@ -1189,6 +1189,8 @@ export default function Survival() {
   useEffect(() => setClaimPickerOpen(false), [turn]);
 
   useEffect(() => {
+    if (!isFocused) return;
+    if (mode !== 'survival') return;
     if (lastPlayerRoll == null) {
       lastProcessedRollRef.current = null;
       return;
@@ -1199,7 +1201,7 @@ export default function Survival() {
     if (letterAttemptUsedRef.current) return;
     letterAttemptUsedRef.current = true;
     void attemptInfernoLetterAward();
-  }, [lastPlayerRoll, attemptInfernoLetterAward]);
+  }, [isFocused, mode, lastPlayerRoll, attemptInfernoLetterAward]);
 
   useEffect(() => {
     if (turn === 'player') {
