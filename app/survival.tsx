@@ -290,6 +290,7 @@ export default function Survival() {
   const plusOneFlashTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const plusOneFlashTickRef = useRef(0);
   const pendingCpuBluffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cpuBluffResolveInFlightRef = useRef(false);
 
   // Animation refs for micro animations
   const streakScaleAnim = useRef(new Animated.Value(1)).current;
@@ -1205,6 +1206,7 @@ export default function Survival() {
       setCpuDiceRevealed(false);
       setPendingCpuBluffResolution(false);
       setShouldRevealCpuDice(false);
+      cpuBluffResolveInFlightRef.current = false;
     }
   }, [turn, lastCpuRoll, lastClaim]);
 
@@ -1473,6 +1475,7 @@ export default function Survival() {
     }
 
     console.log('BLUFF: Revealing Rival dice regardless of truth state (Survival)');
+    cpuBluffResolveInFlightRef.current = true;
     setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
     setPendingCpuBluffResolution(true);
@@ -1523,18 +1526,33 @@ export default function Survival() {
     }
   }
 
-  const handleCpuRevealComplete = useCallback(() => {
-    setIsRevealAnimating(false);
-    if (pendingCpuBluffResolution) {
+  const resolveCpuBluffOnce = useCallback(
+    (source: 'reveal-complete' | 'fallback') => {
+      if (pendingCpuBluffTimeoutRef.current) {
+        clearTimeout(pendingCpuBluffTimeoutRef.current);
+        pendingCpuBluffTimeoutRef.current = null;
+      }
+      if (!cpuBluffResolveInFlightRef.current) {
+        if (__DEV__) {
+          console.log('[SURVIVAL][CPU BLUFF RESOLVE] skipped duplicate', { source });
+        }
+        return;
+      }
+      cpuBluffResolveInFlightRef.current = false;
+      if (__DEV__) {
+        console.log('[SURVIVAL][CPU BLUFF RESOLVE] resolving', { source });
+      }
       callBluff();
       setPendingCpuBluffResolution(false);
       setShouldRevealCpuDice(false);
-    }
-    if (pendingCpuBluffTimeoutRef.current) {
-      clearTimeout(pendingCpuBluffTimeoutRef.current);
-      pendingCpuBluffTimeoutRef.current = null;
-    }
-  }, [pendingCpuBluffResolution, callBluff]);
+      setIsRevealAnimating(false);
+    },
+    [callBluff]
+  );
+
+  const handleCpuRevealComplete = useCallback(() => {
+    resolveCpuBluffOnce('reveal-complete');
+  }, [resolveCpuBluffOnce]);
 
   const handleSocialRevealComplete = useCallback(() => {
     setShowSocialReveal(false);
@@ -1556,28 +1574,22 @@ export default function Survival() {
     }
 
     pendingCpuBluffTimeoutRef.current = setTimeout(() => {
-      setPendingCpuBluffResolution((prev) => {
-        if (!prev) return prev;
-        if (__DEV__) {
-          console.log('[SURVIVAL DEBUG] Fallback resolving pending CPU bluff', {
-            turn,
-            pendingCpuBluffResolution: prev,
-            shouldRevealCpuDice,
-            isRevealAnimating,
-            lastClaim,
-            lastPlayerRoll,
-            lastCpuRoll,
-          });
-        }
-        callBluff();
-        setIsRevealAnimating(false);
-        setShouldRevealCpuDice(false);
-        return false;
-      });
+      if (__DEV__) {
+        console.log('[SURVIVAL DEBUG] Fallback resolving pending CPU bluff', {
+          turn,
+          pendingCpuBluffResolution,
+          shouldRevealCpuDice,
+          isRevealAnimating,
+          lastClaim,
+          lastPlayerRoll,
+          lastCpuRoll,
+        });
+      }
+      resolveCpuBluffOnce('fallback');
     }, 1200);
   }, [
     pendingCpuBluffResolution,
-    callBluff,
+    resolveCpuBluffOnce,
     turn,
     shouldRevealCpuDice,
     isRevealAnimating,
