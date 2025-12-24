@@ -1954,7 +1954,7 @@ export default function Survival() {
                   label="Nice"
                   variant="success"
                   onPress={() => setInfernoLetterModalOpen(false)}
-                  style={[styles.btn, styles.menuActionButtonSuccess]}
+                  style={[styles.modalActionButton, styles.menuActionButtonSuccess]}
                 />
               </View>
             </View>
@@ -2141,7 +2141,7 @@ export default function Survival() {
                     setIntroVisible(false);
                     void setHasSeenSurvivalIntro(true);
                   }}
-                  style={[styles.btn, styles.menuActionButtonSuccess]}
+                  style={[styles.modalActionButton, styles.menuActionButtonSuccess]}
                 />
               </View>
             </View>
@@ -2695,6 +2695,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  modalActionButton: {
+    alignSelf: 'stretch',
+    marginTop: 12,
   },
   closeButton: {
     padding: 8,
