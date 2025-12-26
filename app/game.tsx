@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -217,7 +217,7 @@ export default function Game() {
     lastBluffDefenderTruth,
     bluffResultNonce,
     mode,
-    stopSurvival,
+    exitSurvivalToNormal,
   } = useGameStore();
 
   const narration = (buildBanner?.() || getBaseMessage() || '').trim();
@@ -225,11 +225,11 @@ export default function Game() {
 
   // Ensure we leave Survival mode whenever the Quick Play screen mounts so claims/event
   // history stay in the normal bucket.
-  useEffect(() => {
-    stopSurvival();
-    // stopSurvival reference from Zustand is stable; run once on mount only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      exitSurvivalToNormal();
+    }, [exitSurvivalToNormal])
+  );
 
   useEffect(() => {
     let isMounted = true;

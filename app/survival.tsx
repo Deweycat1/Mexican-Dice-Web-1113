@@ -4,6 +4,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Alert,
   Modal,
   Platform,
   Pressable,
@@ -467,7 +468,7 @@ export default function Survival() {
     // survival controls
     startSurvival,
     restartSurvival,
-    stopSurvival,
+    exitSurvivalToNormal,
     currentStreak,
     bestStreak,
     globalBest,
@@ -586,7 +587,13 @@ export default function Survival() {
   // Watchdog to recover from a stalled CPU turn in Survival mode
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    if (mode !== 'survival') return;
+    if (mode !== 'survival') {
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+      return;
+    }
 
     // Clear any existing timer if conditions are not suitable
     if (turn !== 'cpu' || gameOver !== null || turnLock || isBusy) {
@@ -1437,6 +1444,25 @@ export default function Survival() {
     handleRollOrClaim();
   }, [streakEnded, restartSurvival, handleRollOrClaim]);
 
+  const handlePressMenu = useCallback(() => {
+    const title = 'End your streak?';
+    const message = 'Opening the menu will end your current streak.';
+    const MENU_ROUTE = '/';
+
+    if (Platform.OS === 'web') {
+      const ok = window.confirm(`${title}\n\n${message}`);
+      if (ok) {
+        router.push(MENU_ROUTE);
+      }
+      return;
+    }
+
+    Alert.alert(title, message, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Go to Menu', style: 'destructive', onPress: () => router.push(MENU_ROUTE) },
+    ]);
+  }, [router]);
+
   const primaryLabel = streakEnded
     ? 'New Game'
     : hasRolled && !mustBluff
@@ -1534,6 +1560,13 @@ export default function Survival() {
         clearTimeout(pendingCpuBluffTimeoutRef.current);
         pendingCpuBluffTimeoutRef.current = null;
       }
+      if (mode !== 'survival') {
+        cpuBluffResolveInFlightRef.current = false;
+        setPendingCpuBluffResolution(false);
+        setShouldRevealCpuDice(false);
+        setIsRevealAnimating(false);
+        return;
+      }
       if (!cpuBluffResolveInFlightRef.current) {
         if (__DEV__) {
           console.log('[SURVIVAL][CPU BLUFF RESOLVE] skipped duplicate', { source });
@@ -1549,7 +1582,7 @@ export default function Survival() {
       setShouldRevealCpuDice(false);
       setIsRevealAnimating(false);
     },
-    [callBluff]
+    [callBluff, mode]
   );
 
   const handleCpuRevealComplete = useCallback(() => {
@@ -1563,7 +1596,7 @@ export default function Survival() {
   }, []);
 
   useEffect(() => {
-    if (!pendingCpuBluffResolution) {
+    if (!isFocused || mode !== 'survival' || !pendingCpuBluffResolution) {
       if (pendingCpuBluffTimeoutRef.current) {
         clearTimeout(pendingCpuBluffTimeoutRef.current);
         pendingCpuBluffTimeoutRef.current = null;
@@ -1590,6 +1623,8 @@ export default function Survival() {
       resolveCpuBluffOnce('fallback');
     }, 1200);
   }, [
+    isFocused,
+    mode,
     pendingCpuBluffResolution,
     resolveCpuBluffOnce,
     turn,
@@ -1639,11 +1674,11 @@ export default function Survival() {
       startSurvival();
       return () => {
         if (__DEV__) {
-          console.log('SURVIVAL: screen blurred -> stopSurvival()');
+          console.log('SURVIVAL: screen blurred -> exitSurvivalToNormal()');
         }
-        stopSurvival();
+        exitSurvivalToNormal();
       };
-    }, [startSurvival, stopSurvival])
+    }, [startSurvival, exitSurvivalToNormal])
   );
 
   useEffect(() => {
@@ -1915,7 +1950,7 @@ export default function Survival() {
                 <StyledButton
                   label="Menu"
                   variant="ghost"
-                  onPress={() => router.push('/')}
+                  onPress={handlePressMenu}
                   style={[styles.btn, styles.menuBtnBlueOutline]}
                   textStyle={styles.footerButtonTextSmall}
                 />

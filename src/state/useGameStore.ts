@@ -159,6 +159,7 @@ export type Store = {
   startSurvival(): void;
   restartSurvival(): void;
   stopSurvival(): void;
+  exitSurvivalToNormal(): void;
   endSurvival(reason: string): void;
   fetchGlobalBest(): Promise<void>;
   submitGlobalBest(streak: number): Promise<void>;
@@ -719,6 +720,37 @@ export const useGameStore = create<Store>((set, get) => {
     set({ mode: 'normal', isSurvivalOver: false, currentStreak: 0 });
   };
 
+  const exitSurvivalToNormal = () => {
+    const state = get();
+    if (state.mode !== 'survival') return;
+    pendingCpuRaise = null;
+    set({
+      mode: 'normal',
+      isSurvivalOver: false,
+      currentStreak: 0,
+      turn: 'player',
+      lastClaim: null,
+      baselineClaim: null,
+      lastAction: 'normal',
+      lastPlayerRoll: null,
+      lastCpuRoll: null,
+      mustBluff: false,
+      isRolling: false,
+      isBusy: false,
+      turnLock: false,
+      gameOver: null,
+      pendingInfernoDelay: false,
+      mexicanFlashNonce: 0,
+      cpuSocialDice: null,
+      cpuSocialRevealNonce: 0,
+      socialBannerNonce: 0,
+      lastBluffCaller: null,
+      lastBluffDefenderTruth: null,
+      bluffResultNonce: 0,
+      playerTurnStartTime: null,
+    });
+  };
+
   const fetchGlobalBest = async () => {
     if (isTestEnv) return;
     try {
@@ -913,6 +945,7 @@ export const useGameStore = create<Store>((set, get) => {
     if (start.gameOver || start.turn !== 'cpu' || start.turnLock) {
       return;
     }
+    const startMode = start.mode;
     const hapticsEnabled = isHapticsEnabled();
 
     const shouldForceInfernoDelay = start.pendingInfernoDelay;
@@ -932,6 +965,7 @@ export const useGameStore = create<Store>((set, get) => {
 
       const state = get();
       if (state.gameOver || state.turn !== 'cpu') return;
+      if (state.mode !== startMode) return;
 
   const { lastClaim, baselineClaim } = state;
       const previousClaim = lastClaim ?? null;
@@ -1286,6 +1320,7 @@ export const useGameStore = create<Store>((set, get) => {
     restartSurvival,
     endSurvival,
     stopSurvival,
+    exitSurvivalToNormal,
     fetchGlobalBest,
     submitGlobalBest,
     recordWin,
