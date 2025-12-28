@@ -40,6 +40,9 @@ import {
 } from '../stats/personalStats';
 import { awardBadge, incrementBluffCaught } from '../stats/badges';
 import { updateRankFromGameResult } from '../stats/rank';
+import { supabase } from '../lib/supabase';
+import { getCurrentUser } from '../lib/auth';
+import { didCarry } from '../utils/carry';
 
 export type Turn = 'player' | 'cpu';
 export type LastAction = 'normal' | 'reverseVsMexican';
@@ -128,6 +131,9 @@ export type Store = {
     | { type: 'claim'; who: Turn; claim: number; bluff: boolean }
     | { type: 'event'; text: string }
   )[];
+  // Previous roll used for carry-rate tracking
+  carryPrevRoll: DicePair | null;
+  carryLastRecordedKey: string | null;
 
   turnLock: boolean;
   isBusy: boolean;
@@ -177,6 +183,8 @@ const buildSurvivalChallengeReset = (): Pick<
   | 'mustBluff'
   | 'survivalHistory'
   | 'survivalClaims'
+  | 'carryPrevRoll'
+  | 'carryLastRecordedKey'
 > => ({
   lastClaim: null,
   baselineClaim: null,
@@ -186,6 +194,8 @@ const buildSurvivalChallengeReset = (): Pick<
   mustBluff: false,
   survivalHistory: [] as Store['survivalHistory'],
   survivalClaims: [] as Store['survivalClaims'],
+  carryPrevRoll: null,
+  carryLastRecordedKey: null,
 });
 
 const isTestEnv = process.env.NODE_ENV === 'test';
@@ -363,6 +373,44 @@ export const useGameStore = create<Store>((set, get) => {
       }
     } catch (error) {
       console.error('Failed to record low-roll behavior:', error);
+    }
+  };
+
+  // TODO: validate carry stats on the server if this becomes user-facing.
+  const recordCarryStat = async (hit: boolean) => {
+    if (isTestEnv) return;
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+
+      const { data, error: readError } = await supabase
+        .from('secret_stats')
+        .select('carry_hits, carry_attempts')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (readError) {
+        console.error('Failed to read carry stats:', readError);
+        return;
+      }
+
+      const currentHits = data?.carry_hits ?? 0;
+      const currentAttempts = data?.carry_attempts ?? 0;
+      const nextHits = currentHits + (hit ? 1 : 0);
+      const nextAttempts = currentAttempts + 1;
+
+      const { error: writeError } = await supabase
+        .from('secret_stats')
+        .upsert(
+          { user_id: user.id, carry_hits: nextHits, carry_attempts: nextAttempts },
+          { onConflict: 'user_id' }
+        );
+
+      if (writeError) {
+        console.error('Failed to update carry stats:', writeError);
+      }
+    } catch (error) {
+      console.error('Failed to update carry stats:', error);
     }
   };
 
@@ -648,6 +696,8 @@ export const useGameStore = create<Store>((set, get) => {
       lastAction: 'normal',
       lastPlayerRoll: null,
       lastCpuRoll: null,
+      carryPrevRoll: null,
+      carryLastRecordedKey: null,
       mustBluff: false,
       isRolling: false,
       cpuSocialDice: null,
@@ -679,6 +729,8 @@ export const useGameStore = create<Store>((set, get) => {
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
       turn: 'player',
+      carryPrevRoll: null,
+      carryLastRecordedKey: null,
     });
     void loadBestStreak().then((b) => set({ bestStreak: b || 0 })).catch(() => {});
     // Fetch global best when starting survival mode
@@ -707,6 +759,8 @@ export const useGameStore = create<Store>((set, get) => {
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
       turn: 'player',
+      carryPrevRoll: null,
+      carryLastRecordedKey: null,
     });
   };
 
@@ -748,6 +802,8 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
       playerTurnStartTime: null,
+      carryPrevRoll: null,
+      carryLastRecordedKey: null,
     });
   };
 
@@ -969,13 +1025,21 @@ export const useGameStore = create<Store>((set, get) => {
 
   const { lastClaim, baselineClaim } = state;
       const previousClaim = lastClaim ?? null;
+      const prevCarry = state.carryPrevRoll;
       const roll = rollDice();
       const dicePair: DicePair = roll.values;
       const actual = roll.normalized;
-      set({ lastCpuRoll: actual });
+      set({ lastCpuRoll: actual, carryPrevRoll: dicePair });
 
       // Record roll statistics (async, non-blocking)
       void recordRollStat(actual);
+      if (prevCarry) {
+        const carryKey = `${state.mode}:cpu:${roundIndexCounter}`;
+        if (carryKey !== state.carryLastRecordedKey) {
+          set({ carryLastRecordedKey: carryKey });
+          void recordCarryStat(didCarry(prevCarry, dicePair));
+        }
+      }
 
       if (actual === 41) {
         void playSpecialClaimHaptic(41, hapticsEnabled);
@@ -1198,6 +1262,8 @@ export const useGameStore = create<Store>((set, get) => {
     lastAction: 'normal',
     lastPlayerRoll: null,
     lastCpuRoll: null,
+    carryPrevRoll: null,
+    carryLastRecordedKey: null,
 
     isRolling: false,
     mustBluff: false,
@@ -1242,6 +1308,8 @@ export const useGameStore = create<Store>((set, get) => {
         lastAction: 'normal',
         lastPlayerRoll: null,
         lastCpuRoll: null,
+        carryPrevRoll: null,
+        carryLastRecordedKey: null,
         isRolling: false,
         mustBluff: false,
         message: 'New game. Good luck!',
@@ -1281,19 +1349,28 @@ export const useGameStore = create<Store>((set, get) => {
       beginTurnLock();
       set({ isRolling: true });
 
-      const { normalized: actual } = rollDice();
+      const prevCarry = state.carryPrevRoll;
+      const { values: dicePair, normalized: actual } = rollDice();
       const activeChallenge = resolveActiveChallenge(state.baselineClaim, state.lastClaim);
       const legalTruth = computeLegalTruth(activeChallenge, actual);
 
       // Record roll statistics (async, non-blocking)
       void recordRollStat(actual);
       void incrementPersonalRollCount(actual);
+      if (prevCarry) {
+        const carryKey = `${state.mode}:player:${roundIndexCounter}`;
+        if (carryKey !== state.carryLastRecordedKey) {
+          set({ carryLastRecordedKey: carryKey });
+          void recordCarryStat(didCarry(prevCarry, dicePair));
+        }
+      }
       
       // Start timing player's turn
       const turnStartTime = Date.now();
 
       set((prev) => ({
         lastPlayerRoll: actual,
+        carryPrevRoll: dicePair,
         mustBluff: !legalTruth,
         isRolling: false,
         mexicanFlashNonce: actual === 21 ? Date.now() : prev.mexicanFlashNonce,

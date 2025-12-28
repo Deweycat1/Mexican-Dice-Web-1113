@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+import { supabase } from '../src/lib/supabase';
+import { getCurrentUser } from '../src/lib/auth';
 
 interface SurvivalBestData {
   streak: number;
@@ -87,6 +89,10 @@ export default function SecretStatsScreen() {
   
   // Meta stats (honesty, aggression, claims risk, roll rarity)
   const [metaStats, setMetaStats] = useState<MetaStats | null>(null);
+
+  // Hidden dice math stats
+  const [carryHits, setCarryHits] = useState<number>(0);
+  const [carryAttempts, setCarryAttempts] = useState<number>(0);
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -198,6 +204,27 @@ export default function SecretStatsScreen() {
         // Set win stats
         setPlayerWins(winsData.playerWins ?? 0);
         setCpuWins(winsData.cpuWins ?? 0);
+
+        // Fetch hidden carry stats from Supabase
+        try {
+          const user = await getCurrentUser();
+          if (user) {
+            const { data: carryData, error: carryError } = await supabase
+              .from('secret_stats')
+              .select('carry_hits, carry_attempts')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (carryError) {
+              console.log('Carry stats not available yet');
+            } else {
+              setCarryHits(carryData?.carry_hits ?? 0);
+              setCarryAttempts(carryData?.carry_attempts ?? 0);
+            }
+          }
+        } catch {
+          console.log('Carry stats not available yet');
+        }
       } catch (err) {
         console.error('Error fetching stats:', err);
         setError(err instanceof Error ? err.message : 'Failed to load statistics');
@@ -338,6 +365,10 @@ export default function SecretStatsScreen() {
   const totalGames = playerWins + cpuWins;
   const playerWinRate = totalGames > 0 ? (playerWins / totalGames) * 100 : 0;
   const cpuWinRate = totalGames > 0 ? (cpuWins / totalGames) * 100 : 0;
+  const carryPercent =
+    carryAttempts > 0
+      ? `${((carryHits / carryAttempts) * 100).toFixed(2)}%`
+      : '—';
 
   return (
     <View style={styles.container}>
@@ -553,6 +584,20 @@ export default function SecretStatsScreen() {
             </View>
           </View>
         )}
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🧮 Dice Math (Hidden)</Text>
+          <View style={styles.statsTable}>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Carry Rate</Text>
+              <Text style={styles.statCountLarge}>{carryPercent}</Text>
+            </View>
+            <View style={styles.statRow}>
+              <Text style={styles.statLabel}>Overlapping dice across consecutive rolls</Text>
+              <Text style={styles.statCountSmall}>{carryAttempts.toLocaleString()} checks</Text>
+            </View>
+          </View>
+        </View>
 
         {/* Claim Risk Analysis has been deprecated and removed from the backend. */}
 

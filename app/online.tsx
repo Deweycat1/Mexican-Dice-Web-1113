@@ -64,9 +64,6 @@ type LobbyGame = {
   matchmaking_type?: 'friend' | 'random' | null;
 };
 
-const friendlyHint =
-  'Play at your own pace: start a match with a friend and come back to it anytime.';
-
 const MAX_USERNAME_LENGTH = 40;
 
 // Allow only letters, spaces, and hyphens for friend usernames
@@ -928,11 +925,6 @@ export default function OnlineLobbyScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.innerContent}>
             <View>
-              <View style={styles.banner}>
-                <Text style={styles.bannerText}>{friendlyHint}</Text>
-                <Text style={styles.refreshHint}>Refresh to see new challenges</Text>
-              </View>
-
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Start a new match</Text>
                 <Text style={styles.cardSubtitle}>
@@ -1069,27 +1061,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: '#F0F6FC',
     fontSize: 16,
-  },
-  banner: {
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  bannerText: {
-    color: '#F0F6FC',
-    textAlign: 'center',
-    fontSize: 13,
-  },
-  refreshHint: {
-    color: '#53A7F3',
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 6,
   },
   card: {
     backgroundColor: '#2A3136',
