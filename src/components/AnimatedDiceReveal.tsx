@@ -55,7 +55,7 @@ export default function AnimatedDiceReveal({
 
     Animated.timing(rotation, {
       toValue: 1,
-      duration: Platform.OS === 'android' ? 900 : 450,
+      duration: Platform.OS === 'android' ? 650 : 450,
       easing: Easing.inOut(Easing.ease),
       useNativeDriver: true,
     }).start(({ finished }) => {

@@ -747,7 +747,11 @@ export default function Game() {
       setShowSocialReveal(true);
       setSocialRevealHidden(true);
       setIsRevealAnimating(true);
-      requestAnimationFrame(() => setSocialRevealHidden(false));
+      if (Platform.OS === 'android') {
+        setSocialRevealHidden(false);
+      } else {
+        requestAnimationFrame(() => setSocialRevealHidden(false));
+      }
     }
   }, [cpuSocialDice, cpuSocialRevealNonce]);
 

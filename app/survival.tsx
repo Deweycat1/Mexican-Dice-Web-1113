@@ -1652,7 +1652,11 @@ export default function Survival() {
       setShowSocialReveal(true);
       setSocialRevealHidden(true);
       setIsRevealAnimating(true);
-      requestAnimationFrame(() => setSocialRevealHidden(false));
+      if (Platform.OS === 'android') {
+        setSocialRevealHidden(false);
+      } else {
+        requestAnimationFrame(() => setSocialRevealHidden(false));
+      }
     }
   }, [cpuSocialDice, cpuSocialRevealNonce]);
 
