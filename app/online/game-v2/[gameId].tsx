@@ -55,6 +55,7 @@ import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStat
 import { awardBadge } from '../../../src/stats/badges';
 import { updateRankFromGameResult } from '../../../src/stats/rank';
 import { initPushNotifications } from '../../../src/lib/pushNotifications';
+import { getNextWompWompMessage } from '../../../src/lib/constants';
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -262,7 +263,10 @@ export default function OnlineGameV2Screen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
-  const [banner, setBanner] = useState<{ type: 'got-em' | 'womp-womp' | 'social' | 'wink'; text: string } | null>(null);
+  const [banner, setBanner] = useState<{
+    type: 'got-em' | 'womp-womp' | 'social' | 'wink';
+    text: string;
+  } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hostName, setHostName] = useState<string>('Host');
@@ -285,6 +289,7 @@ export default function OnlineGameV2Screen() {
   const prevHistoryLengthRef = useRef<number>(0);
   const historyInitializedRef = useRef(false);
   const localHandledBluffBannerRef = useRef(false);
+  const lastWompWompIndexRef = useRef(-1);
 
   const showBluffResultBanner = useCallback(
     (liar: boolean, iAmCaller: boolean) => {
@@ -292,11 +297,13 @@ export default function OnlineGameV2Screen() {
         if (iAmCaller) {
           setBanner({ type: 'got-em', text: 'You caught their bluff.' });
         } else {
-          setBanner({ type: 'womp-womp', text: 'They caught your bluff.' });
+          const { text } = getNextWompWompMessage(lastWompWompIndexRef);
+          setBanner({ type: 'womp-womp', text });
         }
       } else {
         if (iAmCaller) {
-          setBanner({ type: 'womp-womp', text: 'They told the truth.' });
+          const { text } = getNextWompWompMessage(lastWompWompIndexRef);
+          setBanner({ type: 'womp-womp', text });
         } else {
           setBanner({ type: 'got-em', text: "GOT 'EM!!!" });
         }

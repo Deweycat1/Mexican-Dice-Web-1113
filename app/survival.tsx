@@ -38,7 +38,7 @@ import {
 } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
-import { MEXICAN_ICON } from '../src/lib/constants';
+import { MEXICAN_ICON, getNextWompWompMessage } from '../src/lib/constants';
 import { awardBadge } from '../src/stats/badges';
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
@@ -257,6 +257,7 @@ export default function Survival() {
   const [rivalBluffBannerVisible, setRivalBluffBannerVisible] = useState(false);
   const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | 'social' | null>(null);
   const [rivalBluffBannerSecondary, setRivalBluffBannerSecondary] = useState<string | null>(null);
+  const lastWompWompIndexRef = useRef(-1);
   const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -1184,9 +1185,11 @@ export default function Survival() {
   const currentBluffBannerPrimary = useMemo(() => {
     if (rivalBluffBannerType === 'social') return '🍻 SOCIAL!!! 🍻';
     if (rivalBluffBannerType === 'got-em') return "GOT 'EM!!!";
-    if (rivalBluffBannerType === 'womp-womp') return 'WOMP WOMP';
+    if (rivalBluffBannerType === 'womp-womp') {
+      return rivalBluffBannerSecondary ?? 'WOMP WOMP';
+    }
     return '';
-  }, [rivalBluffBannerType]);
+  }, [rivalBluffBannerSecondary, rivalBluffBannerType]);
 
   const claimOptions = useMemo(
     () => getSurvivalClaimOptions(lastClaimValue, lastPlayerRoll),
@@ -1295,17 +1298,8 @@ export default function Survival() {
       const pick = options[Math.floor(Math.random() * options.length)];
       setRivalBluffBannerSecondary(pick);
     } else if (type === 'womp-womp') {
-      const options = [
-        'They were telling the truth.',
-        'Clean roll.',
-        'No bluff there.',
-        'Bit too early.',
-        'Solid claim.',
-        'Bad call.',
-        'Too risky.',
-      ];
-      const pick = options[Math.floor(Math.random() * options.length)];
-      setRivalBluffBannerSecondary(pick);
+      const { text } = getNextWompWompMessage(lastWompWompIndexRef);
+      setRivalBluffBannerSecondary(text);
     } else {
       setRivalBluffBannerSecondary(null);
     }
@@ -1735,7 +1729,9 @@ export default function Survival() {
                     {currentBluffBannerPrimary}
                   </Text>
                 )}
-                {rivalBluffBannerType !== 'social' && !!rivalBluffBannerSecondary && (
+                {rivalBluffBannerType !== 'social' &&
+                  rivalBluffBannerType !== 'womp-womp' &&
+                  !!rivalBluffBannerSecondary && (
                   <Text style={styles.gotEmBannerTextSecondary}>
                     {rivalBluffBannerSecondary}
                   </Text>

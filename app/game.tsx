@@ -26,7 +26,7 @@ import StyledButton from '../src/components/StyledButton';
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { InlineFlameText } from '../src/components/InlineFlameText';
 import RulesContent from '../src/components/RulesContent';
-import { MEXICAN_ICON } from '../src/lib/constants';
+import { MEXICAN_ICON, getNextWompWompMessage } from '../src/lib/constants';
 import {
   compareClaims,
   isAlwaysClaimable,
@@ -167,6 +167,7 @@ export default function Game() {
   const [rivalBluffBannerVisible, setRivalBluffBannerVisible] = useState(false);
   const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | 'social' | null>(null);
   const [rivalBluffBannerSecondary, setRivalBluffBannerSecondary] = useState<string | null>(null);
+  const lastWompWompIndexRef = useRef(-1);
   const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
   const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
@@ -359,9 +360,11 @@ export default function Game() {
   const currentBluffBannerPrimary = useMemo(() => {
     if (rivalBluffBannerType === 'social') return '🍻 SOCIAL!!! 🍻';
     if (rivalBluffBannerType === 'got-em') return "GOT 'EM!!!";
-    if (rivalBluffBannerType === 'womp-womp') return 'WOMP WOMP';
+    if (rivalBluffBannerType === 'womp-womp') {
+      return rivalBluffBannerSecondary ?? 'WOMP WOMP';
+    }
     return '';
-  }, [rivalBluffBannerType]);
+  }, [rivalBluffBannerSecondary, rivalBluffBannerType]);
 
   const claimOptions = useMemo(
     () => getQuickPlayClaimOptions(lastClaimValue, lastPlayerRoll),
@@ -563,15 +566,8 @@ export default function Game() {
       const pick = options[Math.floor(Math.random() * options.length)];
       setRivalBluffBannerSecondary(pick);
     } else if (type === 'womp-womp') {
-      const options = [
-        'They were telling the truth.',
-        'Clean roll.',
-        'No bluff there.',
-        'Bit too early.',
-        'Solid claim.',
-      ];
-      const pick = options[Math.floor(Math.random() * options.length)];
-      setRivalBluffBannerSecondary(pick);
+      const { text } = getNextWompWompMessage(lastWompWompIndexRef);
+      setRivalBluffBannerSecondary(text);
     } else {
       setRivalBluffBannerSecondary(null);
     }
@@ -862,7 +858,9 @@ export default function Game() {
                     {currentBluffBannerPrimary}
                   </Text>
                 )}
-                {rivalBluffBannerType !== 'social' && !!rivalBluffBannerSecondary && (
+                {rivalBluffBannerType !== 'social' &&
+                  rivalBluffBannerType !== 'womp-womp' &&
+                  !!rivalBluffBannerSecondary && (
                   <Text style={styles.gotEmBannerTextSecondary}>
                     {rivalBluffBannerSecondary}
                   </Text>

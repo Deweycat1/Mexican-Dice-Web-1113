@@ -8,36 +8,37 @@ type Props = {
 
 export function RulesContent({ containerStyle, textColor = '#E6FFE6' }: Props) {
   const colorStyle = { color: textColor };
+  const generalGameplay = [
+    {
+      text: 'Players take turns rolling two dice with the goal to match or beat the previous roll.',
+    },
+    {
+      text: 'Each roll is read as a two-digit number, with the higher die always listed first.',
+    },
+    { text: 'Doubles always outrank mixed rolls. (11 > 65)' },
+    {
+      text: 'After rolling, the active player must either:',
+      subBullets: ['Claim the value actually rolled, or', 'Bluff by claiming a higher value.'],
+    },
+    {
+      text: 'The next player must choose to:',
+      subBullets: ['Beat the current claim, or', 'Call the bluff.'],
+    },
+  ];
+
   return (
     <View style={[styles.container, containerStyle]}>
       <Text style={[styles.heading, colorStyle]}>General Gameplay</Text>
-      <Text style={[styles.bullet, colorStyle]}>
-        • Roll two dice and read them as a two-digit number, with the higher die first
-      </Text>
-      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
-        • Example: rolling a 3 and a 5 is read as 53
-      </Text>
-      <Text style={[styles.bullet, colorStyle]}>
-        • Doubles beat mixed (11 &gt; 65)
-      </Text>
-      <Text style={[styles.bullet, colorStyle]}>
-        • After rolling, you must make a claim
-      </Text>
-      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
-        • Claim the value you actually rolled, or
-      </Text>
-      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
-        • Bluff by claiming a higher value
-      </Text>
-      <Text style={[styles.bullet, colorStyle]}>
-        • The next player must choose to:
-      </Text>
-      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
-        • Beat your claim, or
-      </Text>
-      <Text style={[styles.bullet, styles.subBullet, colorStyle]}>
-        • Call your bluff
-      </Text>
+      {generalGameplay.map((item) => (
+        <View key={item.text}>
+          <Text style={[styles.bullet, colorStyle]}>• {item.text}</Text>
+          {item.subBullets?.map((subBullet) => (
+            <Text key={subBullet} style={[styles.bullet, styles.subBullet, colorStyle]}>
+              ◦ {subBullet}
+            </Text>
+          ))}
+        </View>
+      ))}
 
       <Text style={[styles.heading, colorStyle]}>Special Rolls</Text>
 
