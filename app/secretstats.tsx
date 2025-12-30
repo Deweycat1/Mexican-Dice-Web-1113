@@ -1,17 +1,17 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
-import { supabase } from '../src/lib/supabase';
 import { getCurrentUser } from '../src/lib/auth';
+import { supabase } from '../src/lib/supabase';
 import { flushPendingCarryStats } from '../src/state/useGameStore';
 
 interface SurvivalBestData {
@@ -489,7 +489,6 @@ export default function SecretStatsScreen() {
 
         <View style={styles.card}>
           <View style={styles.cardTitleRow}>
-            <FlameEmojiIcon size={20} style={styles.inlineFlameIcon} />
             <Text style={[styles.cardTitle, styles.cardTitleSegment]}>Inferno</Text>
             <FlameEmojiIcon size={20} style={styles.inlineFlameIcon} />
             <Text style={[styles.cardTitle, styles.cardTitleSegment]}>Mode</Text>
