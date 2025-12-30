@@ -11,13 +11,8 @@ export default function StatisticsMenuScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <Text style={styles.title}>Statistics</Text>
+        <Text style={styles.title}>Performance</Text>
         <View style={styles.buttonGroup}>
-          <StyledButton
-            label="Badges"
-            onPress={() => router.push('/badges')}
-            style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonGreen]}
-          />
           <StyledButton
             label="Rank & Leaderboard"
             onPress={() => router.push('/rank')}

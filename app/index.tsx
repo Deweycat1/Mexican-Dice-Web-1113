@@ -65,7 +65,7 @@ export default function HomeScreen() {
               <Text style={styles.buttonText}>Online Multiplayer</Text>
             </Link>
             <Link href="/statistics" style={styles.buttonStats}>
-              <Text style={styles.buttonText}>Stats &amp; Badges</Text>
+              <Text style={styles.buttonText}>Rank and Stats</Text>
             </Link>
 
             <Link href="/rules" style={styles.buttonRules}>

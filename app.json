@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.infernodice.infernodice",
-      "versionCode": 124,
+      "versionCode": 126,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
