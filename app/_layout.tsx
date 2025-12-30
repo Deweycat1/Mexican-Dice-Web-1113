@@ -10,14 +10,20 @@ import { startRollingMusic, stopRollingMusic } from '../src/lib/globalMusic';
 import { ensureUserProfile } from '../src/lib/auth';
 import { initPushNotifications } from '../src/lib/pushNotifications';
 import { useSettingsStore } from '../src/state/useSettingsStore';
+import { createAnalyticsId, setAnalyticsContext } from '../src/analytics/logEvent';
 
 const ANDROID_TURN_CHANNEL_ID = 'turns';
+const ANALYTICS_SESSION_ID = createAnalyticsId();
 
 export default function RootLayout() {
   const pathname = usePathname();
   const router = useRouter();
   const didHandleInitialNotification = useRef(false);
   const musicEnabled = useSettingsStore((state) => state.musicEnabled);
+
+  useEffect(() => {
+    setAnalyticsContext({ sessionId: ANALYTICS_SESSION_ID });
+  }, []);
 
   // Ensure web root/background fills viewport and uses the dark gunmetal base
   useEffect(() => {
@@ -63,6 +69,7 @@ export default function RootLayout() {
     (async () => {
       try {
         const profile = await ensureUserProfile();
+        setAnalyticsContext({ userId: profile.id });
 
         // Push registration should:
         // - Run once per native app session

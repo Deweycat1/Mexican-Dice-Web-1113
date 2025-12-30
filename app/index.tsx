@@ -7,6 +7,7 @@ import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';
 import QuickPlayButton from '../assets/images/QuickPlay.png';
 import { InfernoModeButton } from '../src/components/InfernoModeButton';
 import { useSettingsStore } from '../src/state/useSettingsStore';
+import { logEvent } from '../src/analytics/logEvent';
 
 export default function HomeScreen() {
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
@@ -45,6 +46,10 @@ export default function HomeScreen() {
     [setSfxEnabled]
   );
 
+  const handleModeSelect = useCallback((mode: 'normal' | 'survival' | 'online') => {
+    logEvent({ eventType: 'mode_selected', mode, metadata: { source: 'menu' } });
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -53,15 +58,15 @@ export default function HomeScreen() {
             <Image source={MexicanDiceLogo} style={styles.logo} />
 
             <Link href="/game" asChild>
-              <Pressable style={styles.quickPlayWrapper}>
+              <Pressable style={styles.quickPlayWrapper} onPress={() => handleModeSelect('normal')}>
                 <Image source={QuickPlayButton} style={styles.quickPlayImage} resizeMode="contain" />
               </Pressable>
             </Link>
 
             <Link href="/survival" asChild>
-              <InfernoModeButton />
+              <InfernoModeButton onPress={() => handleModeSelect('survival')} />
             </Link>
-            <Link href="/online" style={styles.button}>
+            <Link href="/online" style={styles.button} onPress={() => handleModeSelect('online')}>
               <Text style={styles.buttonText}>Online Multiplayer</Text>
             </Link>
             <Link href="/statistics" style={styles.buttonStats}>

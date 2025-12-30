@@ -44,6 +44,7 @@ import { updateRankFromGameResult } from '../stats/rank';
 import { supabase } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { didCarry } from '../utils/carry';
+import { createAnalyticsId, logEvent } from '../analytics/logEvent';
 
 export type Turn = 'player' | 'cpu';
 export type LastAction = 'normal' | 'reverseVsMexican';
@@ -329,11 +330,13 @@ export type Store = {
   // Previous roll used for carry-rate tracking
   carryPrevRoll: DicePair | null;
   carryLastRecordedKey: string | null;
+  currentMatchId: string | null;
 
   turnLock: boolean;
   isBusy: boolean;
   gameOver: Turn | null;
 
+  startQuickPlayMatch(): void;
   newGame(): void;
 
   playerRoll(): void;
@@ -398,6 +401,13 @@ const isTestEnv = process.env.NODE_ENV === 'test';
 export const useGameStore = create<Store>((set, get) => {
   const beginTurnLock = () => set({ turnLock: true });
   const endTurnLock = () => set({ turnLock: false });
+  const startQuickPlayMatch = () => {
+    const state = get();
+    if (state.currentMatchId) return;
+    const matchId = createAnalyticsId();
+    set({ currentMatchId: matchId });
+    logEvent({ eventType: 'match_started', mode: 'normal', matchId });
+  };
 
   const rollDice = (): { values: [number, number]; normalized: number } => {
     const rollDie = () => Math.floor(Math.random() * 6) + 1;
@@ -694,6 +704,12 @@ export const useGameStore = create<Store>((set, get) => {
     } else {
       // Quick Play mode - record win if game ends
       if (finished) {
+        logEvent({
+          eventType: 'match_ended',
+          mode: 'normal',
+          matchId: state.currentMatchId ?? null,
+          metadata: { reason: 'game_over', winner: other(who) },
+        });
         const winner = other(who); // The winner is the opposite of who lost
         const loser = who; // who lost the point
         void recordWin(winner);
@@ -780,6 +796,12 @@ export const useGameStore = create<Store>((set, get) => {
           // player lost -> mark run over but keep the last streak value visible until restart
           const prevStreak = s.currentStreak || 0;
           const newBest = Math.max(s.bestStreak || 0, prevStreak);
+          logEvent({
+            eventType: 'match_ended',
+            mode: 'survival',
+            matchId: s.currentMatchId ?? null,
+            metadata: { reason: 'streak_ended', streak: prevStreak },
+          });
           void saveBestStreak(newBest);
           set({ bestStreak: newBest, isSurvivalOver: true });
           // Award global record breaker badge only when this run beats the known global best
@@ -886,11 +908,13 @@ export const useGameStore = create<Store>((set, get) => {
 
   // Survival controls
   const startSurvival = () => {
+    const matchId = createAnalyticsId();
     // Reset survival scores and round state when starting a run
     const survivalReset = buildSurvivalChallengeReset();
     set({
       ...survivalReset,
       mode: 'survival',
+      currentMatchId: matchId,
       currentStreak: 0,
       isSurvivalOver: false,
       survivalPlayerScore: STARTING_SCORE,
@@ -912,15 +936,18 @@ export const useGameStore = create<Store>((set, get) => {
       carryPrevRoll: null,
       carryLastRecordedKey: null,
     });
+    logEvent({ eventType: 'match_started', mode: 'survival', matchId });
     void loadBestStreak().then((b) => set({ bestStreak: b || 0 })).catch(() => {});
     // Fetch global best when starting survival mode
     void fetchGlobalBest();
   };
 
   const restartSurvival = () => {
+    const matchId = createAnalyticsId();
     const survivalReset = buildSurvivalChallengeReset();
     set({
       ...survivalReset,
+      currentMatchId: matchId,
       currentStreak: 0,
       isSurvivalOver: false,
       survivalPlayerScore: STARTING_SCORE,
@@ -942,6 +969,7 @@ export const useGameStore = create<Store>((set, get) => {
       carryPrevRoll: null,
       carryLastRecordedKey: null,
     });
+    logEvent({ eventType: 'match_started', mode: 'survival', matchId });
   };
 
   const endSurvival = (reason: string) => {
@@ -1062,6 +1090,18 @@ export const useGameStore = create<Store>((set, get) => {
 
     // Track bluff call behavior
     const callerWasCorrect = liar; // If the defender was lying, the caller was correct
+    logEvent({
+      eventType: 'bluff_called',
+      mode: state.mode === 'survival' ? 'survival' : 'normal',
+      matchId: state.currentMatchId ?? null,
+      metadata: {
+        caller: caller === 'player' ? 'player' : 'cpu',
+        successful: callerWasCorrect,
+        claimed: lastClaim,
+        actual: prevActual ?? null,
+        consequence: liar ? 'liar_lost' : 'caller_lost',
+      },
+    });
     void postBehaviorEvent({
       type: 'bluff-call',
       caller: caller === 'player' ? 'player' : 'rival',
@@ -1423,10 +1463,10 @@ export const useGameStore = create<Store>((set, get) => {
     }
   };
 
-  return {
-    playerScore: STARTING_SCORE,
-    cpuScore: STARTING_SCORE,
-    turn: 'player',
+    return {
+      playerScore: STARTING_SCORE,
+      cpuScore: STARTING_SCORE,
+      turn: 'player',
 
       // last 3 messages shown in the black narration box
       history: [],
@@ -1442,11 +1482,12 @@ export const useGameStore = create<Store>((set, get) => {
     lastAction: 'normal',
     lastPlayerRoll: null,
     lastCpuRoll: null,
-    carryPrevRoll: null,
-    carryLastRecordedKey: null,
+      carryPrevRoll: null,
+      carryLastRecordedKey: null,
+      currentMatchId: null,
 
-    isRolling: false,
-    mustBluff: false,
+      isRolling: false,
+      mustBluff: false,
     message: `Welcome to Inferno ${MEXICAN_ICON} Dice!`,
     survivalMessage: 'Survive as long as you can in Inferno Mode.',
     pendingInfernoDelay: false,
@@ -1469,30 +1510,33 @@ export const useGameStore = create<Store>((set, get) => {
     // survival score bucket (kept separate from normal game scores)
     survivalPlayerScore: STARTING_SCORE,
     survivalCpuScore: STARTING_SCORE,
-    // Survival defaults
-    mode: 'normal',
-    currentStreak: 0,
-    bestStreak: 0,
-    globalBest: 0,
-    isSurvivalOver: false,
+      // Survival defaults
+      mode: 'normal',
+      currentStreak: 0,
+      bestStreak: 0,
+      globalBest: 0,
+      isSurvivalOver: false,
 
-    newGame: () => {
-      roundIndexCounter = 0;
-      pendingCpuRaise = null;
-      set({
-        playerScore: STARTING_SCORE,
-        cpuScore: STARTING_SCORE,
+      startQuickPlayMatch,
+      newGame: () => {
+        const matchId = createAnalyticsId();
+        roundIndexCounter = 0;
+        pendingCpuRaise = null;
+        set({
+          playerScore: STARTING_SCORE,
+          cpuScore: STARTING_SCORE,
         turn: 'player',
         lastClaim: null,
         baselineClaim: null,  // Reset baseline
         lastAction: 'normal',
         lastPlayerRoll: null,
         lastCpuRoll: null,
-        carryPrevRoll: null,
-        carryLastRecordedKey: null,
-        isRolling: false,
-        mustBluff: false,
-        message: 'New game. Good luck!',
+          carryPrevRoll: null,
+          carryLastRecordedKey: null,
+          currentMatchId: matchId,
+          isRolling: false,
+          mustBluff: false,
+          message: 'New game. Good luck!',
         history: [],
         claims: [],
         playerTurnStartTime: null,
@@ -1508,10 +1552,11 @@ export const useGameStore = create<Store>((set, get) => {
         cpuSocialDice: null,
         cpuSocialRevealNonce: 0,
         socialBannerNonce: 0,
-        playerBluffEventsThisGame: 0,
-        playerSuccessfulBluffsThisGame: 0,
-      });
-    },
+          playerBluffEventsThisGame: 0,
+          playerSuccessfulBluffsThisGame: 0,
+        });
+        logEvent({ eventType: 'match_started', mode: 'normal', matchId });
+      },
 
     playerRoll: () => {
       const state = get();

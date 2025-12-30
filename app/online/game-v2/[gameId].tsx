@@ -51,6 +51,7 @@ import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
 import { ensureUserProfile, getCurrentUser } from '../../../src/lib/auth';
 import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
 import { supabase } from '../../../src/lib/supabase';
+import { logEvent } from '../../../src/analytics/logEvent';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import { awardBadge } from '../../../src/stats/badges';
 import { updateRankFromGameResult } from '../../../src/stats/rank';
@@ -290,6 +291,8 @@ export default function OnlineGameV2Screen() {
   const historyInitializedRef = useRef(false);
   const localHandledBluffBannerRef = useRef(false);
   const lastWompWompIndexRef = useRef(-1);
+  const matchStartLoggedRef = useRef<string | null>(null);
+  const matchEndLoggedRef = useRef<string | null>(null);
 
   const showBluffResultBanner = useCallback(
     (liar: boolean, iAmCaller: boolean) => {
@@ -547,9 +550,26 @@ export default function OnlineGameV2Screen() {
   }, [normalizedGameId, userId, game?.current_player_id, isMyTurn]);
 
   useEffect(() => {
+    if (!normalizedGameId || !game || !myRole) return;
+    if (game.status === 'in_progress' && matchStartLoggedRef.current !== normalizedGameId) {
+      matchStartLoggedRef.current = normalizedGameId;
+      logEvent({ eventType: 'match_started', mode: 'online', onlineGameId: normalizedGameId });
+    }
+  }, [normalizedGameId, game, myRole]);
+
+  useEffect(() => {
     if (!game || !myRole) return;
     const prev = prevStatusRef.current;
     if (prev !== 'finished' && game.status === 'finished') {
+      if (normalizedGameId && matchEndLoggedRef.current !== normalizedGameId) {
+        matchEndLoggedRef.current = normalizedGameId;
+        logEvent({
+          eventType: 'match_ended',
+          mode: 'online',
+          onlineGameId: normalizedGameId,
+          metadata: { reason: 'game_over' },
+        });
+      }
       // Online games also count toward personal stats and day-based badges
       void (async () => {
         try {
@@ -1115,6 +1135,17 @@ export default function OnlineGameV2Screen() {
     );
     const liar = outcome === +1;
     const iAmCaller = true;
+    logEvent({
+      eventType: 'bluff_called',
+      mode: 'online',
+      onlineGameId: normalizedGameId ?? null,
+      metadata: {
+        caller: myRole,
+        successful: liar,
+        defenderRole: defendingRole,
+        liarRole: liar ? defendingRole : null,
+      },
+    });
     const loserRole = liar ? defendingRole : myRole;
     if (liar) {
       void playBluffCallSuccessHaptic(hapticsEnabled);
@@ -1196,6 +1227,7 @@ export default function OnlineGameV2Screen() {
     handleUpdate,
     hostName,
     guestName,
+    normalizedGameId,
     userId,
     hapticsEnabled,
     showBluffResultBanner,

@@ -27,6 +27,7 @@ import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { InlineFlameText } from '../src/components/InlineFlameText';
 import RulesContent from '../src/components/RulesContent';
 import { MEXICAN_ICON, getNextWompWompMessage } from '../src/lib/constants';
+import { logEvent } from '../src/analytics/logEvent';
 import {
   compareClaims,
   isAlwaysClaimable,
@@ -160,6 +161,7 @@ export default function Game() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const tutorialFirstSeenRef = useRef(false);
 
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
@@ -218,6 +220,7 @@ export default function Game() {
     lastBluffDefenderTruth,
     bluffResultNonce,
     mode,
+    startQuickPlayMatch,
     exitSurvivalToNormal,
   } = useGameStore();
 
@@ -229,7 +232,8 @@ export default function Game() {
   useFocusEffect(
     useCallback(() => {
       exitSurvivalToNormal();
-    }, [exitSurvivalToNormal])
+      startQuickPlayMatch();
+    }, [exitSurvivalToNormal, startQuickPlayMatch])
   );
 
   useEffect(() => {
@@ -237,6 +241,7 @@ export default function Game() {
 
     const hydrateTutorial = async () => {
       if (FORCE_SHOW_TUTORIAL) {
+        tutorialFirstSeenRef.current = false;
         if (isMounted) setShowTutorial(true);
         return;
       }
@@ -244,10 +249,14 @@ export default function Game() {
       try {
         const stored = await AsyncStorage.getItem(TUTORIAL_SEEN_KEY);
         if (!stored && isMounted) {
+          tutorialFirstSeenRef.current = true;
           setShowTutorial(true);
+        } else {
+          tutorialFirstSeenRef.current = false;
         }
       } catch {
         if (isMounted) {
+          tutorialFirstSeenRef.current = true;
           setShowTutorial(true);
         }
       }
@@ -790,6 +799,10 @@ export default function Game() {
 
   const handleTutorialDone = useCallback(() => {
     setShowTutorial(false);
+    if (tutorialFirstSeenRef.current) {
+      tutorialFirstSeenRef.current = false;
+      logEvent({ eventType: 'tutorial_completed', mode: 'normal' });
+    }
     const persist = async () => {
       try {
         await AsyncStorage.setItem(TUTORIAL_SEEN_KEY, '1');
