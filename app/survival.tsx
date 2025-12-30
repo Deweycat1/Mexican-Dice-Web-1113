@@ -2085,6 +2085,17 @@ export default function Survival() {
                 <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
                   <SurvivalRulesContent />
                 </ScrollView>
+                <View style={styles.rulesActions}>
+                  <StyledButton
+                    label="View Inferno Tutorial"
+                    variant="primary"
+                    onPress={() => {
+                      setRulesOpen(false);
+                      setIntroVisible(true);
+                    }}
+                    style={styles.rulesTutorialButton}
+                  />
+                </View>
               </View>
             </View>
           </Modal>
@@ -2779,6 +2790,9 @@ const styles = StyleSheet.create({
     borderColor: '#30363D',
     borderWidth: 2,
   },
+  rulesActions: {
+    marginTop: 16,
+  },
   rulesHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2800,6 +2814,11 @@ const styles = StyleSheet.create({
   },
   rulesScroll: {
     maxHeight: '100%',
+  },
+  rulesTutorialButton: {
+    backgroundColor: '#FE9902',
+    borderColor: '#FFEA70',
+    borderWidth: 2,
   },
   settingsRow: {
     flexDirection: 'row',

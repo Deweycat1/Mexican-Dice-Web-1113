@@ -1,32 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { FlameEmojiIcon } from './FlameEmojiIcon';
-
 export default function SurvivalRulesContent() {
   return (
     <View style={styles.container}>
-      <View style={[styles.inlineRow, styles.titleRow]}>
-        <Text style={[styles.title, styles.inlineTextSegment]}>Inferno</Text>
-        <FlameEmojiIcon size={22} style={styles.inlineFlameIcon} />
-        <Text style={[styles.title, styles.inlineTextSegment]}>Mode Rules</Text>
-      </View>
-      <Text style={styles.subtitle}>(A streamlined, single player twist on Inferno Dice)</Text>
-
-      <View style={[styles.inlineRow, styles.headingRow]}>
-        <Text style={[styles.heading, styles.inlineTextSegment]}>How Inferno</Text>
-        <FlameEmojiIcon size={18} style={styles.inlineFlameIcon} />
-        <Text style={[styles.heading, styles.inlineTextSegment]}>Mode Works</Text>
-      </View>
-      <Text style={styles.paragraph}>You face off against Infernoman in an endless series of rounds.</Text>
-      <Text style={styles.paragraph}>Each time you win a round, your streak increases.</Text>
-      <Text style={styles.paragraph}>If you lose a round, your streak ends immediately.</Text>
-      <View style={styles.inlineRow}>
-        <Text style={[styles.paragraph, styles.inlineTextSegment]}>There are no points or scorekeeper dice in Inferno</Text>
-        <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
-        <Text style={[styles.paragraph, styles.inlineTextSegment]}>Mode.</Text>
-      </View>
-      <Text style={styles.paragraph}>Your only objective is simple: survive as long as possible.</Text>
+      <Text style={[styles.heading, styles.headingRow]}>How Inferno Mode Works</Text>
+      <Text style={styles.bullet}>• You face off against Infernoman in an endless series of rounds.</Text>
+      <Text style={styles.bullet}>• Each time you win a round, your streak increases.</Text>
+      <Text style={styles.bullet}>• If you lose a round, your streak ends immediately.</Text>
+      <Text style={styles.bullet}>• There are no points or scorekeeper dice in Inferno Mode.</Text>
+      <Text style={styles.bullet}>• Your only objective is simple: survive as long as possible.</Text>
 
       <Text style={styles.heading}>Rolling and Claims</Text>
       <Text style={styles.paragraph}>
@@ -63,7 +46,7 @@ export default function SurvivalRulesContent() {
 
       <Text style={styles.heading}>Inferno Letters</Text>
       <Text style={styles.paragraph}>
-        Inferno Letters: Roll a real 21 (Mexican) to sometimes earn letters that light up INFERNO.
+        Inferno Letters: Roll a real 21 (Inferno) to sometimes earn letters that light up INFERNO.
         Collect all 7 for a badge. Stored on this device.
       </Text>
 
@@ -98,11 +81,9 @@ export default function SurvivalRulesContent() {
       <Text style={styles.paragraph}>Every win increases your streak except 41 Social resets, which give no streak.</Text>
 
       <Text style={styles.heading}>Losing a Round</Text>
-      <View style={[styles.inlineRow, styles.paragraphSpacing]}>
-        <Text style={[styles.paragraph, styles.inlineTextSegment]}>Your Inferno</Text>
-        <FlameEmojiIcon size={16} style={styles.inlineFlameIcon} />
-        <Text style={[styles.paragraph, styles.inlineTextSegment]}>Mode run ends immediately if:</Text>
-      </View>
+      <Text style={[styles.paragraph, styles.paragraphSpacing]}>
+        Your Inferno Mode run ends immediately if:
+      </Text>
       <Text style={styles.bullet}>• You fail to match or beat the active claim</Text>
       <Text style={styles.bullet}>• You are caught bluffing</Text>
       <Text style={styles.bullet}>• You incorrectly call a bluff</Text>
@@ -121,17 +102,6 @@ export default function SurvivalRulesContent() {
 const styles = StyleSheet.create({
   container: {
     rowGap: 6,
-  },
-  inlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  inlineTextSegment: {
-    marginBottom: 0,
-  },
-  inlineFlameIcon: {
-    marginHorizontal: 4,
   },
   titleRow: {
     marginBottom: 4,
