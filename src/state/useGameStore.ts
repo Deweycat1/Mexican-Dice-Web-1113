@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Platform } from 'react-native';
 
 import LearningAIDiceOpponent from '../ai/LearningAIOpponent';
 import { loadAiState, saveAiState } from '../ai/persistence';
@@ -70,6 +71,200 @@ let pendingCpuRaise: { claim: number; roll: DicePair; normalized: number } | nul
 let surv_5_8_totalWouldCall = 0;
 let surv_5_8_keptCall = 0;
 let surv_5_8_overrodeToRaise = 0;
+
+const PENDING_CARRY_KEY = 'inferno-dice:pending-carry-v1';
+
+type PendingCarryStats = { attempts: number; hits: number };
+
+type StorageAPI = {
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
+};
+
+const memoryStorage = new Map<string, string>();
+
+const makeMemoryStorage = (): StorageAPI => ({
+  getItem: async (key) => memoryStorage.get(key) ?? null,
+  setItem: async (key, value) => {
+    memoryStorage.set(key, value);
+  },
+  removeItem: async (key) => {
+    memoryStorage.delete(key);
+  },
+});
+
+const getWebStorage = (): StorageAPI => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return makeMemoryStorage();
+  }
+
+  return {
+    getItem: async (key) => {
+      try {
+        return window.localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    },
+    setItem: async (key, value) => {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {
+        // ignore write errors on web storage
+      }
+    },
+    removeItem: async (key) => {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        // ignore remove errors on web storage
+      }
+    },
+  };
+};
+
+const getNativeStorage = (): StorageAPI => {
+  try {
+    // Lazy require to avoid web bundling issues.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const mod = require('@react-native-async-storage/async-storage');
+    const asyncStorage = mod.default ?? mod;
+    return {
+      getItem: asyncStorage.getItem.bind(asyncStorage),
+      setItem: asyncStorage.setItem.bind(asyncStorage),
+      removeItem: asyncStorage.removeItem.bind(asyncStorage),
+    };
+  } catch {
+    return makeMemoryStorage();
+  }
+};
+
+const carryStorage: StorageAPI = Platform.OS === 'web' ? getWebStorage() : getNativeStorage();
+
+let carryOp: Promise<unknown> = Promise.resolve();
+
+const runCarryOp = async <T,>(fn: () => Promise<T>): Promise<T> => {
+  const next = carryOp.then(fn, fn);
+  carryOp = next.catch(() => undefined);
+  return next;
+};
+
+const logCarryDev = (...args: unknown[]) => {
+  if (__DEV__) {
+    console.log('[carry-stats]', ...args);
+  }
+};
+
+const logCarryDevError = (...args: unknown[]) => {
+  if (__DEV__) {
+    console.warn('[carry-stats]', ...args);
+  }
+};
+
+const readPendingCarryStats = async (): Promise<PendingCarryStats> => {
+  try {
+    const raw = await carryStorage.getItem(PENDING_CARRY_KEY);
+    if (!raw) return { attempts: 0, hits: 0 };
+    const parsed = JSON.parse(raw) as Partial<PendingCarryStats>;
+    const attempts = Number(parsed.attempts ?? 0);
+    const hits = Number(parsed.hits ?? 0);
+    return {
+      attempts: Number.isFinite(attempts) ? attempts : 0,
+      hits: Number.isFinite(hits) ? hits : 0,
+    };
+  } catch (error) {
+    logCarryDevError('Failed to read pending carry stats:', error);
+    return { attempts: 0, hits: 0 };
+  }
+};
+
+const writePendingCarryStats = async (value: PendingCarryStats) => {
+  try {
+    if (value.attempts <= 0 && value.hits <= 0) {
+      await carryStorage.removeItem(PENDING_CARRY_KEY);
+      return;
+    }
+    await carryStorage.setItem(PENDING_CARRY_KEY, JSON.stringify(value));
+  } catch (error) {
+    logCarryDevError('Failed to persist pending carry stats:', error);
+  }
+};
+
+const enqueuePendingCarryStats = async (hit: boolean) => {
+  const pending = await readPendingCarryStats();
+  const next = {
+    attempts: pending.attempts + 1,
+    hits: pending.hits + (hit ? 1 : 0),
+  };
+  await writePendingCarryStats(next);
+};
+
+const getAuthedUserId = async (): Promise<string | null> => {
+  try {
+    const user = await getCurrentUser();
+    return user?.id ?? null;
+  } catch (error) {
+    logCarryDevError('Failed to resolve auth for carry stats:', error);
+    return null;
+  }
+};
+
+const updateCarryStatsWithDelta = async (
+  userId: string,
+  attemptsDelta: number,
+  hitsDelta: number
+) => {
+  try {
+    const { data, error: readError } = await supabase
+      .from('secret_stats')
+      .select('carry_hits, carry_attempts')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (readError) {
+      logCarryDevError('Failed to read carry stats:', readError);
+      return false;
+    }
+
+    const currentHits = data?.carry_hits ?? 0;
+    const currentAttempts = data?.carry_attempts ?? 0;
+    const nextHits = currentHits + hitsDelta;
+    const nextAttempts = currentAttempts + attemptsDelta;
+
+    const { error: writeError } = await supabase
+      .from('secret_stats')
+      .upsert(
+        { user_id: userId, carry_hits: nextHits, carry_attempts: nextAttempts },
+        { onConflict: 'user_id' }
+      );
+
+    if (writeError) {
+      logCarryDevError('Failed to update carry stats:', writeError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    logCarryDevError('Failed to update carry stats:', error);
+    return false;
+  }
+};
+
+export const flushPendingCarryStats = async () => {
+  if (isTestEnv) return;
+  await runCarryOp(async () => {
+    const userId = await getAuthedUserId();
+    if (!userId) return;
+    const pending = await readPendingCarryStats();
+    if (pending.attempts <= 0 && pending.hits <= 0) return;
+    logCarryDev('Flushing pending carry stats:', pending);
+    const ok = await updateCarryStatsWithDelta(userId, pending.attempts, pending.hits);
+    if (ok) {
+      await writePendingCarryStats({ attempts: 0, hits: 0 });
+    }
+  });
+};
 
 const persistAiState = () => {
   void saveAiState(aiOpponent.state());
@@ -379,39 +574,24 @@ export const useGameStore = create<Store>((set, get) => {
   // TODO: validate carry stats on the server if this becomes user-facing.
   const recordCarryStat = async (hit: boolean) => {
     if (isTestEnv) return;
-    try {
-      const user = await getCurrentUser();
-      if (!user) return;
-
-      const { data, error: readError } = await supabase
-        .from('secret_stats')
-        .select('carry_hits, carry_attempts')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (readError) {
-        console.error('Failed to read carry stats:', readError);
+    await runCarryOp(async () => {
+      const userId = await getAuthedUserId();
+      if (!userId) {
+        await enqueuePendingCarryStats(hit);
         return;
       }
 
-      const currentHits = data?.carry_hits ?? 0;
-      const currentAttempts = data?.carry_attempts ?? 0;
-      const nextHits = currentHits + (hit ? 1 : 0);
-      const nextAttempts = currentAttempts + 1;
+      const pending = await readPendingCarryStats();
+      const attemptsDelta = pending.attempts + 1;
+      const hitsDelta = pending.hits + (hit ? 1 : 0);
+      const ok = await updateCarryStatsWithDelta(userId, attemptsDelta, hitsDelta);
 
-      const { error: writeError } = await supabase
-        .from('secret_stats')
-        .upsert(
-          { user_id: user.id, carry_hits: nextHits, carry_attempts: nextAttempts },
-          { onConflict: 'user_id' }
-        );
-
-      if (writeError) {
-        console.error('Failed to update carry stats:', writeError);
+      if (ok) {
+        await writePendingCarryStats({ attempts: 0, hits: 0 });
+      } else {
+        await writePendingCarryStats({ attempts: attemptsDelta, hits: hitsDelta });
       }
-    } catch (error) {
-      console.error('Failed to update carry stats:', error);
-    }
+    });
   };
 
   const pushSurvivalClaim = (who: Turn, claim: number, actual: number | null | undefined) => {

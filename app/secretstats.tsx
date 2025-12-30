@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Pressable,
@@ -12,6 +12,7 @@ import {
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { supabase } from '../src/lib/supabase';
 import { getCurrentUser } from '../src/lib/auth';
+import { flushPendingCarryStats } from '../src/state/useGameStore';
 
 interface SurvivalBestData {
   streak: number;
@@ -102,139 +103,183 @@ export default function SecretStatsScreen() {
   const [isResetting, setIsResetting] = useState<boolean>(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
 
-  const resolveBaseUrl = () => (typeof window !== 'undefined' ? window.location.origin : '');
+  const resolveBaseUrl = useCallback(
+    () => (typeof window !== 'undefined' ? window.location.origin : ''),
+    []
+  );
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setIsLoading(true);
-      setError(null);
+  const fetchStats = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        const baseUrl = resolveBaseUrl();
-        
-        // Fetch all relevant APIs
-        const [
-          survivalBestRes,
-          quickPlayBestRes,
-          winsRes,
-          behaviorRes,
-          metaRes,
-          survivalOver10Res,
-          survivalAverageRes,
-        ] = await Promise.all([
-          fetch(`${baseUrl}/api/survival-best`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-          fetch(`${baseUrl}/api/quickplay-best`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-          fetch(`${baseUrl}/api/win-stats`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-          fetch(`${baseUrl}/api/behavior-stats`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-          fetch(`${baseUrl}/api/meta-stats`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-          fetch(`${baseUrl}/api/survival-over10`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-          fetch(`${baseUrl}/api/survival-average-streak`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-        ]);
+    try {
+      const baseUrl = resolveBaseUrl();
+      
+      // Fetch all relevant APIs
+      const [
+        survivalBestRes,
+        quickPlayBestRes,
+        winsRes,
+        behaviorRes,
+        metaRes,
+        survivalOver10Res,
+        survivalAverageRes,
+      ] = await Promise.all([
+        fetch(`${baseUrl}/api/survival-best`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        fetch(`${baseUrl}/api/quickplay-best`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        fetch(`${baseUrl}/api/win-stats`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        fetch(`${baseUrl}/api/behavior-stats`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        fetch(`${baseUrl}/api/meta-stats`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        fetch(`${baseUrl}/api/survival-over10`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+        fetch(`${baseUrl}/api/survival-average-streak`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ]);
 
-        if (!survivalBestRes.ok) throw new Error('Failed to fetch survival best');
-        if (!quickPlayBestRes.ok) throw new Error('Failed to fetch quick play best');
-        if (!winsRes.ok) throw new Error('Failed to fetch win stats');
+      if (!survivalBestRes.ok) throw new Error('Failed to fetch survival best');
+      if (!quickPlayBestRes.ok) throw new Error('Failed to fetch quick play best');
+      if (!winsRes.ok) throw new Error('Failed to fetch win stats');
 
-        const survivalBestData: SurvivalBestData = await survivalBestRes.json();
-        const quickPlayBestData: QuickPlayBestData = await quickPlayBestRes.json();
-        const winsData: WinStatsData = await winsRes.json();
-        if (survivalAverageRes.ok) {
-          try {
-            const survivalAverageData: SurvivalAverageData = await survivalAverageRes.json();
-            setSurvivalAverage(survivalAverageData);
-          } catch {
+      const survivalBestData: SurvivalBestData = await survivalBestRes.json();
+      const quickPlayBestData: QuickPlayBestData = await quickPlayBestRes.json();
+      const winsData: WinStatsData = await winsRes.json();
+      if (survivalAverageRes.ok) {
+        try {
+          const survivalAverageData: SurvivalAverageData = await survivalAverageRes.json();
+          setSurvivalAverage(survivalAverageData);
+        } catch {
+          if (__DEV__) {
             console.log('Survival average stats not available yet');
           }
         }
-        
-        // Parse behavior and meta stats (with error handling)
-        try {
-          if (behaviorRes.ok) {
-            const behaviorData: BehaviorStats = await behaviorRes.json();
-            setBehaviorStats(behaviorData);
-          }
-        } catch {
+      }
+      
+      // Parse behavior and meta stats (with error handling)
+      try {
+        if (behaviorRes.ok) {
+          const behaviorData: BehaviorStats = await behaviorRes.json();
+          setBehaviorStats(behaviorData);
+        }
+      } catch {
+        if (__DEV__) {
           console.log('Behavior stats not available yet');
         }
+      }
 
-        try {
-          if (metaRes.ok) {
-            const metaData: MetaStats = await metaRes.json();
-            setMetaStats(metaData);
-          }
-        } catch {
+      try {
+        if (metaRes.ok) {
+          const metaData: MetaStats = await metaRes.json();
+          setMetaStats(metaData);
+        }
+      } catch {
+        if (__DEV__) {
           console.log('Meta stats not available yet');
         }
+      }
 
-        try {
-          if (survivalOver10Res.ok) {
-            const over10Data = await survivalOver10Res.json();
-            setSurvivalOver10(over10Data);
-          }
-        } catch {
+      try {
+        if (survivalOver10Res.ok) {
+          const over10Data = await survivalOver10Res.json();
+          setSurvivalOver10(over10Data);
+        }
+      } catch {
+        if (__DEV__) {
           console.log('Survival over-10 stats not available yet');
         }
+      }
 
-        // Set survival stats
-        setSurvivalBest(survivalBestData);
-        setQuickPlayBest(quickPlayBestData);
-        // Average streak not available (endpoint removed); keep as null so UI shows fallback
+      // Set survival stats
+      setSurvivalBest(survivalBestData);
+      setQuickPlayBest(quickPlayBestData);
+      // Average streak not available (endpoint removed); keep as null so UI shows fallback
 
-        // Set win stats
-        setPlayerWins(winsData.playerWins ?? 0);
-        setCpuWins(winsData.cpuWins ?? 0);
+      // Set win stats
+      setPlayerWins(winsData.playerWins ?? 0);
+      setCpuWins(winsData.cpuWins ?? 0);
 
-        // Fetch hidden carry stats from Supabase
-        try {
-          const user = await getCurrentUser();
-          if (user) {
-            const { data: carryData, error: carryError } = await supabase
-              .from('secret_stats')
-              .select('carry_hits, carry_attempts')
-              .eq('user_id', user.id)
-              .maybeSingle();
+      // Fetch hidden carry stats from Supabase
+      try {
+        const user = await getCurrentUser();
+        if (user) {
+          const { data: carryData, error: carryError } = await supabase
+            .from('secret_stats')
+            .select('carry_hits, carry_attempts')
+            .eq('user_id', user.id)
+            .maybeSingle();
 
-            if (carryError) {
+          if (carryError) {
+            if (__DEV__) {
               console.log('Carry stats not available yet');
-            } else {
-              setCarryHits(carryData?.carry_hits ?? 0);
-              setCarryAttempts(carryData?.carry_attempts ?? 0);
             }
+          } else {
+            setCarryHits(carryData?.carry_hits ?? 0);
+            setCarryAttempts(carryData?.carry_attempts ?? 0);
           }
-        } catch {
+        }
+      } catch {
+        if (__DEV__) {
           console.log('Carry stats not available yet');
         }
-      } catch (err) {
-        console.error('Error fetching stats:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load statistics');
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load statistics');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [resolveBaseUrl]);
 
+  useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fetchStats]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      void (async () => {
+        await flushPendingCarryStats();
+        if (isActive) {
+          await fetchStats();
+        }
+      })();
+      return () => {
+        isActive = false;
+      };
+    }, [fetchStats])
+  );
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) return;
+      void (async () => {
+        await flushPendingCarryStats();
+        await fetchStats();
+      })();
+    });
+
+    return () => {
+      data?.subscription?.unsubscribe();
+    };
+  }, [fetchStats]);
 
   // Auto-timeout confirmation after 15 seconds
   useEffect(() => {
