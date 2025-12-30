@@ -15,6 +15,7 @@ const PAGES = [
   require('../../assets/images/tutorial/Page5.png'),
   require('../../assets/images/tutorial/Page6.png'),
   require('../../assets/images/tutorial/Page7.png'),
+  require('../../assets/images/tutorial/Page8.png'),
 ] as const;
 
 export function ScreenshotTutorial({ visible, onDone }: Props) {
