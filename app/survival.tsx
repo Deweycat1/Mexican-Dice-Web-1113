@@ -27,6 +27,7 @@ import { InlineFlameText } from '../src/components/InlineFlameText';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
 import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
+import InfernoTutorial from '../src/tutorial/InfernoTutorial';
 import {
   compareClaims,
   isAlwaysClaimable,
@@ -2146,55 +2147,13 @@ export default function Survival() {
             </View>
           </Modal>
 
-          <Modal
+          <InfernoTutorial
             visible={introVisible}
-            transparent
-            animationType="fade"
-            onRequestClose={() => {
+            onDone={() => {
               setIntroVisible(false);
               void setHasSeenSurvivalIntro(true);
             }}
-          >
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={() => {
-                setIntroVisible(false);
-                void setHasSeenSurvivalIntro(true);
-              }}
-            />
-            <View style={styles.modalCenter}>
-              <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Inferno Survival</Text>
-                  <Pressable
-                    onPress={() => {
-                      setIntroVisible(false);
-                      void setHasSeenSurvivalIntro(true);
-                    }}
-                    style={styles.closeButton}
-                  >
-                    <Text style={styles.closeButtonText}>✕</Text>
-                  </Pressable>
-                </View>
-
-                <View style={styles.modalBody}>
-                  <Text style={styles.modalMessage}>
-                    How long can you survive in the inferno without losing a point??
-                  </Text>
-                </View>
-
-                <StyledButton
-                  label="Let’s Find Out"
-                  variant="success"
-                  onPress={() => {
-                    setIntroVisible(false);
-                    void setHasSeenSurvivalIntro(true);
-                  }}
-                  style={[styles.modalActionButton, styles.menuActionButtonSuccess]}
-                />
-              </View>
-            </View>
-          </Modal>
+          />
 
         </SafeAreaView>
       </FeltBackground>
