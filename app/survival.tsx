@@ -1946,7 +1946,7 @@ export default function Survival() {
                   variant="ghost"
                   onPress={() => setSettingsOpen(true)}
                   style={[styles.btn, styles.newGameBtn]}
-                  textStyle={styles.footerButtonTextSmall}
+                  textStyle={styles.settingsFooterButtonTextSmall}
                 />
                 <StyledButton
                   label="Menu"
@@ -2833,6 +2833,9 @@ const styles = StyleSheet.create({
   },
   footerButtonTextSmall: {
     fontSize: 14,
+  },
+  settingsFooterButtonTextSmall: {
+    fontSize: Platform.OS === 'android' ? 12.6 : 14,
   },
   screenOverlay: {
     position: 'absolute',

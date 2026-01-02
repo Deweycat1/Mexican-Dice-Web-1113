@@ -11,7 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.infernodice.infernodice",
-      "buildNumber": "110",
+      "buildNumber": "123",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDisplayName": "InfernoDice"
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.infernodice.infernodice",
-      "versionCode": 126,
+      "versionCode": 133,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
