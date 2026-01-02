@@ -43,6 +43,7 @@ import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
 import ScreenshotTutorial from '../src/tutorial/ScreenshotTutorial';
+import { requestReviewIfEligible } from '../src/utils/reviewPrompt';
 
 const TUTORIAL_SEEN_KEY = 'tutorial_seen_v1';
 // Set to true temporarily if you want to force the tutorial
@@ -555,6 +556,7 @@ export default function Game() {
     if (gameOver === 'player') {
       // Player wins (Rival hit 0 points)
       showEndBanner('win');
+      void requestReviewIfEligible('first_win_game');
     } else if (gameOver === 'cpu') {
       // Player loses (Player hit 0 points)
       showEndBanner('lose');

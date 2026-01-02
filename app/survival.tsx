@@ -43,6 +43,7 @@ import { MEXICAN_ICON, getNextWompWompMessage } from '../src/lib/constants';
 import { awardBadge } from '../src/stats/badges';
 import { useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
+import { requestReviewIfEligible } from '../src/utils/reviewPrompt';
 import {
   INFERNO_SLOTS,
   InfernoSlotId,
@@ -514,6 +515,7 @@ export default function Survival() {
   // subtle flash on streak increment
   const streakFlashAnim = useRef(new Animated.Value(1)).current;
   const prevStreakRef = useRef(currentStreak);
+  const prevStreakForReviewRef = useRef(currentStreak);
 
   const logSurvivalSnapshot = useCallback(
     (tag: string) => {
@@ -585,6 +587,14 @@ export default function Survival() {
     }
     prevStreakRef.current = currentStreak;
   }, [currentStreak, streakFlashAnim]);
+
+  useEffect(() => {
+    const prev = prevStreakForReviewRef.current;
+    if (prev < 10 && currentStreak >= 10) {
+      void requestReviewIfEligible('streak_10_survival');
+    }
+    prevStreakForReviewRef.current = currentStreak;
+  }, [currentStreak]);
 
   // Watchdog to recover from a stalled CPU turn in Survival mode
   useEffect(() => {
