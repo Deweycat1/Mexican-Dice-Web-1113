@@ -40,7 +40,7 @@ import {
   updatePersonalStatsOnGamePlayed,
 } from '../stats/personalStats';
 import { awardBadge, incrementBluffCaught } from '../stats/badges';
-import { updateRankFromGameResult } from '../stats/rank';
+import { getGlobalSurvivalBest, updateRankFromGameResult } from '../stats/rank';
 import { supabase } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { didCarry } from '../utils/carry';
@@ -1018,11 +1018,7 @@ export const useGameStore = create<Store>((set, get) => {
   const fetchGlobalBest = async () => {
     if (isTestEnv) return;
     try {
-      const response = await fetch('/api/survival-best', { method: 'GET' });
-      if (!response.ok) throw new Error('Failed to fetch global best');
-      const data = await response.json();
-      // Handle both old (number) and new (SurvivalBest object) formats
-      const streak = typeof data === 'number' ? data : (data.streak ?? 0);
+      const streak = await getGlobalSurvivalBest(1);
       set({ globalBest: streak });
     } catch (error) {
       console.error('Error fetching global best:', error);
@@ -1033,16 +1029,11 @@ export const useGameStore = create<Store>((set, get) => {
   const submitGlobalBest = async (streak: number) => {
     if (isTestEnv) return;
     try {
-      const response = await fetch('/api/survival-best', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ streak }),
+      await updateRankFromGameResult({
+        mode: 'survival',
+        survivalStreak: streak,
       });
-      if (!response.ok) throw new Error('Failed to submit global best');
-      const data = await response.json();
-      // Handle response with new format (SurvivalBest object)
-      const bestStreak = data.streak ?? 0;
-      set({ globalBest: bestStreak });
+      await fetchGlobalBest();
     } catch (error) {
       console.error('Error submitting global best:', error);
       // Keep current globalBest value on error

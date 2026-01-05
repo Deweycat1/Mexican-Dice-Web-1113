@@ -164,6 +164,11 @@ export async function getTopSurvivalPlayers(
   }
 }
 
+export async function getGlobalSurvivalBest(minBest = 1): Promise<number> {
+  const top = await getTopSurvivalPlayers(1, minBest);
+  return top[0]?.survivalBest ?? 0;
+}
+
 export async function getTopQuickplayWins(
   limit = 5,
   minWins = 1
