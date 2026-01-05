@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LayoutChangeEvent, Platform, StyleSheet, Text, View } from 'react-native';
+import { LayoutChangeEvent, Platform, StyleSheet, View } from 'react-native';
+
+import { AppText as Text } from './AppText';
 import Animated, {
     Easing,
     useAnimatedStyle,

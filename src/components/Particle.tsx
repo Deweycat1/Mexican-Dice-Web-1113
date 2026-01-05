@@ -1,5 +1,7 @@
 import React from 'react';
-import { Animated, Text } from 'react-native';
+import { Animated } from 'react-native';
+
+import { AppText as Text } from './AppText';
 
 type ParticleProps = {
   content: React.ReactNode;

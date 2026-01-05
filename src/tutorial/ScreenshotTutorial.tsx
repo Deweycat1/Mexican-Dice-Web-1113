@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, SafeAreaView, StyleSheet, View } from 'react-native';
+
+import { AppText as Text } from '../components/AppText';
 import { Image } from 'expo-image';
 
 type Props = {

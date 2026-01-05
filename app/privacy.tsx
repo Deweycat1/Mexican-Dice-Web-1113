@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { AppText as Text } from '../src/components/AppText';
 export default function PrivacyPolicyScreen() {
   const router = useRouter();
 

@@ -1,6 +1,8 @@
 // QR landing route for physical packaging (/app).
 import React, { useEffect, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
+
+import { AppText as Text } from '../src/components/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type DetectedPlatform = 'ios' | 'android' | 'other';

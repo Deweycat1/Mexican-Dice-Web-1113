@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
+
+import { AppText as Text } from './AppText';
 import FireworksOverlay from './FireworksOverlay';
 
 type MilestoneMode = '5' | '10' | '15' | 'newLeader' | '20' | '25' | '30' | '35' | '40';

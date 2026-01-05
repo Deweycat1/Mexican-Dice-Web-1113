@@ -5,10 +5,10 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
+import { AppText as Text } from '../src/components/AppText';
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { getCurrentUser } from '../src/lib/auth';
 import { supabase } from '../src/lib/supabase';

@@ -6,10 +6,10 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
+import { AppText as Text } from '../src/components/AppText';
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 interface RollStatsData {
   rolls: Record<string, number>;

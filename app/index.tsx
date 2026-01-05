@@ -1,6 +1,8 @@
 import { Link } from 'expo-router';
 import React, { useCallback, useEffect } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+
+import { AppText as Text } from '../src/components/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';

@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, TextProps } from 'react-native';
+import { StyleSheet, TextProps } from 'react-native';
 
+import { AppText as Text } from './AppText';
 import { MEXICAN_ICON } from '../lib/constants';
 import { FlameEmojiIcon } from './FlameEmojiIcon';
 
@@ -42,4 +43,3 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
 });
-

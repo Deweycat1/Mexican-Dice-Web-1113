@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, TouchableOpacity, View } from 'react-native';
+
+import { AppText as Text } from './AppText';
 import { supabase } from '../lib/supabase';
 
 export type Challenge = {

@@ -1,6 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { AppText as Text } from './AppText';
 export default function WaitingForAcceptance() {
   return (
     <View style={styles.container}>

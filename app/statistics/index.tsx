@@ -1,6 +1,8 @@
 import React from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { AppText as Text } from '../../src/components/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import StyledButton from '../../src/components/StyledButton';

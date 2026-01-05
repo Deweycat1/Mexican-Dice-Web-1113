@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { AppText as Text } from './AppText';
 export default function SurvivalRulesContent() {
   return (
     <View style={styles.container}>

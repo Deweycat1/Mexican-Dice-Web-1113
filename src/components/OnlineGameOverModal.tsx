@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { AppText as Text } from './AppText';
 type OnlineGameOverModalProps = {
   visible: boolean;
   didIWin: boolean;

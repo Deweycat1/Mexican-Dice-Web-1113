@@ -1,6 +1,7 @@
 import React from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { AppText as Text } from './AppText';
 import { FlameEmojiIcon } from './FlameEmojiIcon';
 
 type Props = {

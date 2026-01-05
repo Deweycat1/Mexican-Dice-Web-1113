@@ -1,5 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { AppText as Text } from '../src/components/AppText';
 import FeltBackground from '../src/components/FeltBackground';
 
 export default function FeltTest() {

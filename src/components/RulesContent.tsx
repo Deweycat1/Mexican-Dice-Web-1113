@@ -1,6 +1,7 @@
 import React from 'react';
-import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
+import { AppText as Text } from './AppText';
 type Props = {
   containerStyle?: StyleProp<ViewStyle>;
   textColor?: string;

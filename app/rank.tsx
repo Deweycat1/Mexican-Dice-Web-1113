@@ -4,11 +4,11 @@ import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppText as Text } from '../src/components/AppText';
 import StyledButton from '../src/components/StyledButton';
 import { getPersonalStats, PersonalStats } from '../src/stats/personalStats';
 import type { PlayerRank } from '../src/stats/rank';

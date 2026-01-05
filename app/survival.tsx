@@ -11,13 +11,13 @@ import {
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
   View,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinearGradient } from 'expo-linear-gradient';
+import { AppText as Text } from '../src/components/AppText';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
