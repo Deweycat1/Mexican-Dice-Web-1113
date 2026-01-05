@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import Dice from './Dice';
 import { DIE_SIZE } from '../theme/dice';
@@ -27,24 +27,50 @@ export default function AnimatedDiceReveal({
       : !hidden; // iOS / web: preserve existing behavior
   const [showActual, setShowActual] = useState(initialShowActual);
   const rotation = useRef(new Animated.Value(0)).current;
-  const revealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealInProgressRef = useRef(false);
+  const revealCompletedRef = useRef(false);
+  const revealStartedRef = useRef(false);
+  const MAX_REVEAL_MS = Platform.OS === 'android' ? 2600 : 2400;
+
+  const completeOnce = useCallback(
+    (reason: 'finished' | 'fallback' | 'hidden' | 'unmount' | 'interrupted') => {
+      if (revealCompletedRef.current) return;
+      revealCompletedRef.current = true;
+      if (__DEV__) {
+        console.log('[AnimatedDiceReveal] complete', { reason });
+      }
+      if (onRevealComplete) onRevealComplete();
+    },
+    [onRevealComplete]
+  );
+
+  const clearRevealTimers = () => {
+    if (revealDelayRef.current) {
+      clearTimeout(revealDelayRef.current);
+      revealDelayRef.current = null;
+    }
+    if (revealFallbackRef.current) {
+      clearTimeout(revealFallbackRef.current);
+      revealFallbackRef.current = null;
+    }
+  };
 
   useEffect(() => {
-    if (revealTimeoutRef.current) {
-      clearTimeout(revealTimeoutRef.current);
-      revealTimeoutRef.current = null;
-    }
+    clearRevealTimers();
 
     if (hidden) {
       // Reset to hidden state
       rotation.stopAnimation();
       rotation.setValue(0);
       setShowActual(false);
+      if (revealStartedRef.current && !revealCompletedRef.current) {
+        completeOnce('hidden');
+      }
+      revealInProgressRef.current = false;
       return () => {
-        if (revealTimeoutRef.current) {
-          clearTimeout(revealTimeoutRef.current);
-          revealTimeoutRef.current = null;
-        }
+        clearRevealTimers();
       };
     }
 
@@ -52,6 +78,12 @@ export default function AnimatedDiceReveal({
     rotation.stopAnimation();
     rotation.setValue(0);
     setShowActual(false);
+    revealInProgressRef.current = true;
+    revealCompletedRef.current = false;
+    revealStartedRef.current = true;
+    revealFallbackRef.current = setTimeout(() => {
+      completeOnce('fallback');
+    }, MAX_REVEAL_MS);
 
     Animated.timing(rotation, {
       toValue: 1,
@@ -61,18 +93,21 @@ export default function AnimatedDiceReveal({
     }).start(({ finished }) => {
       if (finished) {
         // Delay after animation completes before calling callback
-        revealTimeoutRef.current = setTimeout(() => {
-          if (onRevealComplete) onRevealComplete();
+        revealDelayRef.current = setTimeout(() => {
+          completeOnce('finished');
         }, 1700);
+      } else {
+        completeOnce('interrupted');
       }
     });
     return () => {
-      if (revealTimeoutRef.current) {
-        clearTimeout(revealTimeoutRef.current);
-        revealTimeoutRef.current = null;
+      if (revealStartedRef.current && !revealCompletedRef.current) {
+        completeOnce('unmount');
       }
+      revealInProgressRef.current = false;
+      clearRevealTimers();
     };
-  }, [hidden, onRevealComplete, rotation]);
+  }, [hidden, completeOnce, rotation]);
 
   // Interpolate rotateY for 3D flip effect
   const rotateY = rotation.interpolate({

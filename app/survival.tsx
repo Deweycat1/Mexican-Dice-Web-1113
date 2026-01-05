@@ -94,6 +94,7 @@ const DICE_JIGGLE_SMALL = DIE_SIZE * 0.05;
 const DICE_JIGGLE_MEDIUM = DIE_SIZE * 0.08;
 const DICE_JIGGLE_HEAVY = DIE_SIZE * 0.1;
 const DICE_JIGGLE_EPIC = DIE_SIZE * 0.12;
+const REVEAL_WATCHDOG_MS = 2600;
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -295,6 +296,10 @@ export default function Survival() {
   const plusOneFlashTickRef = useRef(0);
   const pendingCpuBluffTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cpuBluffResolveInFlightRef = useRef(false);
+  const revealWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const revealNeedsResetRef = useRef(false);
+  const activeBluffIdRef = useRef(0);
+  const resolvedBluffIdRef = useRef<number | null>(null);
 
   // Animation refs for micro animations
   const streakScaleAnim = useRef(new Animated.Value(1)).current;
@@ -1230,6 +1235,8 @@ export default function Survival() {
       setPendingCpuBluffResolution(false);
       setShouldRevealCpuDice(false);
       cpuBluffResolveInFlightRef.current = false;
+      activeBluffIdRef.current = 0;
+      resolvedBluffIdRef.current = null;
     }
   }, [turn, lastCpuRoll, lastClaim]);
 
@@ -1509,6 +1516,16 @@ export default function Survival() {
 
     console.log('BLUFF: Revealing Rival dice regardless of truth state (Survival)');
     cpuBluffResolveInFlightRef.current = true;
+    activeBluffIdRef.current += 1;
+    resolvedBluffIdRef.current = null;
+    if (__DEV__) {
+      console.log('[SURVIVAL][REVEAL] start cpu-bluff', {
+        bluffId: activeBluffIdRef.current,
+        lastClaim,
+        lastCpuRoll,
+        lastPlayerRoll,
+      });
+    }
     setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
     setPendingCpuBluffResolution(true);
@@ -1560,45 +1577,156 @@ export default function Survival() {
   }
 
   const resolveCpuBluffOnce = useCallback(
-    (source: 'reveal-complete' | 'fallback') => {
+    (
+      source: 'reveal-complete' | 'fallback' | 'watchdog' | 'focus-resume',
+      bluffId: number
+    ) => {
       if (pendingCpuBluffTimeoutRef.current) {
         clearTimeout(pendingCpuBluffTimeoutRef.current);
         pendingCpuBluffTimeoutRef.current = null;
       }
+      if (revealWatchdogRef.current) {
+        clearTimeout(revealWatchdogRef.current);
+        revealWatchdogRef.current = null;
+      }
+      if (activeBluffIdRef.current === 0 || bluffId !== activeBluffIdRef.current) {
+        if (__DEV__) {
+          console.log('[SURVIVAL][CPU BLUFF RESOLVE] stale resolve ignored', {
+            source,
+            bluffId,
+            activeBluffId: activeBluffIdRef.current,
+          });
+        }
+        return;
+      }
+      if (resolvedBluffIdRef.current === bluffId) {
+        if (__DEV__) {
+          console.log('[SURVIVAL][CPU BLUFF RESOLVE] duplicate resolve ignored', {
+            source,
+            bluffId,
+          });
+        }
+        return;
+      }
+      resolvedBluffIdRef.current = bluffId;
       if (mode !== 'survival') {
         cpuBluffResolveInFlightRef.current = false;
+        if (__DEV__) {
+          console.log('[SURVIVAL][REVEAL] clear cpu-bluff (mode exit)', { source });
+        }
         setPendingCpuBluffResolution(false);
         setShouldRevealCpuDice(false);
         setIsRevealAnimating(false);
+        setCpuDiceRevealed(false);
+        activeBluffIdRef.current = 0;
         return;
       }
       if (!cpuBluffResolveInFlightRef.current) {
         if (__DEV__) {
           console.log('[SURVIVAL][CPU BLUFF RESOLVE] skipped duplicate', { source });
         }
+        activeBluffIdRef.current = 0;
         return;
       }
       cpuBluffResolveInFlightRef.current = false;
       if (__DEV__) {
-        console.log('[SURVIVAL][CPU BLUFF RESOLVE] resolving', { source });
+        console.log('[SURVIVAL][CPU BLUFF RESOLVE] resolving', { source, bluffId });
       }
       callBluff();
+      if (__DEV__) {
+        console.log('[SURVIVAL][REVEAL] clear cpu-bluff (resolved)', { source });
+      }
       setPendingCpuBluffResolution(false);
       setShouldRevealCpuDice(false);
       setIsRevealAnimating(false);
+      setCpuDiceRevealed(false);
+      activeBluffIdRef.current = 0;
     },
     [callBluff, mode]
   );
 
   const handleCpuRevealComplete = useCallback(() => {
-    resolveCpuBluffOnce('reveal-complete');
+    resolveCpuBluffOnce('reveal-complete', activeBluffIdRef.current);
   }, [resolveCpuBluffOnce]);
 
   const handleSocialRevealComplete = useCallback(() => {
+    if (__DEV__) {
+      console.log('[SURVIVAL][REVEAL] clear social', { source: 'onRevealComplete' });
+    }
     setShowSocialReveal(false);
     setSocialRevealHidden(true);
     setIsRevealAnimating(false);
   }, []);
+
+  const clearRevealState = useCallback(
+    (reason: 'watchdog' | 'focus-resume') => {
+      if (__DEV__) {
+        console.log('[SURVIVAL][REVEAL] watchdog clear', {
+          reason,
+          pendingCpuBluffResolution,
+          showSocialReveal,
+          inFlight: cpuBluffResolveInFlightRef.current,
+          activeBluffId: activeBluffIdRef.current,
+        });
+      }
+      if (pendingCpuBluffResolution || cpuBluffResolveInFlightRef.current) {
+        resolveCpuBluffOnce(reason, activeBluffIdRef.current);
+        return;
+      }
+      if (showSocialReveal) {
+        handleSocialRevealComplete();
+        return;
+      }
+      setIsRevealAnimating(false);
+      setPendingCpuBluffResolution(false);
+      setShouldRevealCpuDice(false);
+      cpuBluffResolveInFlightRef.current = false;
+    },
+    [handleSocialRevealComplete, pendingCpuBluffResolution, resolveCpuBluffOnce, showSocialReveal]
+  );
+
+  useEffect(() => {
+    if (mode !== 'survival') {
+      if (revealWatchdogRef.current) {
+        clearTimeout(revealWatchdogRef.current);
+        revealWatchdogRef.current = null;
+      }
+      return;
+    }
+    if (!isRevealAnimating) {
+      if (revealWatchdogRef.current) {
+        clearTimeout(revealWatchdogRef.current);
+        revealWatchdogRef.current = null;
+      }
+      return;
+    }
+
+    if (revealWatchdogRef.current) {
+      clearTimeout(revealWatchdogRef.current);
+    }
+    revealWatchdogRef.current = setTimeout(() => {
+      revealWatchdogRef.current = null;
+      clearRevealState('watchdog');
+    }, REVEAL_WATCHDOG_MS);
+
+    return () => {
+      if (revealWatchdogRef.current) {
+        clearTimeout(revealWatchdogRef.current);
+        revealWatchdogRef.current = null;
+      }
+    };
+  }, [clearRevealState, isRevealAnimating, mode]);
+
+  useEffect(() => {
+    if (!isFocused && isRevealAnimating) {
+      revealNeedsResetRef.current = true;
+      return;
+    }
+    if (isFocused && revealNeedsResetRef.current && isRevealAnimating) {
+      revealNeedsResetRef.current = false;
+      clearRevealState('focus-resume');
+    }
+  }, [clearRevealState, isFocused, isRevealAnimating]);
 
   useEffect(() => {
     if (!isFocused || mode !== 'survival' || !pendingCpuBluffResolution) {
@@ -1625,7 +1753,7 @@ export default function Survival() {
           lastCpuRoll,
         });
       }
-      resolveCpuBluffOnce('fallback');
+      resolveCpuBluffOnce('fallback', activeBluffIdRef.current);
     }, 1200);
   }, [
     isFocused,
@@ -1662,6 +1790,9 @@ export default function Survival() {
       setSocialDiceValues(dice);
       setShowSocialReveal(true);
       setSocialRevealHidden(true);
+      if (__DEV__) {
+        console.log('[SURVIVAL][REVEAL] start social', { nonce });
+      }
       setIsRevealAnimating(true);
       if (Platform.OS === 'android') {
         setSocialRevealHidden(false);

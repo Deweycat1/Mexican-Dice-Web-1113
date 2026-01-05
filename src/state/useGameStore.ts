@@ -1832,13 +1832,24 @@ export const useGameStore = create<Store>((set, get) => {
         caller === 'player' &&
         result.loser === 'cpu'
       ) {
-        console.log('[INFERNO] player won point, starting next Rival turn');
-        set({ pendingInfernoDelay: false, turn: 'cpu' });
-        cpuTurn();
+        console.log('[INFERNO] player won point, handing turn back to player');
+        if (__DEV__) {
+          console.log('[INFERNO] survival bluff outcome', {
+            loser: result.loser,
+            nextTurn: 'player',
+          });
+        }
+        set({ pendingInfernoDelay: false, turn: 'player' });
         return;
       }
 
       if (!result.gameOver && after.turn === 'cpu') {
+        if (__DEV__) {
+          console.log('[INFERNO] survival bluff outcome', {
+            loser: result.loser,
+            nextTurn: 'cpu',
+          });
+        }
         set({ pendingInfernoDelay: false });
         cpuTurn();
       }
