@@ -100,14 +100,14 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     left: 0,
-    width: '20%',
+    width: '50%',
   },
   tapOverlayRight: {
     position: 'absolute',
     top: 0,
     bottom: 0,
     right: 0,
-    width: '20%',
+    width: '50%',
   },
   pagerContainer: {
     position: 'absolute',
