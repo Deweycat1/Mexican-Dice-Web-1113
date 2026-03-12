@@ -1300,8 +1300,8 @@ export const useGameStore = create<Store>((set, get) => {
         let keepCall = true;
 
         if (inNoCallBand) {
-          // Streak < 5: never call bluff, always soften to a raise
-          keepCall = false;
+          // Streak < 5: call bluff 20% of the time; otherwise soften to a raise
+          keepCall = Math.random() < 0.2;
         } else if (inSoftBand) {
           // Streak 5–7: keep call only ~40% of the time
           keepCall = Math.random() < 0.4;
