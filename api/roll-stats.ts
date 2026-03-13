@@ -19,6 +19,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Ensure responses are never cached by browsers or edge/CDN.
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
 
   // Handle OPTIONS for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -43,6 +48,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'GET') {
+      res.setHeader('X-Stats-Generated-At', new Date().toISOString());
+      res.setHeader('X-Stats-Env', process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'unknown');
       // Return full stats for all rolls
       const entries = await Promise.all(
         ALL_ROLLS.map(async (roll) => {

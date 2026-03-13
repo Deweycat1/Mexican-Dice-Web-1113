@@ -56,11 +56,13 @@ export default function RollClaimComparisonScreen() {
       const [rollsRes, claimsRes] = await Promise.all([
         fetch(`${baseUrl}/api/roll-stats`, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
         }),
         fetch(`${baseUrl}/api/claim-stats`, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
         }),
       ]);
 
