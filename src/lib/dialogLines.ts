@@ -33,7 +33,6 @@ export const rivalPointWinLines = [
   "The flames pick me.",
   "Ooh... scorched you.",
   "Feeling the heat yet?",
-  "My imps are blazing.",
   "That point combusted nicely.",
   "A spicy little win.",
   "Need to cool off?",
