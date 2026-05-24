@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
 
 import { splitClaim } from '../engine/mexican';
 import { AppText as Text } from './AppText';
@@ -43,7 +43,7 @@ function DicePair({ value }: { value: number }) {
   );
 }
 
-export default function RoundRecapOverlay({ recap, onDone, durationMs = 2600 }: Props) {
+export default function RoundRecapOverlay({ recap, onDone, durationMs = 5000 }: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(8)).current;
   const doneRef = useRef(onDone);
@@ -52,6 +52,13 @@ export default function RoundRecapOverlay({ recap, onDone, durationMs = 2600 }: 
   useEffect(() => {
     doneRef.current = onDone;
   }, [onDone]);
+
+  const handleDismiss = useCallback(() => {
+    animationRef.current?.stop();
+    opacity.setValue(0);
+    translateY.setValue(8);
+    doneRef.current();
+  }, [opacity, translateY]);
 
   useEffect(() => {
     if (!recap) {
@@ -117,7 +124,7 @@ export default function RoundRecapOverlay({ recap, onDone, durationMs = 2600 }: 
 
   return (
     <Animated.View
-      pointerEvents="none"
+      pointerEvents="auto"
       style={[
         styles.container,
         {
@@ -126,37 +133,39 @@ export default function RoundRecapOverlay({ recap, onDone, durationMs = 2600 }: 
         },
       ]}
     >
-      <View style={[styles.card, resolvedToneStyle]}>
-        <Text style={[styles.title, resolvedTitleStyle]}>{recap.title}</Text>
+      <Pressable style={styles.dismissLayer} onPress={handleDismiss}>
+        <View style={[styles.card, resolvedToneStyle]}>
+          <Text style={[styles.title, resolvedTitleStyle]}>{recap.title}</Text>
 
-        {isSingleDice ? (
-          <View style={styles.singleDiceSummary}>
-            <Text style={styles.diceLabel}>{recap.singleDiceLabel ?? 'Roll'}</Text>
-            <DicePair value={recap.claimed} />
-          </View>
-        ) : (
-          <View style={styles.diceSummary}>
-            <View style={styles.diceSummaryColumn}>
-              <Text style={styles.diceLabel}>Claimed</Text>
+          {isSingleDice ? (
+            <View style={styles.singleDiceSummary}>
+              <Text style={styles.diceLabel}>{recap.singleDiceLabel ?? 'Roll'}</Text>
               <DicePair value={recap.claimed} />
             </View>
-            <View style={styles.divider} />
-            <View style={styles.diceSummaryColumn}>
-              <Text style={styles.diceLabel}>Actual</Text>
-              <DicePair value={recap.actual} />
+          ) : (
+            <View style={styles.diceSummary}>
+              <View style={styles.diceSummaryColumn}>
+                <Text style={styles.diceLabel}>Claimed</Text>
+                <DicePair value={recap.claimed} />
+              </View>
+              <View style={styles.divider} />
+              <View style={styles.diceSummaryColumn}>
+                <Text style={styles.diceLabel}>Actual</Text>
+                <DicePair value={recap.actual} />
+              </View>
             </View>
-          </View>
-        )}
+          )}
 
-        <View style={styles.rows}>
-          {recap.rows.map((row) => (
-            <View key={`${row.label}-${row.value}`} style={styles.row}>
-              <Text style={styles.rowLabel}>{row.label}</Text>
-              <Text style={styles.rowValue}>{row.value}</Text>
-            </View>
-          ))}
+          <View style={styles.rows}>
+            {recap.rows.map((row) => (
+              <View key={`${row.label}-${row.value}`} style={styles.row}>
+                <Text style={styles.rowLabel}>{row.label}</Text>
+                <Text style={styles.rowValue}>{row.value}</Text>
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -171,6 +180,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 40,
+  },
+  dismissLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   card: {
     width: '84%',
