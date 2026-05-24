@@ -22,6 +22,7 @@ import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
 import { ScoreDie } from '../src/components/ScoreDie';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
+import RoundRecapOverlay, { RoundRecapData } from '../src/components/RoundRecapOverlay';
 import StyledButton from '../src/components/StyledButton';
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { InlineFlameText } from '../src/components/InlineFlameText';
@@ -34,12 +35,11 @@ import {
   isReverseOf,
   rankValue,
   resolveActiveChallenge,
-  resolveBluff,
   splitClaim,
 } from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
-import { useGameStore } from '../src/state/useGameStore';
+import { type PointEvent, useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
 import ScreenshotTutorial from '../src/tutorial/ScreenshotTutorial';
@@ -134,6 +134,41 @@ const DEMONIC_LINES = [
 ];
 
 const pickRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+const formatPointLoss = (amount: number) => `${amount} ${amount === 1 ? 'point' : 'points'}`;
+
+function buildPointRecap(event: PointEvent): RoundRecapData | null {
+  if (event.mode !== 'normal' || event.actual == null) return null;
+
+  const nameFor = (who: 'player' | 'cpu') => (who === 'player' ? 'You' : 'Infernoman');
+  const callerName = nameFor(event.caller);
+  const defenderName = nameFor(event.defender);
+  const loserName = nameFor(event.loser);
+  const winnerName = event.gameOverWinner ? nameFor(event.gameOverWinner) : null;
+
+  return {
+    id: event.nonce,
+    title: event.defenderToldTruth ? 'Bad Call' : 'Bluff Caught',
+    tone: event.loser === 'cpu' ? 'success' : 'danger',
+    claimed: event.claimed,
+    actual: event.actual,
+    rows: [
+      {
+        label: 'Result',
+        value: event.defenderToldTruth
+          ? `${defenderName} told the truth`
+          : `${defenderName} was bluffing`,
+      },
+      {
+        label: 'Penalty',
+        value: `${loserName} loses ${formatPointLoss(event.penalty)}`,
+      },
+      {
+        label: winnerName ? 'Outcome' : 'Next Turn',
+        value: winnerName ? `${winnerName} wins` : `${callerName} starts`,
+      },
+    ],
+  };
+}
 
 // ------------------------------
 
@@ -163,6 +198,7 @@ export default function Game() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const tutorialFirstSeenRef = useRef(false);
+  const [roundRecap, setRoundRecap] = useState<RoundRecapData | null>(null);
 
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
@@ -217,13 +253,12 @@ export default function Game() {
     cpuSocialDice,
     cpuSocialRevealNonce,
     socialBannerNonce,
-    lastBluffCaller,
-    lastBluffDefenderTruth,
-    bluffResultNonce,
+    lastPointEvent,
     mode,
     startQuickPlayMatch,
     exitSurvivalToNormal,
   } = useGameStore();
+  const lastRenderedPointEventNonceRef = useRef(lastPointEvent?.nonce ?? 0);
 
   const narration = (buildBanner?.() || getBaseMessage() || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
@@ -632,11 +667,15 @@ export default function Game() {
   }, [socialBannerNonce, triggerRivalBluffBanner]);
 
   useEffect(() => {
-    if (!bluffResultNonce) return;
-    if (lastBluffCaller !== 'cpu') return;
-    if (typeof lastBluffDefenderTruth !== 'boolean') return;
-    triggerRivalBluffBanner(lastBluffDefenderTruth ? 'got-em' : 'womp-womp');
-  }, [bluffResultNonce, lastBluffCaller, lastBluffDefenderTruth, triggerRivalBluffBanner]);
+    if (!lastPointEvent) return;
+    if (lastPointEvent.nonce <= lastRenderedPointEventNonceRef.current) return;
+
+    lastRenderedPointEventNonceRef.current = lastPointEvent.nonce;
+    const recap = buildPointRecap(lastPointEvent);
+    if (recap) {
+      setRoundRecap(recap);
+    }
+  }, [lastPointEvent]);
 
   function handleRollOrClaim() {
     if (controlsDisabled || isRevealAnimating) return;
@@ -662,30 +701,11 @@ export default function Game() {
     if (controlsDisabled) return;
     console.log("BLUFF: Player called Rival's bluff", { lastClaim, lastCpuRoll, lastAction });
 
-    let rivalToldTruth: boolean | null = null;
-    if (lastClaim != null && lastCpuRoll != null) {
-      const { outcome } = resolveBluff(lastClaim, lastCpuRoll, lastAction === 'reverseVsMexican');
-      rivalToldTruth = outcome === -1;
-      console.log('BLUFF: showdown snapshot', {
-        claim: lastClaim,
-        actual: lastCpuRoll,
-        prevWasReverseVsMexican: lastAction === 'reverseVsMexican',
-        rivalToldTruth,
-      });
-    } else {
-      console.log('BLUFF: missing data to precompute truth; using default reveal path');
-    }
-
     console.log('BLUFF: Revealing Rival dice regardless of truth state');
     setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
     setPendingCpuBluffResolution(true);
     setCpuDiceRevealed(true);
-    if (rivalToldTruth === false) {
-      triggerRivalBluffBanner('got-em');
-    } else if (rivalToldTruth === true) {
-      triggerRivalBluffBanner('womp-womp');
-    }
   }
 
   function handleOpenBluff() {
@@ -701,6 +721,7 @@ export default function Game() {
 
   const startFreshGame = useCallback(() => {
     newGame();
+    setRoundRecap(null);
     setHasRolledThisGame(false);
     // Only bump the animation key on non-Android platforms
     if (Platform.OS !== 'android') {
@@ -727,6 +748,10 @@ export default function Game() {
       setShouldRevealCpuDice(false);
     }
   }, [pendingCpuBluffResolution, callBluff]);
+
+  const handleRoundRecapDone = useCallback(() => {
+    setRoundRecap(null);
+  }, []);
 
   const handleSocialRevealComplete = useCallback(() => {
     setShowSocialReveal(false);
@@ -1082,6 +1107,7 @@ export default function Game() {
                   </>
                 )}
               </View>
+              <RoundRecapOverlay recap={roundRecap} onDone={handleRoundRecapDone} />
             </View>
 
             {/* ACTION BAR */}
@@ -1466,6 +1492,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   diceArea: {
+    position: 'relative',
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',

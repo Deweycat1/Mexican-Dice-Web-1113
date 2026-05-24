@@ -48,6 +48,18 @@ import { createAnalyticsId, logEvent } from '../analytics/logEvent';
 
 export type Turn = 'player' | 'cpu';
 export type LastAction = 'normal' | 'reverseVsMexican';
+export type PointEvent = {
+  nonce: number;
+  mode: 'normal' | 'survival';
+  caller: Turn;
+  defender: Turn;
+  defenderToldTruth: boolean;
+  loser: Turn;
+  claimed: number;
+  actual: number | null;
+  penalty: 1 | 2;
+  gameOverWinner: Turn | null;
+};
 
 const STARTING_SCORE = 5;
 
@@ -305,6 +317,7 @@ export type Store = {
   lastBluffCaller: Turn | null;
   lastBluffDefenderTruth: boolean | null;
   bluffResultNonce: number;
+  lastPointEvent: PointEvent | null;
   pendingInfernoDelay: boolean;
   // Per-game bluff tracking for ranking
   playerBluffEventsThisGame: number;
@@ -929,6 +942,7 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffCaller: null,
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
+      lastPointEvent: null,
       playerTurnStartTime: null,
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
@@ -962,6 +976,7 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffCaller: null,
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
+      lastPointEvent: null,
       playerTurnStartTime: null,
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
@@ -1009,6 +1024,7 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffCaller: null,
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
+      lastPointEvent: null,
       playerTurnStartTime: null,
       carryPrevRoll: null,
       carryLastRecordedKey: null,
@@ -1078,6 +1094,8 @@ export const useGameStore = create<Store>((set, get) => {
     const liar = outcome === +1;
     const loser = liar ? prevBy : caller;
     const lossAmount: 1 | 2 = penalty === 2 ? 2 : 1;
+    const losingScore = loser === 'player' ? state.playerScore : state.cpuScore;
+    const gameOverWinner = Math.max(0, losingScore - lossAmount) === 0 ? other(loser) : null;
 
     // Track bluff call behavior
     const callerWasCorrect = liar; // If the defender was lying, the caller was correct
@@ -1162,6 +1180,18 @@ export const useGameStore = create<Store>((set, get) => {
         lastBluffCaller: caller,
         lastBluffDefenderTruth: defenderToldTruth,
         bluffResultNonce: (prevState.bluffResultNonce ?? 0) + 1,
+        lastPointEvent: {
+          nonce: (prevState.lastPointEvent?.nonce ?? 0) + 1,
+          mode: state.mode,
+          caller,
+          defender: prevBy,
+          defenderToldTruth,
+          loser,
+          claimed: lastClaim,
+          actual: typeof prevActual === 'number' && !Number.isNaN(prevActual) ? prevActual : null,
+          penalty: lossAmount,
+          gameOverWinner,
+        },
       }));
 
     // Add history entry when Infernoman incorrectly calls player's bluff
@@ -1489,6 +1519,7 @@ export const useGameStore = create<Store>((set, get) => {
     lastBluffCaller: null,
     lastBluffDefenderTruth: null,
     bluffResultNonce: 0,
+    lastPointEvent: null,
     playerBluffEventsThisGame: 0,
     playerSuccessfulBluffsThisGame: 0,
     
@@ -1543,6 +1574,7 @@ export const useGameStore = create<Store>((set, get) => {
         cpuSocialDice: null,
         cpuSocialRevealNonce: 0,
         socialBannerNonce: 0,
+        lastPointEvent: null,
           playerBluffEventsThisGame: 0,
           playerSuccessfulBluffsThisGame: 0,
         });
