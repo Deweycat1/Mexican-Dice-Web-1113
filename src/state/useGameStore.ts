@@ -60,6 +60,12 @@ export type PointEvent = {
   penalty: 1 | 2;
   gameOverWinner: Turn | null;
 };
+export type SocialEvent = {
+  nonce: number;
+  mode: 'normal' | 'survival';
+  who: Turn;
+  nextTurn: Turn;
+};
 
 const STARTING_SCORE = 5;
 
@@ -318,6 +324,7 @@ export type Store = {
   lastBluffDefenderTruth: boolean | null;
   bluffResultNonce: number;
   lastPointEvent: PointEvent | null;
+  lastSocialEvent: SocialEvent | null;
   pendingInfernoDelay: boolean;
   // Per-game bluff tracking for ranking
   playerBluffEventsThisGame: number;
@@ -943,6 +950,7 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
       lastPointEvent: null,
+      lastSocialEvent: null,
       playerTurnStartTime: null,
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
@@ -977,6 +985,7 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
       lastPointEvent: null,
+      lastSocialEvent: null,
       playerTurnStartTime: null,
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
@@ -1025,6 +1034,7 @@ export const useGameStore = create<Store>((set, get) => {
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
       lastPointEvent: null,
+      lastSocialEvent: null,
       playerTurnStartTime: null,
       carryPrevRoll: null,
       carryLastRecordedKey: null,
@@ -1300,6 +1310,12 @@ export const useGameStore = create<Store>((set, get) => {
           cpuSocialDice: socialDice,
           cpuSocialRevealNonce: prevState.cpuSocialRevealNonce + 1,
           socialBannerNonce: prevState.socialBannerNonce + 1,
+          lastSocialEvent: {
+            nonce: (prevState.lastSocialEvent?.nonce ?? 0) + 1,
+            mode: state.mode,
+            who: 'cpu',
+            nextTurn: 'player',
+          },
           turn: 'player',
         }));
         setModeMessage('Infernoman shows Social (41). Round resets.');
@@ -1520,6 +1536,7 @@ export const useGameStore = create<Store>((set, get) => {
     lastBluffDefenderTruth: null,
     bluffResultNonce: 0,
     lastPointEvent: null,
+    lastSocialEvent: null,
     playerBluffEventsThisGame: 0,
     playerSuccessfulBluffsThisGame: 0,
     
@@ -1575,6 +1592,7 @@ export const useGameStore = create<Store>((set, get) => {
         cpuSocialRevealNonce: 0,
         socialBannerNonce: 0,
         lastPointEvent: null,
+        lastSocialEvent: null,
           playerBluffEventsThisGame: 0,
           playerSuccessfulBluffsThisGame: 0,
         });
@@ -1726,6 +1744,12 @@ export const useGameStore = create<Store>((set, get) => {
         set((prevState) => ({
           turn: 'cpu',
           socialBannerNonce: prevState.socialBannerNonce + 1,
+          lastSocialEvent: {
+            nonce: (prevState.lastSocialEvent?.nonce ?? 0) + 1,
+            mode: state.mode,
+            who: 'player',
+            nextTurn: 'cpu',
+          },
           pendingInfernoDelay: false,
         }));
         setModeMessage('Social (41) shown. Round resets.');

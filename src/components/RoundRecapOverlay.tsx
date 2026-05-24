@@ -5,7 +5,7 @@ import { splitClaim } from '../engine/mexican';
 import { AppText as Text } from './AppText';
 import Dice from './Dice';
 
-export type RoundRecapTone = 'success' | 'danger';
+export type RoundRecapTone = 'success' | 'danger' | 'social';
 
 export type RoundRecapRow = {
   label: string;
@@ -18,6 +18,8 @@ export type RoundRecapData = {
   tone: RoundRecapTone;
   claimed: number;
   actual: number;
+  diceMode?: 'claimActual' | 'single';
+  singleDiceLabel?: string;
   rows: RoundRecapRow[];
 };
 
@@ -107,6 +109,11 @@ export default function RoundRecapOverlay({ recap, onDone, durationMs = 2600 }: 
 
   const toneStyle = recap.tone === 'success' ? styles.cardSuccess : styles.cardDanger;
   const titleStyle = recap.tone === 'success' ? styles.titleSuccess : styles.titleDanger;
+  const isSingleDice = recap.diceMode === 'single';
+  const resolvedToneStyle =
+    recap.tone === 'social' ? styles.cardSocial : toneStyle;
+  const resolvedTitleStyle =
+    recap.tone === 'social' ? styles.titleSocial : titleStyle;
 
   return (
     <Animated.View
@@ -119,20 +126,27 @@ export default function RoundRecapOverlay({ recap, onDone, durationMs = 2600 }: 
         },
       ]}
     >
-      <View style={[styles.card, toneStyle]}>
-        <Text style={[styles.title, titleStyle]}>{recap.title}</Text>
+      <View style={[styles.card, resolvedToneStyle]}>
+        <Text style={[styles.title, resolvedTitleStyle]}>{recap.title}</Text>
 
-        <View style={styles.diceSummary}>
-          <View style={styles.diceSummaryColumn}>
-            <Text style={styles.diceLabel}>Claimed</Text>
+        {isSingleDice ? (
+          <View style={styles.singleDiceSummary}>
+            <Text style={styles.diceLabel}>{recap.singleDiceLabel ?? 'Roll'}</Text>
             <DicePair value={recap.claimed} />
           </View>
-          <View style={styles.divider} />
-          <View style={styles.diceSummaryColumn}>
-            <Text style={styles.diceLabel}>Actual</Text>
-            <DicePair value={recap.actual} />
+        ) : (
+          <View style={styles.diceSummary}>
+            <View style={styles.diceSummaryColumn}>
+              <Text style={styles.diceLabel}>Claimed</Text>
+              <DicePair value={recap.claimed} />
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.diceSummaryColumn}>
+              <Text style={styles.diceLabel}>Actual</Text>
+              <DicePair value={recap.actual} />
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.rows}>
           {recap.rows.map((row) => (
@@ -178,6 +192,9 @@ const styles = StyleSheet.create({
   cardDanger: {
     borderColor: '#C21807',
   },
+  cardSocial: {
+    borderColor: '#FFD166',
+  },
   title: {
     fontSize: 18,
     fontWeight: '900',
@@ -190,6 +207,9 @@ const styles = StyleSheet.create({
   titleDanger: {
     color: '#FFD1D1',
   },
+  titleSocial: {
+    color: '#FFE8A3',
+  },
   diceSummary: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -199,6 +219,11 @@ const styles = StyleSheet.create({
   diceSummaryColumn: {
     flex: 1,
     alignItems: 'center',
+  },
+  singleDiceSummary: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   diceLabel: {
     color: '#C9D1D9',

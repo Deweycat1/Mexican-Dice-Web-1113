@@ -407,7 +407,7 @@ export default function SecretStatsScreen() {
     );
   }
 
-  const totalGames = playerWins + cpuWins;
+  const totalGames = ponolayerWins + cpuWins;
   const playerWinRate = totalGames > 0 ? (playerWins / totalGames) * 100 : 0;
   const cpuWinRate = totalGames > 0 ? (cpuWins / totalGames) * 100 : 0;
   const carryPercent =

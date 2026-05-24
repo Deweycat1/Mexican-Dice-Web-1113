@@ -2,7 +2,7 @@
 
 - **Android**: Every Google Play Store upload must increase `expo.android.versionCode` by at least **1**.
 - **iOS**: Every App Store Connect upload must increase `expo.ios.buildNumber` by at least **1**.
-- **Marketing version**: `expo.version` is the user‑facing marketing version. Change it only when you want the visible app version to change.
+- **Marketing version**: `expo.version` is the user-facing marketing version. Bump it when App Store Connect has closed the current iOS version train, for example after a version has already been approved.
 
 When in doubt, bump both `expo.android.versionCode` and `expo.ios.buildNumber` by **+1** for each store submission.
 
@@ -18,4 +18,3 @@ When in doubt, bump both `expo.android.versionCode` and `expo.ios.buildNumber` b
 4. Build for release:
    - Android: `eas build --platform android`
    - iOS: `eas build --platform ios`
-

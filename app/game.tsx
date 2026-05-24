@@ -39,7 +39,7 @@ import {
 } from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
-import { type PointEvent, useGameStore } from '../src/state/useGameStore';
+import { type PointEvent, type SocialEvent, useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
 import ScreenshotTutorial from '../src/tutorial/ScreenshotTutorial';
@@ -139,32 +139,71 @@ const formatPointLoss = (amount: number) => `${amount} ${amount === 1 ? 'point' 
 function buildPointRecap(event: PointEvent): RoundRecapData | null {
   if (event.mode !== 'normal' || event.actual == null) return null;
 
-  const nameFor = (who: 'player' | 'cpu') => (who === 'player' ? 'You' : 'Infernoman');
-  const callerName = nameFor(event.caller);
-  const defenderName = nameFor(event.defender);
-  const loserName = nameFor(event.loser);
-  const winnerName = event.gameOverWinner ? nameFor(event.gameOverWinner) : null;
+  const verdictFor = (who: 'player' | 'cpu', toldTruth: boolean) => {
+    if (toldTruth) {
+      return who === 'player' ? 'Your claim was real' : "Infernoman's claim was real";
+    }
+    return who === 'player' ? 'Infernoman caught your bluff' : "You caught Infernoman's bluff";
+  };
+  const losesPointsFor = (who: 'player' | 'cpu', amount: number) =>
+    who === 'player'
+      ? `You lose ${formatPointLoss(amount)}`
+      : `Infernoman loses ${formatPointLoss(amount)}`;
+  const winsFor = (who: 'player' | 'cpu') =>
+    who === 'player' ? 'You win the game' : 'Infernoman wins the game';
+  const startsFor = (who: 'player' | 'cpu') =>
+    who === 'player' ? 'You roll next' : 'Infernoman rolls next';
 
   return {
     id: event.nonce,
-    title: event.defenderToldTruth ? 'Bad Call' : 'Bluff Caught',
+    title: event.defenderToldTruth ? 'Call Missed' : 'Bluff Exposed',
     tone: event.loser === 'cpu' ? 'success' : 'danger',
     claimed: event.claimed,
     actual: event.actual,
     rows: [
       {
-        label: 'Result',
-        value: event.defenderToldTruth
-          ? `${defenderName} told the truth`
-          : `${defenderName} was bluffing`,
+        label: 'Verdict',
+        value: verdictFor(event.defender, event.defenderToldTruth),
       },
       {
         label: 'Penalty',
-        value: `${loserName} loses ${formatPointLoss(event.penalty)}`,
+        value: losesPointsFor(event.loser, event.penalty),
       },
       {
-        label: winnerName ? 'Outcome' : 'Next Turn',
-        value: winnerName ? `${winnerName} wins` : `${callerName} starts`,
+        label: event.gameOverWinner ? 'Game' : 'Next Up',
+        value: event.gameOverWinner ? winsFor(event.gameOverWinner) : startsFor(event.caller),
+      },
+    ],
+  };
+}
+
+function buildSocialRecap(event: SocialEvent): RoundRecapData | null {
+  if (event.mode !== 'normal') return null;
+
+  const shownBy =
+    event.who === 'player' ? 'You rolled a Social' : 'Infernoman rolled a Social';
+  const nextUp = event.nextTurn === 'player' ? 'You roll next' : 'Infernoman rolls next';
+
+  return {
+    id: event.nonce,
+    title: 'Social Shown',
+    tone: 'social',
+    claimed: 41,
+    actual: 41,
+    diceMode: 'single',
+    singleDiceLabel: 'Social',
+    rows: [
+      {
+        label: 'Result',
+        value: shownBy,
+      },
+      {
+        label: 'Effect',
+        value: 'Round resets',
+      },
+      {
+        label: 'Next Up',
+        value: nextUp,
       },
     ],
   };
@@ -199,6 +238,7 @@ export default function Game() {
   const [showTutorial, setShowTutorial] = useState(false);
   const tutorialFirstSeenRef = useRef(false);
   const [roundRecap, setRoundRecap] = useState<RoundRecapData | null>(null);
+  const pendingSocialRecapRef = useRef<RoundRecapData | null>(null);
 
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
@@ -254,11 +294,13 @@ export default function Game() {
     cpuSocialRevealNonce,
     socialBannerNonce,
     lastPointEvent,
+    lastSocialEvent,
     mode,
     startQuickPlayMatch,
     exitSurvivalToNormal,
   } = useGameStore();
   const lastRenderedPointEventNonceRef = useRef(lastPointEvent?.nonce ?? 0);
+  const lastRenderedSocialEventNonceRef = useRef(lastSocialEvent?.nonce ?? 0);
 
   const narration = (buildBanner?.() || getBaseMessage() || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
@@ -677,6 +719,21 @@ export default function Game() {
     }
   }, [lastPointEvent]);
 
+  useEffect(() => {
+    if (!lastSocialEvent) return;
+    if (lastSocialEvent.nonce <= lastRenderedSocialEventNonceRef.current) return;
+
+    lastRenderedSocialEventNonceRef.current = lastSocialEvent.nonce;
+    const recap = buildSocialRecap(lastSocialEvent);
+    if (recap) {
+      if (lastSocialEvent.who === 'cpu') {
+        pendingSocialRecapRef.current = recap;
+      } else {
+        setRoundRecap(recap);
+      }
+    }
+  }, [lastSocialEvent]);
+
   function handleRollOrClaim() {
     if (controlsDisabled || isRevealAnimating) return;
 
@@ -721,6 +778,7 @@ export default function Game() {
 
   const startFreshGame = useCallback(() => {
     newGame();
+    pendingSocialRecapRef.current = null;
     setRoundRecap(null);
     setHasRolledThisGame(false);
     // Only bump the animation key on non-Android platforms
@@ -757,6 +815,10 @@ export default function Game() {
     setShowSocialReveal(false);
     setSocialRevealHidden(true);
     setIsRevealAnimating(false);
+    if (pendingSocialRecapRef.current) {
+      setRoundRecap(pendingSocialRecapRef.current);
+      pendingSocialRecapRef.current = null;
+    }
   }, []);
 
   useEffect(() => {

@@ -45,6 +45,20 @@ Before uploading any new Android build to Google Play, make sure the `expo.andro
 
 Every Play Store upload must use a versionCode that has never been used before.
 
+## iOS releases (App Store)
+
+Before uploading any new iOS build to App Store Connect, make sure the `expo.ios.buildNumber` has been bumped to a new integer string:
+
+- Run `npm run ios:buildnumber:bump` to increment `buildNumber` in `app.json`.
+- Run `npm run version:check` to verify the resolved Expo config has valid iOS and Android version values.
+- Prefer `npm run ios:build` or `npm run ios:release` for production builds; both bump the iOS build number before invoking EAS.
+
+Every App Store upload must use a build number that has never been used before for that app version.
+
+If App Store Connect rejects a build with `Invalid Pre-Release Train` or says
+`CFBundleShortVersionString` must be higher than the previously approved version, bump
+`expo.version` in `app.json` to the next app version before rebuilding.
+
 If the Expo builds dashboard still shows an outdated Android version (for example, `1.0.2 (19)`), run:
 
 - `npm run android:versioncode:check`
