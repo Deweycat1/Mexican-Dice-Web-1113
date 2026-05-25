@@ -36,11 +36,17 @@ import {
 import { formatCallBluffMessage } from '../utils/narration';
 import {
   incrementPersonalRollCount,
-  incrementSuccessfulBluffs,
   updatePersonalStatsOnGamePlayed,
 } from '../stats/personalStats';
 import { awardBadge, incrementBluffCaught } from '../stats/badges';
 import { getGlobalSurvivalBest, updateRankFromGameResult } from '../stats/rank';
+import {
+  recordPlayerBluffCall,
+  recordPlayerClaim,
+  recordPlayerMatchResult,
+  recordPlayerRoll,
+  recordPlayerSurvivalRun,
+} from '../stats/supabasePlayerStats';
 import { supabase } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { didCarry } from '../utils/carry';
@@ -65,6 +71,11 @@ export type SocialEvent = {
   mode: 'normal' | 'survival';
   who: Turn;
   nextTurn: Turn;
+};
+type LossResult = {
+  gameOver: boolean;
+  loser: Turn | null;
+  amount: 0 | 1 | 2;
 };
 
 const STARTING_SCORE = 5;
@@ -671,7 +682,7 @@ export const useGameStore = create<Store>((set, get) => {
       claims: [...(prev.claims ?? []), entry].slice(-10),
     }));
   };
-  const applyLoss = (who: Turn, amount: 1 | 2, message: string) => {
+  const applyLoss = (who: Turn, amount: 1 | 2, message: string): LossResult => {
     const state = get();
     const hapticsEnabled = isHapticsEnabled();
     if (who === 'player') {
@@ -733,6 +744,10 @@ export const useGameStore = create<Store>((set, get) => {
         const winner = other(who); // The winner is the opposite of who lost
         const loser = who; // who lost the point
         void recordWin(winner);
+        void recordPlayerMatchResult({
+          mode: 'quick_play',
+          won: winner === 'player',
+        });
         // Update global rank for quick play (non-blocking).
         void updateRankFromGameResult({
           mode: 'quick_play',
@@ -834,6 +849,7 @@ export const useGameStore = create<Store>((set, get) => {
           void submitGlobalBest(prevStreak);
           // Record survival run to average calculation
           void recordSurvivalRun(prevStreak);
+          void recordPlayerSurvivalRun({ streak: prevStreak });
           // Update global rank based on survival streak and bluff behavior (non-blocking).
           void updateRankFromGameResult({
             mode: 'survival',
@@ -1073,14 +1089,14 @@ export const useGameStore = create<Store>((set, get) => {
     return compareClaims(actual, activeChallenge) >= 0;
   };
 
-  const processCallBluff = (caller: Turn) => {
+  const processCallBluff = (caller: Turn): LossResult => {
     const state = get();
     const hapticsEnabled = isHapticsEnabled();
     const { lastClaim, lastAction, lastPlayerRoll, lastCpuRoll } = state;
 
     if (lastClaim == null) {
       setModeMessage('No claim to challenge yet.');
-      return { gameOver: false };
+      return { gameOver: false, loser: null, amount: 0 };
     }
 
     const prevBy: Turn = other(caller);
@@ -1129,6 +1145,7 @@ export const useGameStore = create<Store>((set, get) => {
 
     // Track per-game bluff events for ranking when the player calls bluff
     if (caller === 'player') {
+      void recordPlayerBluffCall({ correct: callerWasCorrect });
       set((prev) => ({
         ...prev,
         playerBluffEventsThisGame: (prev.playerBluffEventsThisGame ?? 0) + 1,
@@ -1623,6 +1640,7 @@ export const useGameStore = create<Store>((set, get) => {
       // Record roll statistics (async, non-blocking)
       void recordRollStat(actual);
       void incrementPersonalRollCount(actual);
+      void recordPlayerRoll({ roll: actual });
       if (prevCarry) {
         const carryKey = `${state.mode}:player:${roundIndexCounter}`;
         if (carryKey !== state.carryLastRecordedKey) {
@@ -1739,6 +1757,11 @@ export const useGameStore = create<Store>((set, get) => {
         pushSurvivalClaim('player', 41, state.lastPlayerRoll);
         // record player's Social show in normal mode
         pushClaim('player', 41, state.lastPlayerRoll);
+        void recordPlayerClaim({
+          claim: 41,
+          actualRoll: state.lastPlayerRoll,
+          truthful: true,
+        });
 
         resetRoundState();
         set((prevState) => ({
@@ -1787,7 +1810,12 @@ export const useGameStore = create<Store>((set, get) => {
       // Track honesty: is this claim truthful or a bluff?
       const playerRoll = state.lastPlayerRoll;
       if (playerRoll !== null && !Number.isNaN(playerRoll)) {
-        const isTruthful = claim === playerRoll;
+        const isTruthful = claimMatchesRoll(claim, playerRoll);
+        void recordPlayerClaim({
+          claim,
+          actualRoll: playerRoll,
+          truthful: isTruthful,
+        });
         void trackHonesty(isTruthful);
         
         // Track aggression: bluffing is aggressive
@@ -1799,6 +1827,11 @@ export const useGameStore = create<Store>((set, get) => {
         
         // Track low-roll bluff behavior (for Player Tendencies)
         void recordLowRollBehavior(playerRoll, isBluff);
+      } else {
+        void recordPlayerClaim({
+          claim,
+          truthful: null,
+        });
       }
 
       // Track aggression for high-risk claims (65, 66, 21)

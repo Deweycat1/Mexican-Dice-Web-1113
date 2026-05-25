@@ -21,6 +21,12 @@ export default function StatisticsMenuScreen() {
             style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonGold]}
           />
           <StyledButton
+            label="Personal Stats"
+            onPress={() => router.push('/personal-stats' as never)}
+            variant="primary"
+            style={[styles.menuButton, styles.buttonSpacing, styles.menuButtonBlue]}
+          />
+          <StyledButton
             label="Global Stats"
             onPress={() => router.push('/stats')}
             variant="primary"
@@ -76,6 +82,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FE9902',
     borderWidth: 2,
     borderColor: '#B26B01',
+  },
+  menuButtonBlue: {
+    backgroundColor: '#53A7F3',
+    borderWidth: 2,
+    borderColor: '#1C75BC',
   },
   menuButtonGreen: {
     backgroundColor: '#53A7F3',

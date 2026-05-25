@@ -55,6 +55,12 @@ import { logEvent } from '../../../src/analytics/logEvent';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
 import { awardBadge } from '../../../src/stats/badges';
 import { updateRankFromGameResult } from '../../../src/stats/rank';
+import {
+  recordPlayerBluffCall,
+  recordPlayerClaim,
+  recordPlayerMatchResult,
+  recordPlayerRoll,
+} from '../../../src/stats/supabasePlayerStats';
 import { initPushNotifications } from '../../../src/lib/pushNotifications';
 import { getNextWompWompMessage } from '../../../src/lib/constants';
 
@@ -73,7 +79,8 @@ const formatRoll = (value: number | null | undefined) => {
 };
 const facesFromRoll = (value: number | null | undefined): [number | null, number | null] => {
   if (typeof value !== 'number' || Number.isNaN(value)) return [null, null];
-  return splitClaim(value);
+  const [hi, lo] = splitClaim(value);
+  return [hi, lo];
 };
 
 // Shared round metadata persisted on games_v2.round_state
@@ -445,27 +452,29 @@ export default function OnlineGameV2Screen() {
   const roundState: RoundState = useMemo(() => {
     const raw = game?.round_state;
     if (raw && typeof raw === 'object') {
+      const parsed = raw as Partial<RoundState>;
+      const socialRevealDice = parsed.socialRevealDice;
       return {
         ...defaultRoundState,
         ...raw,
         history: Array.isArray(raw.history) ? raw.history : [],
         lastClaimRoll:
-          typeof (raw as RoundState).lastClaimRoll === 'number' || (raw as RoundState).lastClaimRoll === null
-            ? (raw as RoundState).lastClaimRoll ?? null
+          typeof parsed.lastClaimRoll === 'number' || parsed.lastClaimRoll === null
+            ? parsed.lastClaimRoll ?? null
             : null,
         socialRevealNonce:
-          typeof (raw as RoundState).socialRevealNonce === 'number'
-            ? (raw as RoundState).socialRevealNonce
+          typeof parsed.socialRevealNonce === 'number'
+            ? parsed.socialRevealNonce
             : 0,
         socialRevealDice:
-          Array.isArray((raw as RoundState).socialRevealDice) &&
-          (raw as RoundState).socialRevealDice.length === 2
+          Array.isArray(socialRevealDice) &&
+          socialRevealDice.length === 2
             ? [
-                typeof (raw as RoundState).socialRevealDice?.[0] === 'number' || (raw as RoundState).socialRevealDice?.[0] === null
-                  ? (raw as RoundState).socialRevealDice?.[0] ?? null
+                typeof socialRevealDice[0] === 'number' || socialRevealDice[0] === null
+                  ? socialRevealDice[0] ?? null
                   : null,
-                typeof (raw as RoundState).socialRevealDice?.[1] === 'number' || (raw as RoundState).socialRevealDice?.[1] === null
-                  ? (raw as RoundState).socialRevealDice?.[1] ?? null
+                typeof socialRevealDice[1] === 'number' || socialRevealDice[1] === null
+                  ? socialRevealDice[1] ?? null
                   : null,
               ]
             : null,
@@ -610,6 +619,10 @@ export default function OnlineGameV2Screen() {
             }
 
             if (didCurrentUserWin !== null) {
+              void recordPlayerMatchResult({
+                mode: 'online',
+                won: didCurrentUserWin,
+              });
               void updateRankFromGameResult({
                 mode: 'online',
                 won: didCurrentUserWin,
@@ -953,6 +966,7 @@ export default function OnlineGameV2Screen() {
         nextRound,
         { requireCurrentPlayerId: userId }
       );
+      void recordPlayerRoll({ roll: normalized });
     } catch (err: any) {
       if (err?.message === OUT_OF_TURN_ERROR) {
         Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
@@ -1076,6 +1090,14 @@ export default function OnlineGameV2Screen() {
 
       try {
         await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
+        void recordPlayerClaim({
+          claim,
+          actualRoll: myCurrentRoll,
+          truthful:
+            myCurrentRoll != null
+              ? claimMatchesRoll(claim, myCurrentRoll)
+              : null,
+        });
         setClaimPickerOpen(false);
         setWinkArmed(false);
         if (claim === 41) {
@@ -1208,6 +1230,7 @@ export default function OnlineGameV2Screen() {
 
     try {
       await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
+      void recordPlayerBluffCall({ correct: liar });
     } catch (err: any) {
       if (err?.message === OUT_OF_TURN_ERROR) {
         Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
