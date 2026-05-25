@@ -352,7 +352,8 @@ export default function Game() {
   const rolling = rollingAnim || isRolling;
 
   const isGameOver = gameOver !== null;
-  const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock;
+  const isRecapVisible = roundRecap !== null;
+  const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock || isRecapVisible;
   const showCpuThinking = turn !== 'player' && !isGameOver;
   const lastPlayerClaim = useMemo(() => {
     if (!claims || claims.length === 0) return null;
