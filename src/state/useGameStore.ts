@@ -340,6 +340,11 @@ export type Store = {
   // Per-game bluff tracking for ranking
   playerBluffEventsThisGame: number;
   playerSuccessfulBluffsThisGame: number;
+  quickPlayRoundsPlayed: number;
+  quickPlayIncorrectBluffCalls: number;
+  quickPlaySocialRolls: number;
+  quickPlayPlayerReachedOne: boolean;
+  quickPlayBestMoment: string | null;
   
   // Turn timing tracking
   playerTurnStartTime: number | null;
@@ -819,6 +824,16 @@ export const useGameStore = create<Store>((set, get) => {
         cpuScore: updatedCpu,
         gameOver: finished ? other(who) : null,
         history: [...(prev.history ?? []), entry].slice(-3),
+        quickPlayRoundsPlayed: prev.quickPlayRoundsPlayed + 1,
+        quickPlayPlayerReachedOne:
+          prev.quickPlayPlayerReachedOne || (who === 'player' && updatedPlayer === 1),
+        quickPlayBestMoment:
+          finished &&
+          who === 'cpu' &&
+          prev.quickPlayPlayerReachedOne &&
+          prev.quickPlayBestMoment !== "Caught Infernoman's Inferno bluff"
+            ? 'Came back from 1 point'
+            : prev.quickPlayBestMoment,
       }));
       setModeMessage(finalMessage);
     }
@@ -970,6 +985,11 @@ export const useGameStore = create<Store>((set, get) => {
       playerTurnStartTime: null,
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
+      quickPlayRoundsPlayed: 0,
+      quickPlayIncorrectBluffCalls: 0,
+      quickPlaySocialRolls: 0,
+      quickPlayPlayerReachedOne: false,
+      quickPlayBestMoment: null,
       turn: 'player',
       carryPrevRoll: null,
       carryLastRecordedKey: null,
@@ -1005,6 +1025,11 @@ export const useGameStore = create<Store>((set, get) => {
       playerTurnStartTime: null,
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
+      quickPlayRoundsPlayed: 0,
+      quickPlayIncorrectBluffCalls: 0,
+      quickPlaySocialRolls: 0,
+      quickPlayPlayerReachedOne: false,
+      quickPlayBestMoment: null,
       turn: 'player',
       carryPrevRoll: null,
       carryLastRecordedKey: null,
@@ -1054,6 +1079,11 @@ export const useGameStore = create<Store>((set, get) => {
       playerTurnStartTime: null,
       carryPrevRoll: null,
       carryLastRecordedKey: null,
+      quickPlayRoundsPlayed: 0,
+      quickPlayIncorrectBluffCalls: 0,
+      quickPlaySocialRolls: 0,
+      quickPlayPlayerReachedOne: false,
+      quickPlayBestMoment: null,
     });
   };
 
@@ -1151,6 +1181,13 @@ export const useGameStore = create<Store>((set, get) => {
         playerBluffEventsThisGame: (prev.playerBluffEventsThisGame ?? 0) + 1,
         playerSuccessfulBluffsThisGame:
           (prev.playerSuccessfulBluffsThisGame ?? 0) + (callerWasCorrect ? 1 : 0),
+        quickPlayIncorrectBluffCalls:
+          prev.quickPlayIncorrectBluffCalls +
+          (state.mode === 'normal' && !callerWasCorrect ? 1 : 0),
+        quickPlayBestMoment:
+          state.mode === 'normal' && callerWasCorrect && lastClaim === 21
+            ? "Caught Infernoman's Inferno bluff"
+            : prev.quickPlayBestMoment,
       }));
     }
 
@@ -1333,6 +1370,10 @@ export const useGameStore = create<Store>((set, get) => {
             who: 'cpu',
             nextTurn: 'player',
           },
+          quickPlayRoundsPlayed:
+            prevState.quickPlayRoundsPlayed + (state.mode === 'normal' ? 1 : 0),
+          quickPlaySocialRolls:
+            prevState.quickPlaySocialRolls + (state.mode === 'normal' ? 1 : 0),
           turn: 'player',
         }));
         setModeMessage('Infernoman shows Social (41). Round resets.');
@@ -1556,6 +1597,11 @@ export const useGameStore = create<Store>((set, get) => {
     lastSocialEvent: null,
     playerBluffEventsThisGame: 0,
     playerSuccessfulBluffsThisGame: 0,
+    quickPlayRoundsPlayed: 0,
+    quickPlayIncorrectBluffCalls: 0,
+    quickPlaySocialRolls: 0,
+    quickPlayPlayerReachedOne: false,
+    quickPlayBestMoment: null,
     
     // Turn timing tracking
     playerTurnStartTime: null,
@@ -1612,6 +1658,11 @@ export const useGameStore = create<Store>((set, get) => {
         lastSocialEvent: null,
           playerBluffEventsThisGame: 0,
           playerSuccessfulBluffsThisGame: 0,
+          quickPlayRoundsPlayed: 0,
+          quickPlayIncorrectBluffCalls: 0,
+          quickPlaySocialRolls: 0,
+          quickPlayPlayerReachedOne: false,
+          quickPlayBestMoment: null,
         });
         logEvent({ eventType: 'match_started', mode: 'normal', matchId });
       },
@@ -1773,6 +1824,14 @@ export const useGameStore = create<Store>((set, get) => {
             who: 'player',
             nextTurn: 'cpu',
           },
+          quickPlayRoundsPlayed:
+            prevState.quickPlayRoundsPlayed + (state.mode === 'normal' ? 1 : 0),
+          quickPlaySocialRolls:
+            prevState.quickPlaySocialRolls + (state.mode === 'normal' ? 1 : 0),
+          quickPlayBestMoment:
+            state.mode === 'normal' && prevState.quickPlayBestMoment == null
+              ? 'Rolled a Social'
+              : prevState.quickPlayBestMoment,
           pendingInfernoDelay: false,
         }));
         setModeMessage('Social (41) shown. Round resets.');

@@ -20,6 +20,7 @@ import BluffModal from '../src/components/BluffModal';
 import DialogBanner from '../src/components/DialogBanner';
 import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
+import QuickPlayMatchSummaryOverlay from '../src/components/QuickPlayMatchSummaryOverlay';
 import { ScoreDie } from '../src/components/ScoreDie';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import RoundRecapOverlay, { RoundRecapData } from '../src/components/RoundRecapOverlay';
@@ -39,6 +40,8 @@ import {
 } from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
+import { loadBadges } from '../src/stats/badges';
+import { type BadgeMeta, getBadgeMeta } from '../src/stats/badgeMetadata';
 import { type PointEvent, type SocialEvent, useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
@@ -239,6 +242,9 @@ export default function Game() {
   const tutorialFirstSeenRef = useRef(false);
   const [roundRecap, setRoundRecap] = useState<RoundRecapData | null>(null);
   const pendingSocialRecapRef = useRef<RoundRecapData | null>(null);
+  const [matchSummaryVisible, setMatchSummaryVisible] = useState(false);
+  const [summaryBadges, setSummaryBadges] = useState<BadgeMeta[]>([]);
+  const badgeBaselineRef = useRef(new Set<string>());
 
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
@@ -295,6 +301,11 @@ export default function Game() {
     socialBannerNonce,
     lastPointEvent,
     lastSocialEvent,
+    quickPlayRoundsPlayed,
+    quickPlayIncorrectBluffCalls,
+    quickPlaySocialRolls,
+    quickPlayBestMoment,
+    playerSuccessfulBluffsThisGame,
     mode,
     startQuickPlayMatch,
     exitSurvivalToNormal,
@@ -304,6 +315,27 @@ export default function Game() {
 
   const narration = (buildBanner?.() || getBaseMessage() || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
+
+  const captureBadgeBaseline = useCallback(async () => {
+    const badges = await loadBadges();
+    badgeBaselineRef.current = new Set(
+      Object.values(badges)
+        .filter((badge) => badge?.earned)
+        .map((badge) => badge!.id)
+    );
+  }, []);
+
+  const refreshSummaryBadges = useCallback(async () => {
+    const badges = await loadBadges();
+    const newlyEarned = Object.values(badges)
+      .filter((badge) => badge?.earned && !badgeBaselineRef.current.has(badge.id))
+      .map((badge) => getBadgeMeta(badge!.id));
+    setSummaryBadges(newlyEarned);
+  }, []);
+
+  useEffect(() => {
+    void captureBadgeBaseline();
+  }, [captureBadgeBaseline]);
 
   // Ensure we leave Survival mode whenever the Quick Play screen mounts so claims/event
   // history stay in the normal bucket.
@@ -639,7 +671,23 @@ export default function Game() {
       // Player loses (Player hit 0 points)
       showEndBanner('lose');
     }
-  }, [gameOver, showEndBanner]);
+
+    if (gameOver) {
+      setRoundRecap(null);
+      setMatchSummaryVisible(true);
+      setSummaryBadges([]);
+      const firstBadgeTimer = setTimeout(() => {
+        void refreshSummaryBadges();
+      }, 500);
+      const secondBadgeTimer = setTimeout(() => {
+        void refreshSummaryBadges();
+      }, 1400);
+      return () => {
+        clearTimeout(firstBadgeTimer);
+        clearTimeout(secondBadgeTimer);
+      };
+    }
+  }, [gameOver, refreshSummaryBadges, showEndBanner]);
 
   const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp' | 'social') => {
     setRivalBluffBannerSecondary(null);
@@ -714,6 +762,8 @@ export default function Game() {
     if (lastPointEvent.nonce <= lastRenderedPointEventNonceRef.current) return;
 
     lastRenderedPointEventNonceRef.current = lastPointEvent.nonce;
+    if (lastPointEvent.gameOverWinner) return;
+
     const recap = buildPointRecap(lastPointEvent);
     if (recap) {
       setRoundRecap(recap);
@@ -778,9 +828,12 @@ export default function Game() {
   }
 
   const startFreshGame = useCallback(() => {
+    void captureBadgeBaseline();
     newGame();
     pendingSocialRecapRef.current = null;
     setRoundRecap(null);
+    setMatchSummaryVisible(false);
+    setSummaryBadges([]);
     setHasRolledThisGame(false);
     // Only bump the animation key on non-Android platforms
     if (Platform.OS !== 'android') {
@@ -788,7 +841,7 @@ export default function Game() {
     }
     const openingLine = pickRandomRivalLine();
     setTimeout(() => showDialog('rival', openingLine), 300);
-  }, [newGame, setHasRolledThisGame, setScoreDiceAnimKey, showDialog]);
+  }, [captureBadgeBaseline, newGame, setHasRolledThisGame, setScoreDiceAnimKey, showDialog]);
 
   const handleNewGamePress = useCallback(() => {
     startFreshGame();
@@ -798,6 +851,11 @@ export default function Game() {
     startFreshGame();
     setSettingsOpen(false);
   }, [startFreshGame, setSettingsOpen]);
+
+  const handleMainMenuPress = useCallback(() => {
+    setMatchSummaryVisible(false);
+    router.replace('/');
+  }, [router]);
 
   const handleCpuRevealComplete = useCallback(() => {
     setIsRevealAnimating(false);
@@ -1416,6 +1474,20 @@ export default function Game() {
 
         </SafeAreaView>
 
+        <QuickPlayMatchSummaryOverlay
+          visible={matchSummaryVisible}
+          didPlayerWin={gameOver === 'player'}
+          playerScore={playerScore}
+          cpuScore={cpuScore}
+          roundsPlayed={quickPlayRoundsPlayed}
+          bluffsCaught={playerSuccessfulBluffsThisGame}
+          incorrectBluffCalls={quickPlayIncorrectBluffCalls}
+          socialRolls={quickPlaySocialRolls}
+          bestMoment={quickPlayBestMoment}
+          earnedBadges={summaryBadges}
+          onPlayAgain={startFreshGame}
+          onMainMenu={handleMainMenuPress}
+        />
         <ScreenshotTutorial visible={showTutorial} onDone={handleTutorialDone} />
       </FeltBackground>
     </View>
