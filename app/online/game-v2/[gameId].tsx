@@ -31,6 +31,7 @@ import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
 import BluffModal from '../../../src/components/BluffModal';
 import Dice from '../../../src/components/Dice';
 import FeltBackground from '../../../src/components/FeltBackground';
+import OnlineMatchSummaryOverlay from '../../../src/components/OnlineMatchSummaryOverlay';
 import RulesContent from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
@@ -56,6 +57,8 @@ import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStat
 import { awardBadge } from '../../../src/stats/badges';
 import { updateRankFromGameResult } from '../../../src/stats/rank';
 import {
+  finalizeOnlineMatchResult,
+  type OnlineOpponentRecord,
   recordPlayerBluffCall,
   recordPlayerClaim,
   recordPlayerMatchResult,
@@ -82,6 +85,8 @@ const facesFromRoll = (value: number | null | undefined): [number | null, number
   const [hi, lo] = splitClaim(value);
   return [hi, lo];
 };
+
+const oppositeRole = (role: 'host' | 'guest') => (role === 'host' ? 'guest' : 'host');
 
 // Shared round metadata persisted on games_v2.round_state
 export type RoundState = {
@@ -290,6 +295,8 @@ export default function OnlineGameV2Screen() {
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
   const [winkArmed, setWinkArmed] = useState(false);
   const [isRequestingRematch, setIsRequestingRematch] = useState(false);
+  const [onlineOpponentRecord, setOnlineOpponentRecord] = useState<OnlineOpponentRecord | null>(null);
+  const [onlineOpponentRecordLoading, setOnlineOpponentRecordLoading] = useState(false);
   const prevStatusRef = useRef<GameStatus | null>(null);
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const sfxEnabled = useSettingsStore((state) => state.sfxEnabled);
@@ -300,6 +307,7 @@ export default function OnlineGameV2Screen() {
   const lastWompWompIndexRef = useRef(-1);
   const matchStartLoggedRef = useRef<string | null>(null);
   const matchEndLoggedRef = useRef<string | null>(null);
+  const onlineMatchFinalizedRef = useRef<string | null>(null);
 
   const showBluffResultBanner = useCallback(
     (liar: boolean, iAmCaller: boolean) => {
@@ -348,6 +356,12 @@ export default function OnlineGameV2Screen() {
     console.log('[ONLINE GAME] initializing push notifications', { userId });
     void initPushNotifications({ userId, router });
   }, [userId, router]);
+
+  useEffect(() => {
+    onlineMatchFinalizedRef.current = null;
+    setOnlineOpponentRecord(null);
+    setOnlineOpponentRecordLoading(false);
+  }, [normalizedGameId]);
 
   useEffect(() => {
     if (!normalizedGameId) {
@@ -750,6 +764,71 @@ export default function OnlineGameV2Screen() {
         ? 'Accept Rematch'
         : 'Rematch';
   const showRematchButton = isGameFinished && !!myRole;
+  const myOpponentRecordName = onlineOpponentRecord?.opponentUsername || opponentName;
+  const didPlayerWin = isGameFinished ? myScore > opponentScore : false;
+  const opponentWinksUsed =
+    myRole === 'host'
+      ? roundState.guestWinksUsed ?? 0
+      : myRole === 'guest'
+      ? roundState.hostWinksUsed ?? 0
+      : 0;
+  const showMatchSummary =
+    isGameFinished &&
+    !!myRole &&
+    !game?.rematch_game_id &&
+    !isRevealAnimating &&
+    !isRevealingBluff &&
+    !revealDiceValues;
+  const finalBlowText = useMemo(() => {
+    const caller = roundState.lastBluffCaller ?? null;
+    const defenderTruth =
+      typeof roundState.lastBluffDefenderTruth === 'boolean'
+        ? roundState.lastBluffDefenderTruth
+        : null;
+
+    if (!caller || defenderTruth === null || !myRole) {
+      const lastEvent = [...(roundState.history ?? [])].reverse().find((entry) => entry.type === 'event');
+      return lastEvent?.type === 'event'
+        ? lastEvent.text
+        : 'The final challenge ended the match.';
+    }
+
+    const defender = oppositeRole(caller);
+    const callerLabel = caller === myRole ? 'You' : opponentName;
+    const defenderLabel = defender === myRole ? 'you' : opponentName;
+
+    if (defenderTruth) {
+      if (caller === myRole) {
+        return `${opponentName} told the truth and your call ended the match.`;
+      }
+      return `Your truth held up and ${opponentName}'s call ended the match.`;
+    }
+
+    if (caller === myRole) {
+      return `You caught ${opponentName} bluffing to end the match.`;
+    }
+
+    return `${callerLabel} caught ${defenderLabel} bluffing to end the match.`;
+  }, [
+    myRole,
+    opponentName,
+    roundState.history,
+    roundState.lastBluffCaller,
+    roundState.lastBluffDefenderTruth,
+  ]);
+  useEffect(() => {
+    if (!showMatchSummary || !normalizedGameId) return;
+    if (onlineMatchFinalizedRef.current === normalizedGameId) return;
+
+    onlineMatchFinalizedRef.current = normalizedGameId;
+    setOnlineOpponentRecordLoading(true);
+    void (async () => {
+      const record = await finalizeOnlineMatchResult(normalizedGameId);
+      setOnlineOpponentRecord(record);
+      setOnlineOpponentRecordLoading(false);
+    })();
+  }, [normalizedGameId, showMatchSummary]);
+
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
@@ -1687,6 +1766,25 @@ export default function OnlineGameV2Screen() {
           </View>
         </View>
       </Modal>
+
+      <OnlineMatchSummaryOverlay
+        visible={showMatchSummary}
+        didPlayerWin={didPlayerWin}
+        playerScore={myScore}
+        opponentScore={opponentScore}
+        opponentName={myOpponentRecordName}
+        finalBlowText={finalBlowText}
+        myWinksUsed={myWinksUsed}
+        opponentWinksUsed={opponentWinksUsed}
+        recordWins={onlineOpponentRecord?.wins ?? null}
+        recordLosses={onlineOpponentRecord?.losses ?? null}
+        recordGamesPlayed={onlineOpponentRecord?.gamesPlayed ?? null}
+        recordLoading={onlineOpponentRecordLoading}
+        rematchLabel={rematchButtonLabel}
+        rematchDisabled={!myRole || hasRequestedRematch || isRequestingRematch}
+        onRematch={handleRematchPress}
+        onMainMenu={() => router.replace('/')}
+      />
 
     </View>
   );

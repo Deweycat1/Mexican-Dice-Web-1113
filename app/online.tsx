@@ -88,7 +88,6 @@ export default function OnlineLobbyScreen() {
   const [myUsername, setMyUsername] = useState<string | null>(null);
   const [creatingMatch, setCreatingMatch] = useState(false);
   const [createMessage, setCreateMessage] = useState<string | null>(null);
-  const [findingRandomMatch, setFindingRandomMatch] = useState(false);
   const [games, setGames] = useState<LobbyGame[]>([]);
   const [usernamesById, setUsernamesById] = useState<Record<string, string>>({});
   const [loadingGames, setLoadingGames] = useState(false);
@@ -356,170 +355,6 @@ export default function OnlineLobbyScreen() {
       setCreatingMatch(false);
     }
   }, [friendCode, getActiveGameCount, loadGames, router, userId]);
-
-  const handleFindRandomMatch = useCallback(async () => {
-    if (!userId) {
-      Alert.alert('Account missing', 'Please wait for your account to load.');
-      return;
-    }
-
-    setCreateMessage(null);
-    setFindingRandomMatch(true);
-
-    try {
-      // Enforce the same active game limit as friend matches
-      const activeCount = await getActiveGameCount(userId);
-      if (activeCount >= MAX_ACTIVE_GAMES) {
-        Alert.alert(
-          'Too many matches',
-          'You already have 5 active matches. Finish or delete one before starting a new one.'
-        );
-        return;
-      }
-
-      // 1) Do you already have a waiting random game as host?
-      const { data: existingRows, error: existingError } = await supabase
-        .from('games_v2')
-        .select('*')
-        .eq('host_id', userId)
-        .is('guest_id', null)
-        .eq('status', 'waiting')
-        .eq('matchmaking_type', 'random')
-        .limit(1);
-
-      if (existingError) {
-        console.error('[OnlineLobby][RandomMatch] Existing waiting random game query failed', existingError);
-        throw existingError;
-      }
-
-      console.log('[OnlineLobby][RandomMatch] existing waiting games for host', {
-        userId,
-        count: existingRows?.length ?? 0,
-        ids: existingRows?.map((g: any) => g.id) ?? [],
-      });
-
-      const existing = (existingRows && existingRows[0]) as LobbyGame | undefined;
-      if (existing) {
-        await loadGames();
-        console.log('[OnlineLobby][RandomMatch] reusing existing waiting random game', {
-          id: existing.id,
-          host_id: existing.host_id,
-          guest_id: existing.guest_id,
-          status: existing.status,
-        });
-        return;
-      }
-
-      // 2) Try to join someone else's waiting random game
-      const { data: candidates, error: findError } = await supabase
-        .from('games_v2')
-        .select('*')
-        .eq('status', 'waiting')
-        .is('guest_id', null)
-        .eq('matchmaking_type', 'random')
-        .neq('host_id', userId)
-        .order('created_at', { ascending: true })
-        .limit(5);
-
-      if (findError) {
-        console.error('[OnlineLobby][RandomMatch] Candidate random games query failed', findError);
-        throw findError;
-      }
-
-      console.log('[OnlineLobby][RandomMatch] candidate waiting games', {
-        userId,
-        count: candidates?.length ?? 0,
-        ids: candidates?.map((g: any) => g.id) ?? [],
-      });
-
-      if (candidates && candidates.length > 0) {
-        for (const candidate of candidates as LobbyGame[]) {
-          console.log('[OnlineLobby][RandomMatch] attempting to join candidate', {
-            candidateId: candidate.id,
-            candidateHostId: candidate.host_id,
-          });
-
-          const { data: joinedRows, error: joinError } = await supabase
-            .from('games_v2')
-            .update({
-              guest_id: userId,
-              status: 'in_progress',
-              current_player_id: candidate.host_id,
-            })
-            .eq('id', candidate.id)
-            .is('guest_id', null)
-            .eq('status', 'waiting')
-            .select('*')
-            .limit(1);
-
-          if (joinError) {
-            console.error('[OnlineLobby][RandomMatch] join candidate failed', {
-              candidateId: candidate.id,
-              error: joinError,
-            });
-            continue;
-          }
-
-          const joined = (joinedRows && joinedRows[0]) as LobbyGame | undefined;
-          if (!joined) {
-            console.log('[OnlineLobby][RandomMatch] join candidate returned no rows (likely race)', {
-              candidateId: candidate.id,
-            });
-          }
-
-          if (joined) {
-            console.log('[OnlineLobby][RandomMatch] joined random match successfully', {
-              id: joined.id,
-              host_id: joined.host_id,
-              guest_id: joined.guest_id,
-              status: joined.status,
-            });
-            await loadGames();
-            router.push(`/online/game-v2/${joined.id}` as const);
-            return;
-          }
-        }
-      }
-
-      // 3) Nobody available to join, create a new waiting random game
-      const { data: newGame, error: insertError } = await supabase
-        .from('games_v2')
-        .insert({
-          host_id: userId,
-          guest_id: null,
-          status: 'waiting',
-          current_player_id: null,
-          host_score: STARTING_SCORE,
-          guest_score: STARTING_SCORE,
-          last_roll_1: null,
-          last_roll_2: null,
-          last_claim: null,
-          round_state: INITIAL_ROUND_STATE,
-          matchmaking_type: 'random',
-        })
-        .select('*')
-        .single();
-
-      if (insertError || !newGame) {
-        throw insertError ?? new Error('Unable to start random match.');
-      }
-
-      console.log('[OnlineLobby][RandomMatch] created new waiting random match', {
-        id: newGame.id,
-        host_id: newGame.host_id,
-        status: newGame.status,
-      });
-
-      await loadGames();
-      // Stay in the lobby so the waiting match appears in the list.
-      return;
-    } catch (err: any) {
-      console.error('[OnlineLobby][RandomMatch] Find random match failed', err);
-      Alert.alert('Could not find match', err?.message ?? 'Please try again.');
-    } finally {
-      setFindingRandomMatch(false);
-    }
-  }, [userId, getActiveGameCount, loadGames, router]);
 
   const refreshChallenges = useCallback(() => {
     console.log('[ONLINE] Refreshing challenges…');
@@ -924,11 +759,11 @@ export default function OnlineLobbyScreen() {
       <FeltBackground>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.innerContent}>
-            <View>
+            <View style={styles.pageContent}>
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>Start a new match</Text>
                 <Text style={styles.cardSubtitle}>
-                  Invite a friend using their color-animal code (for example: "BluePanda04").
+                  Invite a friend using their color-animal code, for example BluePanda04.
                 </Text>
                 {myUsername && (
                   <View style={styles.usernameRow}>
@@ -953,15 +788,8 @@ export default function OnlineLobbyScreen() {
                     label={creatingMatch ? 'Starting…' : 'Start Match'}
                     onPress={handleCreateMatch}
                     disabled={creatingMatch || !userId}
-                    style={[styles.primaryButton, styles.startMatchGreen]}
+                    style={[styles.primaryButton, styles.startMatchGreen, styles.startMatchSingleButton]}
                     textStyle={styles.startMatchGreenText}
-                  />
-                  <StyledButton
-                    label={findingRandomMatch ? 'Finding…' : 'Find Random Match'}
-                    onPress={handleFindRandomMatch}
-                    disabled={findingRandomMatch || !userId}
-                    style={[styles.primaryButton, styles.refreshButton]}
-                    textStyle={styles.refreshButtonText}
                   />
                 </View>
                 <View style={styles.startMatchRow}>
@@ -1047,6 +875,11 @@ const styles = StyleSheet.create({
   },
   innerContent: {
     flex: 1,
+    alignItems: 'center',
+  },
+  pageContent: {
+    width: '100%',
+    maxWidth: 520,
   },
   flexSpacer: {
     flexGrow: 1,
@@ -1075,11 +908,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 18,
     marginBottom: 4,
+    textAlign: 'center',
   },
   cardSubtitle: {
     color: '#8B949E',
     fontSize: 13,
     marginBottom: 12,
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
@@ -1089,6 +924,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: '#F0F6FC',
     marginBottom: 12,
+    textAlign: 'center',
   },
   primaryButton: {
     marginBottom: 6,
@@ -1104,6 +940,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#53A7F3',
     borderColor: '#1C75BC',
     borderWidth: 2,
+  },
+  startMatchSingleButton: {
+    flex: 1,
   },
   startMatchGreenText: {
     color: '#F0F6FC',
@@ -1137,6 +976,8 @@ const styles = StyleSheet.create({
   usernameRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     marginBottom: 8,
   },
   usernameLabel: {
@@ -1160,6 +1001,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
   },
   section: {
+    width: '100%',
     marginBottom: 24,
   },
   sectionTitle: {
@@ -1167,6 +1009,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 18,
     marginBottom: 10,
+    textAlign: 'center',
   },
   sectionSubTitle: {
     color: '#8B949E',
@@ -1174,6 +1017,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 6,
     marginBottom: 4,
+    textAlign: 'center',
   },
   emptyTextSmall: {
     color: '#8B949E',
@@ -1281,6 +1125,8 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   mainMenuButton: {
+    width: '100%',
+    maxWidth: 520,
     backgroundColor: '#53A7F3',
     borderRadius: 12,
     paddingVertical: 20,

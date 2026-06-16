@@ -42,6 +42,18 @@ export type SupabasePlayerStats = {
   claims41: number;
 };
 
+export type OnlineOpponentRecord = {
+  gameId: string;
+  opponentId: string;
+  opponentUsername: string | null;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  inserted: boolean;
+};
+
 type PlayerStatsRow = {
   user_id: string;
   games_played: number;
@@ -79,6 +91,18 @@ type PlayerStatsRow = {
   claims_21: number;
   claims_31: number;
   claims_41: number;
+};
+
+type OnlineOpponentRecordRow = {
+  game_id: string;
+  opponent_id: string;
+  opponent_username: string | null;
+  games_played: number;
+  wins: number;
+  losses: number;
+  points_for: number;
+  points_against: number;
+  inserted: boolean;
 };
 
 const isTestEnv = process.env.NODE_ENV === 'test';
@@ -171,6 +195,41 @@ export const recordPlayerSurvivalRun = (params: { streak: number }) => {
     p_streak: Math.max(0, Math.floor(params.streak)),
   });
 };
+
+const mapOnlineOpponentRecordRow = (row: OnlineOpponentRecordRow): OnlineOpponentRecord => ({
+  gameId: row.game_id,
+  opponentId: row.opponent_id,
+  opponentUsername: row.opponent_username ?? null,
+  gamesPlayed: row.games_played ?? 0,
+  wins: row.wins ?? 0,
+  losses: row.losses ?? 0,
+  pointsFor: row.points_for ?? 0,
+  pointsAgainst: row.points_against ?? 0,
+  inserted: !!row.inserted,
+});
+
+export async function finalizeOnlineMatchResult(
+  gameId: string
+): Promise<OnlineOpponentRecord | null> {
+  if (!gameId) return null;
+
+  try {
+    if (!(await hasAuthSession())) return null;
+    const { data, error } = await supabase.rpc('finalize_online_match_result', {
+      p_game_id: gameId,
+    });
+    if (error) {
+      console.error('finalize_online_match_result error', error);
+      return null;
+    }
+
+    const row = Array.isArray(data) ? (data[0] as OnlineOpponentRecordRow | undefined) : null;
+    return row ? mapOnlineOpponentRecordRow(row) : null;
+  } catch (err) {
+    console.error('Failed to finalize online match result', err);
+    return null;
+  }
+}
 
 const mapPlayerStatsRow = (row: PlayerStatsRow): SupabasePlayerStats => ({
   userId: row.user_id,
