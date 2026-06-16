@@ -164,6 +164,10 @@ export default function RoundRecapOverlay({ recap, onDone, durationMs = 5000 }: 
               </View>
             ))}
           </View>
+
+          <View style={styles.dismissHint}>
+            <Text style={styles.dismissHintText}>Tap anywhere to continue</Text>
+          </View>
         </View>
       </Pressable>
     </Animated.View>
@@ -282,5 +286,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     textAlign: 'right',
+  },
+  dismissHint: {
+    borderTopWidth: 1,
+    borderTopColor: '#3C4045',
+    marginTop: 10,
+    paddingTop: 8,
+  },
+  dismissHintText: {
+    color: '#BFE8FF',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
