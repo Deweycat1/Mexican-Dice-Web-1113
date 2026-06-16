@@ -345,6 +345,9 @@ export type Store = {
   quickPlaySocialRolls: number;
   quickPlayPlayerReachedOne: boolean;
   quickPlayBestMoment: string | null;
+  survivalInfernosRolled: number;
+  survivalSocialRolls: number;
+  survivalPlayerClaimsMade: number;
   
   // Turn timing tracking
   playerTurnStartTime: number | null;
@@ -985,6 +988,9 @@ export const useGameStore = create<Store>((set, get) => {
       playerTurnStartTime: null,
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
+      survivalInfernosRolled: 0,
+      survivalSocialRolls: 0,
+      survivalPlayerClaimsMade: 0,
       quickPlayRoundsPlayed: 0,
       quickPlayIncorrectBluffCalls: 0,
       quickPlaySocialRolls: 0,
@@ -1025,6 +1031,9 @@ export const useGameStore = create<Store>((set, get) => {
       playerTurnStartTime: null,
       playerBluffEventsThisGame: 0,
       playerSuccessfulBluffsThisGame: 0,
+      survivalInfernosRolled: 0,
+      survivalSocialRolls: 0,
+      survivalPlayerClaimsMade: 0,
       quickPlayRoundsPlayed: 0,
       quickPlayIncorrectBluffCalls: 0,
       quickPlaySocialRolls: 0,
@@ -1602,6 +1611,9 @@ export const useGameStore = create<Store>((set, get) => {
     quickPlaySocialRolls: 0,
     quickPlayPlayerReachedOne: false,
     quickPlayBestMoment: null,
+    survivalInfernosRolled: 0,
+    survivalSocialRolls: 0,
+    survivalPlayerClaimsMade: 0,
     
     // Turn timing tracking
     playerTurnStartTime: null,
@@ -1658,6 +1670,9 @@ export const useGameStore = create<Store>((set, get) => {
         lastSocialEvent: null,
           playerBluffEventsThisGame: 0,
           playerSuccessfulBluffsThisGame: 0,
+          survivalInfernosRolled: 0,
+          survivalSocialRolls: 0,
+          survivalPlayerClaimsMade: 0,
           quickPlayRoundsPlayed: 0,
           quickPlayIncorrectBluffCalls: 0,
           quickPlaySocialRolls: 0,
@@ -1710,6 +1725,10 @@ export const useGameStore = create<Store>((set, get) => {
         isRolling: false,
         mexicanFlashNonce: actual === 21 ? Date.now() : prev.mexicanFlashNonce,
         playerTurnStartTime: turnStartTime,
+        survivalInfernosRolled:
+          prev.survivalInfernosRolled + (state.mode === 'survival' && actual === 21 ? 1 : 0),
+        survivalSocialRolls:
+          prev.survivalSocialRolls + (state.mode === 'survival' && actual === 41 ? 1 : 0),
       }));
       setModeMessage(
         legalTruth
@@ -1832,6 +1851,8 @@ export const useGameStore = create<Store>((set, get) => {
             state.mode === 'normal' && prevState.quickPlayBestMoment == null
               ? 'Rolled a Social'
               : prevState.quickPlayBestMoment,
+          survivalPlayerClaimsMade:
+            prevState.survivalPlayerClaimsMade + (state.mode === 'survival' ? 1 : 0),
           pendingInfernoDelay: false,
         }));
         setModeMessage('Social (41) shown. Round resets.');
@@ -1865,6 +1886,11 @@ export const useGameStore = create<Store>((set, get) => {
       pushSurvivalClaim('player', claim, state.lastPlayerRoll);
       // record player's claim in normal mode
       pushClaim('player', claim, state.lastPlayerRoll);
+      if (state.mode === 'survival') {
+        set((prevState) => ({
+          survivalPlayerClaimsMade: prevState.survivalPlayerClaimsMade + 1,
+        }));
+      }
 
       // Track honesty: is this claim truthful or a bluff?
       const playerRoll = state.lastPlayerRoll;

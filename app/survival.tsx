@@ -23,6 +23,7 @@ import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
 import FeltBackground from '../src/components/FeltBackground';
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
+import InfernoRunSummaryOverlay from '../src/components/InfernoRunSummaryOverlay';
 import { InlineFlameText } from '../src/components/InlineFlameText';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
@@ -88,6 +89,30 @@ function getMissingInfernoSlots(collected: Set<InfernoSlotId>): InfernoSlotId[] 
 function getInfernoSlotChar(id: InfernoSlotId): string {
   const slot = INFERNO_SLOTS.find((entry) => entry.id === id);
   return slot ? slot.char : '';
+}
+
+function getFinalBlowText(pointEvent: ReturnType<typeof useGameStore.getState>['lastPointEvent']) {
+  if (!pointEvent || pointEvent.mode !== 'survival') {
+    return 'The fire caught up and ended the run.';
+  }
+
+  if (pointEvent.loser !== 'player') {
+    return 'The final showdown closed out the run.';
+  }
+
+  if (pointEvent.actual === 21 && pointEvent.defender === 'cpu') {
+    return 'A real Inferno burned through your last point.';
+  }
+
+  if (pointEvent.caller === 'player' && pointEvent.defenderToldTruth) {
+    return 'You challenged a real claim and lost your last point.';
+  }
+
+  if (pointEvent.caller === 'cpu' && !pointEvent.defenderToldTruth) {
+    return 'Infernoman caught your bluff and ended the run.';
+  }
+
+  return 'Your last point burned away in the showdown.';
 }
 
 const DICE_JIGGLE_SMALL = DIE_SIZE * 0.05;
@@ -473,6 +498,11 @@ export default function Survival() {
     lastBluffCaller,
     lastBluffDefenderTruth,
     bluffResultNonce,
+    lastPointEvent,
+    playerSuccessfulBluffsThisGame,
+    survivalInfernosRolled,
+    survivalSocialRolls,
+    survivalPlayerClaimsMade,
     // survival controls
     startSurvival,
     restartSurvival,
@@ -521,6 +551,7 @@ export default function Survival() {
   const streakFlashAnim = useRef(new Animated.Value(1)).current;
   const prevStreakRef = useRef(currentStreak);
   const prevStreakForReviewRef = useRef(currentStreak);
+  const runStartingBestRef = useRef(bestStreak);
 
   const logSurvivalSnapshot = useCallback(
     (tag: string) => {
@@ -579,6 +610,12 @@ export default function Survival() {
       turnLock,
     ]
   );
+
+  useEffect(() => {
+    if (mode === 'survival' && currentStreak === 0 && !isSurvivalOver) {
+      runStartingBestRef.current = bestStreak;
+    }
+  }, [bestStreak, currentStreak, isSurvivalOver, mode]);
 
   useEffect(() => {
     // if streak increased, trigger a subtle brightening flash
@@ -1192,6 +1229,23 @@ export default function Survival() {
     shouldRevealCpuDice &&
     (turn === 'player' || pendingCpuBluffResolution);
 
+  const summaryPersonalBest = Math.max(bestStreak, currentStreak);
+  const didSetPersonalBest =
+    currentStreak > 0 && currentStreak > Math.max(0, runStartingBestRef.current);
+  const summaryHighlight = useMemo(() => {
+    if (didSetPersonalBest) {
+      return {
+        label: 'RUN HIGHLIGHT',
+        text: 'You set a new Personal Best in Inferno Mode.',
+      };
+    }
+
+    return {
+      label: 'FINAL BLOW',
+      text: getFinalBlowText(lastPointEvent),
+    };
+  }, [didSetPersonalBest, lastPointEvent]);
+
   const currentBluffBannerStyle = useMemo(() => {
     if (rivalBluffBannerType === 'social') return styles.bluffBannerSocial;
     if (rivalBluffBannerType === 'got-em') return styles.bluffBannerSuccess;
@@ -1455,6 +1509,17 @@ export default function Survival() {
 
     handleRollOrClaim();
   }, [streakEnded, restartSurvival, handleRollOrClaim]);
+
+  const handleSummaryPlayAgain = useCallback(() => {
+    letterAttemptUsedRef.current = false;
+    lastProcessedRollRef.current = null;
+    restartSurvival();
+  }, [restartSurvival]);
+
+  const handleSummaryMainMenu = useCallback(() => {
+    exitSurvivalToNormal();
+    router.push('/');
+  }, [exitSurvivalToNormal, router]);
 
   const handlePressMenu = useCallback(() => {
     const title = 'End your streak?';
@@ -2309,6 +2374,21 @@ export default function Survival() {
 
         </SafeAreaView>
       </FeltBackground>
+      <InfernoRunSummaryOverlay
+        visible={isSurvivalOver}
+        streak={currentStreak}
+        personalBest={summaryPersonalBest}
+        bluffsCaught={playerSuccessfulBluffsThisGame}
+        infernosRolled={survivalInfernosRolled}
+        socialRolls={survivalSocialRolls}
+        claimsMade={survivalPlayerClaimsMade}
+        collectedLetters={collectedSlots}
+        highlightLabel={summaryHighlight.label}
+        highlightText={summaryHighlight.text}
+        didSetPersonalBest={didSetPersonalBest}
+        onPlayAgain={handleSummaryPlayAgain}
+        onMainMenu={handleSummaryMainMenu}
+      />
       {/* Celebration Overlay */}
       <StreakCelebrationOverlay
         visible={celebrationVisible}
