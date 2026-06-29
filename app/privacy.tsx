@@ -14,7 +14,7 @@ export default function PrivacyPolicyScreen() {
         <View style={styles.card}>
           <Text style={styles.heading}>Privacy Policy for InfernoDice</Text>
           <Text style={styles.body}>
-            Last updated: December 6, 2025
+            Last updated: June 29, 2026
           </Text>
 
           <Text style={styles.sectionTitle}>1. Introduction</Text>
@@ -28,6 +28,7 @@ export default function PrivacyPolicyScreen() {
           <Text style={styles.subheading}>2.1. Information you provide</Text>
           <Text style={styles.body}>
             - Profile information such as your in‑game username or display name.{'\n'}
+            - Live selfies you choose to attach to claims in private friend matches.{'\n'}
             - Any content you voluntarily submit through in‑app feedback forms or support channels.
           </Text>
 
@@ -48,6 +49,8 @@ export default function PrivacyPolicyScreen() {
           </Text>
           <Text style={styles.body}>
             - Operate the game and provide core features such as online matchmaking and statistics.{'\n'}
+            - Deliver live claim selfies to your opponent and create the temporary end-of-match
+            selfie collage.{'\n'}
             - Maintain fair play and detect abuse or misuse of the service.{'\n'}
             - Understand how players use the game so we can fix bugs, improve balance, and design
             new features.{'\n'}
@@ -63,18 +66,30 @@ export default function PrivacyPolicyScreen() {
             usage events. We do not sell your personal information.
           </Text>
 
-          <Text style={styles.sectionTitle}>5. Online Play and Usernames</Text>
+          <Text style={styles.sectionTitle}>5. Online Play, Usernames, and Selfies</Text>
           <Text style={styles.body}>
             When you play online, your chosen username and basic match data (for example, who you
             played and the outcome) may be visible to other players in lobbies or match history. Do
-            not use a username that contains personal information you do not want to share.
+            not use a username that contains personal information you do not want to share.{'\n'}
+            {'\n'}
+            In private friend matches, you may optionally take a live selfie after rolling. The
+            selfie is shared with your opponent, remains available while they decide whether to
+            roll or Call Bluff, and may appear in the end-of-match collage for both players. Selfies
+            are not added to profile or match-history screens. At the end of a match, either player
+            may choose to export the collage through their device&apos;s sharing tools. A shared copy is
+            handled by the selected third-party app and may remain available outside InfernoDice.
           </Text>
 
           <Text style={styles.sectionTitle}>6. Data Retention</Text>
           <Text style={styles.body}>
             We keep gameplay and analytics data for as long as needed to support the game, analyze
             trends, and maintain fair play. If we no longer need certain data, we will delete it or
-            anonymize it.
+            anonymize it.{'\n'}
+            {'\n'}
+            Match selfies are designed to be temporary. The app removes them once both players have
+            opened the match summary and a player exits, or when a rematch starts. Access also
+            expires 24 hours after the match finishes if one player never opens the summary. This
+            retention period does not apply to copies a player intentionally shares outside the app.
           </Text>
 
           <Text style={styles.sectionTitle}>7. Your Choices</Text>
@@ -83,6 +98,8 @@ export default function PrivacyPolicyScreen() {
             provided.{'\n'}
             - You may choose not to play online modes if you prefer not to share match data with
             other players.{'\n'}
+            - You can decline camera access. If permission is denied, live selfies are disabled for
+            that match.{'\n'}
             - If your device or platform offers privacy controls (such as limiting ad tracking or
             analytics), those settings may further restrict the data shared with us or our
             providers.

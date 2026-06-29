@@ -99,6 +99,10 @@ export default function IncomingChallengesList({ myUserId, onJoinGame }: Incomin
               .eq('id', newChallenge.challenger_id)
               .single()
               .then(({ data: userData, error: userError }) => {
+                if (userError) {
+                  console.error('[Realtime INSERT] Error fetching challenger username:', userError);
+                  return;
+                }
                 const challengerUsername = userData?.username || 'Unknown';
                 console.log('[Realtime INSERT] Fetched challenger username:', challengerUsername);
 
@@ -121,8 +125,7 @@ export default function IncomingChallengesList({ myUserId, onJoinGame }: Incomin
                   console.log('[Realtime INSERT] Adding challenge:', challengeObj);
                   return [challengeObj, ...prev];
                 });
-              })
-              .catch((err) => {
+              }, (err: unknown) => {
                 console.error('[Realtime INSERT] Error fetching challenger username:', err);
               });
           } else {
@@ -233,6 +236,7 @@ export default function IncomingChallengesList({ myUserId, onJoinGame }: Incomin
           guest_id: challenge.recipient_id,
           status: 'in_progress',
           current_player_id: challenge.challenger_id,
+          matchmaking_type: 'friend',
         })
         .select('*')
         .single();

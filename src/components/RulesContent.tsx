@@ -76,17 +76,16 @@ export function RulesContent({ containerStyle, textColor = '#E6FFE6' }: Props) {
       <Text style={[styles.subheading, colorStyle]}>Inferno Rounds</Text>
       <Text style={[styles.bullet, colorStyle]}>• The loser always loses 2 points</Text>
 
-      <Text style={[styles.heading, colorStyle]}>Wink Feature (Multiplayer Only)</Text>
+      <Text style={[styles.heading, colorStyle]}>Live Selfies (Friend Matches Only)</Text>
       <Text style={[styles.paragraph, colorStyle]}>
-        Winks let you add personality to a multiplayer match. They do not affect gameplay…they are just extra mind games to enhance the
-        bluffing chaos. You get 3 winks per game, so use them wisely.
+        After rolling on a mobile device, you may attach a live selfie to your claim. You can send up
+        to 3 selfies per match.
       </Text>
-      <Text style={[styles.paragraph, colorStyle]}>When you send a wink:</Text>
-      <Text style={[styles.bullet, colorStyle]}>• Your opponent sees a 😉 notification</Text>
-      <Text style={[styles.bullet, colorStyle]}>• They have no idea why you winked</Text>
-      <Text style={[styles.bullet, colorStyle]}>• Did you roll something big?</Text>
-      <Text style={[styles.bullet, colorStyle]}>• Are you bluffing?</Text>
-      <Text style={[styles.bullet, colorStyle]}>• Or just trying to scare them?</Text>
+      <Text style={[styles.bullet, colorStyle]}>• Selfies must be taken live with the front camera</Text>
+      <Text style={[styles.bullet, colorStyle]}>• The selfie is sent when you submit your claim</Text>
+      <Text style={[styles.bullet, colorStyle]}>• Your opponent can view it until they roll or Call Bluff</Text>
+      <Text style={[styles.bullet, colorStyle]}>• Both players&apos; selfies return in the match summary collage</Text>
+      <Text style={[styles.bullet, colorStyle]}>• The finished collage can be shared from the match summary</Text>
 
       <Text style={[styles.heading, colorStyle]}>Scoring & Scorekeeper Dice</Text>
       <Text style={[styles.paragraph, colorStyle]}>

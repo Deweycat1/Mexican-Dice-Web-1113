@@ -26,6 +26,9 @@ import {
   View,
 } from 'react-native';
 
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
 import BluffModal from '../../../src/components/BluffModal';
@@ -86,7 +89,78 @@ const facesFromRoll = (value: number | null | undefined): [number | null, number
   return [hi, lo];
 };
 
-const oppositeRole = (role: 'host' | 'guest') => (role === 'host' ? 'guest' : 'host');
+type PlayerRole = 'host' | 'guest';
+
+export type ClaimSelfie = {
+  id: string;
+  from: PlayerRole;
+  claim: number;
+  timestamp: string;
+};
+
+type PendingSelfie = {
+  uri: string;
+  timestamp: string;
+};
+
+const oppositeRole = (role: PlayerRole): PlayerRole => (role === 'host' ? 'guest' : 'host');
+const SELFIE_LIMIT = 3;
+const MAX_SELFIE_ARCHIVE = SELFIE_LIMIT * 2;
+const SELFIE_MAX_BASE64_LENGTH = 140_000;
+
+const parseClaimSelfie = (value: unknown): ClaimSelfie | null => {
+  if (!value || typeof value !== 'object') return null;
+  const selfie = value as Partial<ClaimSelfie>;
+  if (
+    typeof selfie.id !== 'string' ||
+    (selfie.from !== 'host' && selfie.from !== 'guest') ||
+    typeof selfie.claim !== 'number' ||
+    typeof selfie.timestamp !== 'string'
+  ) {
+    return null;
+  }
+  return selfie as ClaimSelfie;
+};
+
+const parseSelfieArchive = (value: unknown): ClaimSelfie[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(parseClaimSelfie)
+    .filter((selfie): selfie is ClaimSelfie => selfie !== null)
+    .slice(-MAX_SELFIE_ARCHIVE);
+};
+
+async function compressSelfie(uri: string): Promise<string> {
+  const firstContext = ImageManipulator.manipulate(uri);
+  firstContext.resize({ width: 480 });
+  const firstImage = await firstContext.renderAsync();
+  let result = await firstImage.saveAsync({
+    base64: true,
+    compress: 0.42,
+    format: SaveFormat.JPEG,
+  });
+
+  if (!result.base64) {
+    throw new Error('The camera did not return image data.');
+  }
+
+  if (result.base64.length > SELFIE_MAX_BASE64_LENGTH) {
+    const smallerContext = ImageManipulator.manipulate(result.uri);
+    smallerContext.resize({ width: 360 });
+    const smallerImage = await smallerContext.renderAsync();
+    result = await smallerImage.saveAsync({
+      base64: true,
+      compress: 0.3,
+      format: SaveFormat.JPEG,
+    });
+  }
+
+  if (!result.base64 || result.base64.length > SELFIE_MAX_BASE64_LENGTH) {
+    throw new Error('The selfie is too large to send. Please retake it.');
+  }
+
+  return `data:image/jpeg;base64,${result.base64}`;
+}
 
 // Shared round metadata persisted on games_v2.round_state
 export type RoundState = {
@@ -101,18 +175,19 @@ export type RoundState = {
   lastClaimRoll: number | null;
   socialRevealDice: [number | null, number | null] | null;
   socialRevealNonce: number;
-  hostWinksUsed: number;
-  guestWinksUsed: number;
-  lastClaimHadWink: boolean;
-  lastWinkBy: 'host' | 'guest' | null;
-  lastWinkNonce: number;
-  lastBluffCaller: 'host' | 'guest' | null;
+  hostSelfiesUsed: number;
+  guestSelfiesUsed: number;
+  activeClaimSelfie: ClaimSelfie | null;
+  selfieArchive: ClaimSelfie[];
+  lastSelfieBy: PlayerRole | null;
+  lastSelfieNonce: number;
+  lastBluffCaller: PlayerRole | null;
   lastBluffDefenderTruth: boolean | null;
   bluffResultNonce: number;
 };
 
 type HistoryItem =
-  | { id: string; type: 'claim'; who: 'host' | 'guest'; claim: number; timestamp: string; wink?: boolean }
+  | { id: string; type: 'claim'; who: PlayerRole; claim: number; timestamp: string }
   | { id: string; type: 'event'; text: string; timestamp: string };
 
 type GameStatus = 'waiting' | 'in_progress' | 'finished' | 'cancelled';
@@ -136,6 +211,8 @@ type OnlineGameV2 = {
   rematch_game_id?: string | null;
   parent_game_id?: string | null;
   matchmaking_type?: 'friend' | 'random' | null;
+  selfie_summary_seen_by_host?: boolean;
+  selfie_summary_seen_by_guest?: boolean;
 };
 
 const defaultRoundState: RoundState = {
@@ -150,11 +227,12 @@ const defaultRoundState: RoundState = {
   lastClaimRoll: null,
   socialRevealDice: null,
   socialRevealNonce: 0,
-  hostWinksUsed: 0,
-  guestWinksUsed: 0,
-  lastClaimHadWink: false,
-  lastWinkBy: null,
-  lastWinkNonce: 0,
+  hostSelfiesUsed: 0,
+  guestSelfiesUsed: 0,
+  activeClaimSelfie: null,
+  selfieArchive: [],
+  lastSelfieBy: null,
+  lastSelfieNonce: 0,
   lastBluffCaller: null,
   lastBluffDefenderTruth: null,
   bluffResultNonce: 0,
@@ -277,7 +355,7 @@ export default function OnlineGameV2Screen() {
   const [error, setError] = useState<string | null>(null);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
   const [banner, setBanner] = useState<{
-    type: 'got-em' | 'womp-womp' | 'social' | 'wink';
+    type: 'got-em' | 'womp-womp' | 'social' | 'selfie';
     text: string;
   } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -293,7 +371,14 @@ export default function OnlineGameV2Screen() {
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
-  const [winkArmed, setWinkArmed] = useState(false);
+  const [pendingSelfie, setPendingSelfie] = useState<PendingSelfie | null>(null);
+  const [selfieCameraOpen, setSelfieCameraOpen] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [selfieCaptureBusy, setSelfieCaptureBusy] = useState(false);
+  const [cameraPermissionDenied, setCameraPermissionDenied] = useState(false);
+  const [selfieViewerUri, setSelfieViewerUri] = useState<string | null>(null);
+  const [summarySelfies, setSummarySelfies] = useState<ClaimSelfie[]>([]);
+  const [selfieImagesById, setSelfieImagesById] = useState<Record<string, string>>({});
   const [isRequestingRematch, setIsRequestingRematch] = useState(false);
   const [onlineOpponentRecord, setOnlineOpponentRecord] = useState<OnlineOpponentRecord | null>(null);
   const [onlineOpponentRecordLoading, setOnlineOpponentRecordLoading] = useState(false);
@@ -308,6 +393,9 @@ export default function OnlineGameV2Screen() {
   const matchStartLoggedRef = useRef<string | null>(null);
   const matchEndLoggedRef = useRef<string | null>(null);
   const onlineMatchFinalizedRef = useRef<string | null>(null);
+  const summarySeenMarkedRef = useRef<string | null>(null);
+  const cameraRef = useRef<CameraView | null>(null);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const showBluffResultBanner = useCallback(
     (liar: boolean, iAmCaller: boolean) => {
@@ -361,6 +449,13 @@ export default function OnlineGameV2Screen() {
     onlineMatchFinalizedRef.current = null;
     setOnlineOpponentRecord(null);
     setOnlineOpponentRecordLoading(false);
+    setPendingSelfie(null);
+    setSelfieCameraOpen(false);
+    setCameraPermissionDenied(false);
+    setSelfieViewerUri(null);
+    setSummarySelfies([]);
+    setSelfieImagesById({});
+    summarySeenMarkedRef.current = null;
   }, [normalizedGameId]);
 
   useEffect(() => {
@@ -492,20 +587,18 @@ export default function OnlineGameV2Screen() {
                   : null,
               ]
             : null,
-        hostWinksUsed:
-          typeof (raw as any).hostWinksUsed === 'number' ? (raw as any).hostWinksUsed : 0,
-        guestWinksUsed:
-          typeof (raw as any).guestWinksUsed === 'number' ? (raw as any).guestWinksUsed : 0,
-        lastClaimHadWink:
-          typeof (raw as any).lastClaimHadWink === 'boolean'
-            ? (raw as any).lastClaimHadWink
-            : false,
-        lastWinkBy:
-          (raw as any).lastWinkBy === 'host' || (raw as any).lastWinkBy === 'guest'
-            ? (raw as any).lastWinkBy
+        hostSelfiesUsed:
+          typeof (raw as any).hostSelfiesUsed === 'number' ? (raw as any).hostSelfiesUsed : 0,
+        guestSelfiesUsed:
+          typeof (raw as any).guestSelfiesUsed === 'number' ? (raw as any).guestSelfiesUsed : 0,
+        activeClaimSelfie: parseClaimSelfie((raw as any).activeClaimSelfie),
+        selfieArchive: parseSelfieArchive((raw as any).selfieArchive),
+        lastSelfieBy:
+          (raw as any).lastSelfieBy === 'host' || (raw as any).lastSelfieBy === 'guest'
+            ? (raw as any).lastSelfieBy
             : null,
-        lastWinkNonce:
-          typeof (raw as any).lastWinkNonce === 'number' ? (raw as any).lastWinkNonce : 0,
+        lastSelfieNonce:
+          typeof (raw as any).lastSelfieNonce === 'number' ? (raw as any).lastSelfieNonce : 0,
         lastBluffCaller:
           (raw as any).lastBluffCaller === 'host' || (raw as any).lastBluffCaller === 'guest'
             ? (raw as any).lastBluffCaller
@@ -530,7 +623,7 @@ export default function OnlineGameV2Screen() {
     return Number.isNaN(parsed) ? null : parsed;
   }, [game?.last_claim]);
 
-  const myRole: 'host' | 'guest' | null = useMemo(() => {
+  const myRole: PlayerRole | null = useMemo(() => {
     if (!game || !userId) return null;
     if (userId === game.host_id) return 'host';
     if (userId === game.guest_id) return 'guest';
@@ -538,7 +631,7 @@ export default function OnlineGameV2Screen() {
   }, [game?.host_id, game?.guest_id, userId]);
 
   const isMyTurn = !!game && !!userId && game.current_player_id === userId;
-  const opponentRole: 'host' | 'guest' | null = myRole === 'host' ? 'guest' : myRole === 'guest' ? 'host' : null;
+  const opponentRole: PlayerRole | null = myRole === 'host' ? 'guest' : myRole === 'guest' ? 'host' : null;
   const myRoll = myRole === 'host' ? roundState.hostRoll : myRole === 'guest' ? roundState.guestRoll : null;
   const mustBluff = myRole === 'host' ? roundState.hostMustBluff : myRole === 'guest' ? roundState.guestMustBluff : false;
   const opponentName = myRole === 'host' ? guestName : hostName;
@@ -675,9 +768,13 @@ export default function OnlineGameV2Screen() {
     prevScoresRef.current = current;
   }, [game?.host_score, game?.guest_score, myRole, hapticsEnabled]);
   const claimSummary = useMemo(() => {
-    const winkSuffix = roundState.lastClaimHadWink ? ' 😉' : '';
-    return `Claim: ${formatClaim(lastClaim)}${winkSuffix}`;
-  }, [lastClaim, myRoll, roundState.lastClaimHadWink]);
+    const selfie = roundState.activeClaimSelfie;
+    const hasActiveSelfie =
+      !!selfie &&
+      selfie.claim === lastClaim &&
+      selfie.from === roundState.lastClaimer;
+    return `Claim: ${formatClaim(lastClaim)}${hasActiveSelfie ? ' + selfie' : ''}`;
+  }, [lastClaim, roundState.activeClaimSelfie, roundState.lastClaimer]);
   const isOpponentClaimPhase = useMemo(() => {
     if (!game) return false;
     if (!isMyTurn) return false;
@@ -696,26 +793,49 @@ export default function OnlineGameV2Screen() {
     if (roundState.lastClaimer !== myRole) return false;
     return lastClaim === 21;
   }, [isMyTurn, myRole, roundState.lastClaimer, lastClaim]);
-  const myWinksUsed =
+  const mySelfiesUsed =
     myRole === 'host'
-      ? roundState.hostWinksUsed ?? 0
+      ? roundState.hostSelfiesUsed ?? 0
       : myRole === 'guest'
-      ? roundState.guestWinksUsed ?? 0
+      ? roundState.guestSelfiesUsed ?? 0
       : 0;
-  const WINK_LIMIT = 3;
-  const winkUsesRemaining = Math.max(0, WINK_LIMIT - myWinksUsed);
-  const canSendWink =
+  const selfieUsesRemaining = Math.max(0, SELFIE_LIMIT - mySelfiesUsed);
+  const isMobileCameraPlatform = Platform.OS === 'ios' || Platform.OS === 'android';
+  const isFriendMatch = game?.matchmaking_type !== 'random';
+  const canPrepareSelfie =
     !!myRole &&
+    isFriendMatch &&
+    isMobileCameraPlatform &&
     isMyTurn &&
     game?.status === 'in_progress' &&
     myRoll != null &&
-    winkUsesRemaining > 0 &&
+    selfieUsesRemaining > 0 &&
+    !cameraPermissionDenied &&
     !isRevealAnimating;
+  const showSelfiePrompt =
+    isFriendMatch &&
+    isMobileCameraPlatform &&
+    isMyTurn &&
+    game?.status === 'in_progress' &&
+    myRoll != null &&
+    !isRevealAnimating;
+  const activeOpponentSelfie =
+    isOpponentClaimPhase &&
+    roundState.activeClaimSelfie?.from !== myRole
+      ? roundState.activeClaimSelfie
+      : null;
+  const activeOpponentSelfieUri = activeOpponentSelfie
+    ? selfieImagesById[activeOpponentSelfie.id] || null
+    : null;
+  const activeOpponentSelfieLoadComplete = activeOpponentSelfie
+    ? typeof selfieImagesById[activeOpponentSelfie.id] === 'string'
+    : false;
   useEffect(() => {
-    if (!isMyTurn || myRoll == null) {
-      setWinkArmed(false);
+    if (!isMyTurn || myRoll == null || game?.status !== 'in_progress') {
+      setPendingSelfie(null);
+      setSelfieCameraOpen(false);
     }
-  }, [isMyTurn, myRoll]);
+  }, [game?.status, isMyTurn, myRoll]);
   useEffect(() => {
     const history = roundState.history ?? [];
     const prevLen = prevHistoryLengthRef.current ?? 0;
@@ -745,8 +865,6 @@ export default function OnlineGameV2Screen() {
     }
     prevHistoryLengthRef.current = history.length;
   }, [roundState.history, myRole, hapticsEnabled]);
-  const winkLabel = `Send 😉 (${winkUsesRemaining})`;
-  const showAsActive = canSendWink && winkArmed;
   const isGameFinished = game?.status === 'finished';
   const hostRequestedRematch = game?.rematch_requested_by_host ?? false;
   const guestRequestedRematch = game?.rematch_requested_by_guest ?? false;
@@ -766,12 +884,103 @@ export default function OnlineGameV2Screen() {
   const showRematchButton = isGameFinished && !!myRole;
   const myOpponentRecordName = onlineOpponentRecord?.opponentUsername || opponentName;
   const didPlayerWin = isGameFinished ? myScore > opponentScore : false;
-  const opponentWinksUsed =
+  const opponentSelfiesUsed =
     myRole === 'host'
-      ? roundState.guestWinksUsed ?? 0
+      ? roundState.guestSelfiesUsed ?? 0
       : myRole === 'guest'
-      ? roundState.hostWinksUsed ?? 0
+      ? roundState.hostSelfiesUsed ?? 0
       : 0;
+  useEffect(() => {
+    if (roundState.selfieArchive.length > 0) {
+      setSummarySelfies(roundState.selfieArchive);
+    }
+  }, [roundState.selfieArchive]);
+  const selfieIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...roundState.selfieArchive.map((selfie) => selfie.id),
+            roundState.activeClaimSelfie?.id,
+          ].filter((id): id is string => typeof id === 'string')
+        )
+      ),
+    [roundState.activeClaimSelfie?.id, roundState.selfieArchive]
+  );
+  const selfieIdsKey = selfieIds.join(',');
+  useEffect(() => {
+    if (!game?.id || selfieIds.length === 0) return;
+    const missingIds = selfieIds.filter(
+      (id) => typeof selfieImagesById[id] !== 'string'
+    );
+    if (missingIds.length === 0) return;
+
+    let cancelled = false;
+    void (async () => {
+      const { data, error: selfieError } = await supabase
+        .from('online_match_selfies')
+        .select('id, image_data')
+        .eq('game_id', game.id)
+        .in('id', missingIds);
+
+      if (cancelled) return;
+      if (selfieError) {
+        console.warn('[ONLINE GAME] failed to load match selfies', selfieError);
+        setSelfieImagesById((current) => {
+          const next = { ...current };
+          for (const id of missingIds) next[id] = '';
+          return next;
+        });
+        return;
+      }
+
+      setSelfieImagesById((current) => {
+        const next = { ...current };
+        let changed = false;
+        const loadedIds = new Set<string>();
+        for (const row of data ?? []) {
+          if (typeof row.id === 'string' && typeof row.image_data === 'string') {
+            loadedIds.add(row.id);
+            if (next[row.id] !== row.image_data) {
+              next[row.id] = row.image_data;
+              changed = true;
+            }
+          }
+        }
+        for (const id of missingIds) {
+          if (!loadedIds.has(id) && typeof next[id] !== 'string') {
+            next[id] = '';
+            changed = true;
+          }
+        }
+        return changed ? next : current;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [game?.id, selfieIds, selfieIdsKey, selfieImagesById]);
+  const summarySelfieMetadata =
+    summarySelfies.length > 0 ? summarySelfies : roundState.selfieArchive;
+  const summarySelfieItems = useMemo(
+    () =>
+      summarySelfieMetadata.flatMap((selfie) => {
+        const uri = selfieImagesById[selfie.id];
+        return uri
+          ? [{
+              id: selfie.id,
+              uri,
+              claim: selfie.claim,
+              ownerLabel: selfie.from === myRole ? 'You' : opponentName,
+            }]
+          : [];
+      }),
+    [myRole, opponentName, selfieImagesById, summarySelfieMetadata]
+  );
+  const allSummarySelfiesLoaded = summarySelfieMetadata.every(
+    (selfie) => typeof selfieImagesById[selfie.id] === 'string'
+  );
   const showMatchSummary =
     isGameFinished &&
     !!myRole &&
@@ -828,6 +1037,36 @@ export default function OnlineGameV2Screen() {
       setOnlineOpponentRecordLoading(false);
     })();
   }, [normalizedGameId, showMatchSummary]);
+  useEffect(() => {
+    if (!showMatchSummary || !allSummarySelfiesLoaded || !game || !myRole) return;
+    const alreadySeen =
+      myRole === 'host'
+        ? game.selfie_summary_seen_by_host
+        : game.selfie_summary_seen_by_guest;
+    if (alreadySeen || summarySeenMarkedRef.current === game.id) return;
+
+    summarySeenMarkedRef.current = game.id;
+    const column =
+      myRole === 'host'
+        ? 'selfie_summary_seen_by_host'
+        : 'selfie_summary_seen_by_guest';
+    setGame((current) => current ? { ...current, [column]: true } : current);
+    void supabase
+      .from('games_v2')
+      .update({ [column]: true })
+      .eq('id', game.id)
+      .then(({ error: seenError }) => {
+        if (seenError) {
+          console.warn('[ONLINE GAME] failed to mark selfie summary seen', seenError);
+          summarySeenMarkedRef.current = null;
+        }
+      });
+  }, [
+    allSummarySelfiesLoaded,
+    game,
+    myRole,
+    showMatchSummary,
+  ]);
 
   const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
   const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
@@ -875,30 +1114,34 @@ export default function OnlineGameV2Screen() {
       startSocialReveal(dice);
     }
   }, [roundState.socialRevealNonce, roundState.socialRevealDice, roundState.lastAction, lastClaim, startSocialReveal]);
-  const lastWinkNonceRef = useRef(roundState.lastWinkNonce ?? 0);
-  const winkGlowAnim = useRef(new Animated.Value(0)).current;
+  const lastSelfieNonceRef = useRef(roundState.lastSelfieNonce ?? 0);
+  const selfieGlowAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const winkNonce = roundState.lastWinkNonce ?? 0;
-    const winkBy = roundState.lastWinkBy ?? null;
+    const selfieNonce = roundState.lastSelfieNonce ?? 0;
+    const selfieBy = roundState.lastSelfieBy ?? null;
     if (!game || !myRole) return;
-    if (!winkNonce || !winkBy) return;
-    if (winkNonce <= lastWinkNonceRef.current) return;
-    lastWinkNonceRef.current = winkNonce;
-    if (winkBy === myRole) return;
+    if (selfieNonce < lastSelfieNonceRef.current) {
+      lastSelfieNonceRef.current = selfieNonce;
+      return;
+    }
+    if (!selfieNonce || !selfieBy) return;
+    if (selfieNonce <= lastSelfieNonceRef.current) return;
+    lastSelfieNonceRef.current = selfieNonce;
+    if (selfieBy === myRole) return;
     if (game.status !== 'in_progress') return;
-    setBanner({ type: 'wink', text: '😉 WINK WINK 😉' });
-    winkGlowAnim.setValue(0);
+    setBanner({ type: 'selfie', text: 'Live selfie received' });
+    selfieGlowAnim.setValue(0);
     Animated.sequence([
-      Animated.timing(winkGlowAnim, { toValue: 1, duration: 250, useNativeDriver: false }),
-      Animated.timing(winkGlowAnim, { toValue: 0, duration: 250, useNativeDriver: false }),
+      Animated.timing(selfieGlowAnim, { toValue: 1, duration: 250, useNativeDriver: false }),
+      Animated.timing(selfieGlowAnim, { toValue: 0, duration: 250, useNativeDriver: false }),
     ]).start();
-  }, [roundState.lastWinkNonce, roundState.lastWinkBy, game?.status, myRole, winkGlowAnim]);
-  const glowStyle = {
+  }, [roundState.lastSelfieNonce, roundState.lastSelfieBy, game?.status, myRole, selfieGlowAnim]);
+  const selfieGlowStyle = {
     borderWidth: 2,
-    borderColor: winkGlowAnim.interpolate({ inputRange: [0, 1], outputRange: ['transparent', '#F9E28F'] }),
-    shadowColor: '#F9E28F',
-    shadowOpacity: winkGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] }),
-    shadowRadius: winkGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 12] }),
+    borderColor: selfieGlowAnim.interpolate({ inputRange: [0, 1], outputRange: ['#30363D', '#FE9902'] }),
+    shadowColor: '#FE9902',
+    shadowOpacity: selfieGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] }),
+    shadowRadius: selfieGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 12] }),
   };
   const bluffResultNonceRef = useRef(roundState.bluffResultNonce ?? 0);
   useEffect(() => {
@@ -950,8 +1193,7 @@ export default function OnlineGameV2Screen() {
       if (entry.type === 'event') return entry.text;
       const whoLabel = entry.who === myRole ? 'You' : opponentName;
       const verb = entry.claim === 41 ? 'rolled' : 'claimed';
-      const winkSuffix = entry.wink ? ' 😉' : '';
-      return `${whoLabel} ${verb} ${formatClaim(entry.claim)}${winkSuffix}`;
+      return `${whoLabel} ${verb} ${formatClaim(entry.claim)}`;
     },
     [myRole, opponentName]
   );
@@ -1036,6 +1278,7 @@ export default function OnlineGameV2Screen() {
         guestRoll: myRole === 'guest' ? normalized : roundState.guestRoll,
         hostMustBluff: myRole === 'host' ? !legalTruth : roundState.hostMustBluff,
         guestMustBluff: myRole === 'guest' ? !legalTruth : roundState.guestMustBluff,
+        activeClaimSelfie: null,
       };
       await handleUpdate(
         {
@@ -1065,9 +1308,73 @@ export default function OnlineGameV2Screen() {
     [roundState.history]
   );
 
+  const handleOpenSelfieCamera = useCallback(async () => {
+    if (!canPrepareSelfie) return;
+    if (pendingSelfie) {
+      setSelfieCameraOpen(true);
+      return;
+    }
+
+    try {
+      const permission = cameraPermission?.granted
+        ? cameraPermission
+        : await requestCameraPermission();
+      if (!permission.granted) {
+        setCameraPermissionDenied(true);
+        Alert.alert(
+          'Camera unavailable',
+          'Camera access was denied. Selfies are disabled for this match.'
+        );
+        return;
+      }
+      setCameraReady(false);
+      setSelfieCameraOpen(true);
+    } catch (err) {
+      console.error('[ONLINE GAME] camera permission failed', err);
+      setCameraPermissionDenied(true);
+      Alert.alert('Camera unavailable', 'Selfies are disabled for this match.');
+    }
+  }, [cameraPermission, canPrepareSelfie, pendingSelfie, requestCameraPermission]);
+
+  const handleCaptureSelfie = useCallback(async () => {
+    if (!cameraRef.current || !cameraReady || selfieCaptureBusy) return;
+    setSelfieCaptureBusy(true);
+    try {
+      const picture = await cameraRef.current.takePictureAsync({
+        quality: 0.55,
+        exif: false,
+        skipProcessing: false,
+      });
+      const dataUri = await compressSelfie(picture.uri);
+      setPendingSelfie({
+        uri: dataUri,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('[ONLINE GAME] selfie capture failed', err);
+      Alert.alert(
+        'Selfie failed',
+        err instanceof Error ? err.message : 'Could not capture the selfie.'
+      );
+    } finally {
+      setSelfieCaptureBusy(false);
+    }
+  }, [cameraReady, selfieCaptureBusy]);
+
+  const handleRetakeSelfie = useCallback(() => {
+    setPendingSelfie(null);
+    setCameraReady(false);
+  }, []);
+
+  const handleRemoveSelfie = useCallback(() => {
+    setPendingSelfie(null);
+    setSelfieCameraOpen(false);
+    setCameraReady(false);
+  }, []);
+
   const handleClaim = useCallback(
-    async (claim: number, useWink?: boolean) => {
-      if (!game || !myRole || !opponentRole || !isMyTurn || isRevealAnimating) return;
+    async (claim: number) => {
+      if (!game || !userId || !myRole || !opponentRole || !isMyTurn || isRevealAnimating) return;
       void playClaimHaptic(hapticsEnabled);
       const prev = lastClaim;
       const activeChallenge = resolveActiveChallenge(roundState.baselineClaim, prev);
@@ -1085,17 +1392,18 @@ export default function OnlineGameV2Screen() {
         return;
       }
 
-      const effectiveUseWink = !!useWink && myRole != null && winkUsesRemaining > 0;
-      const prevWinkNonce = roundState.lastWinkNonce ?? 0;
-      const nextWinkNonce = effectiveUseWink ? prevWinkNonce + 1 : prevWinkNonce;
       const timestamp = new Date().toISOString();
+      const effectiveSelfie =
+        claim !== 41 &&
+        isFriendMatch &&
+        pendingSelfie !== null &&
+        selfieUsesRemaining > 0;
       const newHistory = appendHistory({
         id: uuid(),
         type: 'claim',
         who: myRole,
         claim,
         timestamp,
-        wink: effectiveUseWink,
       });
       const nextBaseline =
         claim === 41
@@ -1116,6 +1424,44 @@ export default function OnlineGameV2Screen() {
       if (myCurrentRoll != null && claim !== myCurrentRoll) {
         void playBluffDeclaredHaptic(hapticsEnabled);
       }
+
+      let insertedSelfieId: string | null = null;
+      let claimSelfie: ClaimSelfie | null = null;
+      if (effectiveSelfie && pendingSelfie) {
+        const { data: selfieRow, error: selfieError } = await supabase
+          .from('online_match_selfies')
+          .insert({
+            game_id: game.id,
+            sender_id: userId,
+            sender_role: myRole,
+            claim,
+            image_data: pendingSelfie.uri,
+          })
+          .select('id')
+          .single();
+
+        if (selfieError || !selfieRow?.id) {
+          console.error('[ONLINE GAME] selfie upload failed', selfieError);
+          Alert.alert('Selfie failed', 'Your claim was not sent. Please try the selfie again.');
+          return;
+        }
+
+        insertedSelfieId = selfieRow.id;
+        claimSelfie = {
+          id: selfieRow.id,
+          from: myRole,
+          claim,
+          timestamp: pendingSelfie.timestamp,
+        };
+        setSelfieImagesById((current) => ({
+          ...current,
+          [selfieRow.id]: pendingSelfie.uri,
+        }));
+      }
+
+      const nextSelfieNonce = claimSelfie
+        ? (roundState.lastSelfieNonce ?? 0) + 1
+        : roundState.lastSelfieNonce;
       const socialDice = claim === 41 && myCurrentRoll != null ? facesFromRoll(myCurrentRoll) : null;
       const nextSocialNonce = claim === 41 ? (roundState.socialRevealNonce ?? 0) + 1 : roundState.socialRevealNonce;
 
@@ -1128,17 +1474,20 @@ export default function OnlineGameV2Screen() {
         lastClaimRoll: claim === 41 ? null : myCurrentRoll,
         socialRevealDice: claim === 41 ? socialDice : roundState.socialRevealDice,
         socialRevealNonce: nextSocialNonce,
-        hostWinksUsed:
+        hostSelfiesUsed:
           myRole === 'host'
-            ? roundState.hostWinksUsed + (effectiveUseWink ? 1 : 0)
-            : roundState.hostWinksUsed,
-        guestWinksUsed:
+            ? roundState.hostSelfiesUsed + (claimSelfie ? 1 : 0)
+            : roundState.hostSelfiesUsed,
+        guestSelfiesUsed:
           myRole === 'guest'
-            ? roundState.guestWinksUsed + (effectiveUseWink ? 1 : 0)
-            : roundState.guestWinksUsed,
-        lastClaimHadWink: !!effectiveUseWink && claim !== 41,
-        lastWinkBy: effectiveUseWink ? myRole : roundState.lastWinkBy ?? null,
-        lastWinkNonce: nextWinkNonce,
+            ? roundState.guestSelfiesUsed + (claimSelfie ? 1 : 0)
+            : roundState.guestSelfiesUsed,
+        activeClaimSelfie: claimSelfie,
+        selfieArchive: claimSelfie
+          ? [...roundState.selfieArchive, claimSelfie].slice(-MAX_SELFIE_ARCHIVE)
+          : roundState.selfieArchive,
+        lastSelfieBy: claimSelfie ? myRole : roundState.lastSelfieBy ?? null,
+        lastSelfieNonce: nextSelfieNonce,
       };
 
       if (myRole === 'host') {
@@ -1157,7 +1506,7 @@ export default function OnlineGameV2Screen() {
         nextRound.guestMustBluff = false;
         nextRound.lastAction = 'normal';
         nextRound.lastClaimer = null;
-        nextRound.lastClaimHadWink = false;
+        nextRound.activeClaimSelfie = null;
       } else if (claim === 21 || claim === 31) {
         void playSpecialClaimHaptic(claim, hapticsEnabled);
       }
@@ -1178,11 +1527,26 @@ export default function OnlineGameV2Screen() {
               : null,
         });
         setClaimPickerOpen(false);
-        setWinkArmed(false);
+        setPendingSelfie(null);
+        setSelfieCameraOpen(false);
+        setCameraReady(false);
         if (claim === 41) {
           setBanner({ type: 'social', text: '🍻 SOCIAL!!! 🍻' });
         }
       } catch (err: any) {
+        if (insertedSelfieId) {
+          const failedSelfieId = insertedSelfieId;
+          void supabase
+            .from('online_match_selfies')
+            .delete()
+            .eq('id', failedSelfieId)
+            .eq('game_id', game.id);
+          setSelfieImagesById((current) => {
+            const next = { ...current };
+            delete next[failedSelfieId];
+            return next;
+          });
+        }
         if (err?.message === OUT_OF_TURN_ERROR) {
           Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
         } else {
@@ -1203,16 +1567,17 @@ export default function OnlineGameV2Screen() {
       handleUpdate,
       hostName,
       guestName,
-      startSocialReveal,
-      winkUsesRemaining,
+      isFriendMatch,
+      pendingSelfie,
+      selfieUsesRemaining,
       userId,
       hapticsEnabled,
     ]
   );
 
   const handleShowSocial = useCallback(() => {
-    handleClaim(41, winkArmed);
-  }, [handleClaim, winkArmed]);
+    handleClaim(41);
+  }, [handleClaim]);
 
   const handleCallBluff = useCallback(async () => {
     if (!game || !myRole || !opponentRole || !isMyTurn || lastClaim == null || isRevealAnimating) {
@@ -1289,11 +1654,12 @@ export default function OnlineGameV2Screen() {
       history: nextHistory,
       socialRevealNonce: roundState.socialRevealNonce ?? 0,
       socialRevealDice: null,
-      hostWinksUsed: roundState.hostWinksUsed,
-      guestWinksUsed: roundState.guestWinksUsed,
-      lastClaimHadWink: false,
-      lastWinkBy: roundState.lastWinkBy ?? null,
-      lastWinkNonce: roundState.lastWinkNonce ?? 0,
+      hostSelfiesUsed: roundState.hostSelfiesUsed,
+      guestSelfiesUsed: roundState.guestSelfiesUsed,
+      activeClaimSelfie: null,
+      selfieArchive: roundState.selfieArchive,
+      lastSelfieBy: roundState.lastSelfieBy ?? null,
+      lastSelfieNonce: roundState.lastSelfieNonce ?? 0,
       lastBluffCaller: myRole,
       lastBluffDefenderTruth: !liar,
       bluffResultNonce: (roundState.bluffResultNonce ?? 0) + 1,
@@ -1335,10 +1701,76 @@ export default function OnlineGameV2Screen() {
     showBluffResultBanner,
   ]);
 
+  const clearFinishedMatchSelfies = useCallback(async (force = false) => {
+    if (!game || !myRole || game.status !== 'finished') return;
+    try {
+      if (!force) {
+        if (!allSummarySelfiesLoaded) return;
+        const seenColumn =
+          myRole === 'host'
+            ? 'selfie_summary_seen_by_host'
+            : 'selfie_summary_seen_by_guest';
+        const { error: seenError } = await supabase
+          .from('games_v2')
+          .update({ [seenColumn]: true })
+          .eq('id', game.id);
+        if (seenError) {
+          console.warn('[ONLINE GAME] failed to mark selfie summary seen', seenError);
+        }
+
+        const { data: seenState, error: seenStateError } = await supabase
+          .from('games_v2')
+          .select('selfie_summary_seen_by_host, selfie_summary_seen_by_guest')
+          .eq('id', game.id)
+          .single();
+        if (seenStateError) {
+          console.warn('[ONLINE GAME] failed to read selfie summary state', seenStateError);
+          return;
+        }
+        if (
+          !seenState?.selfie_summary_seen_by_host ||
+          !seenState?.selfie_summary_seen_by_guest
+        ) {
+          return;
+        }
+      }
+
+      const { error: deleteError } = await supabase
+        .from('online_match_selfies')
+        .delete()
+        .eq('game_id', game.id);
+      if (deleteError) {
+        console.warn('[ONLINE GAME] selfie image cleanup failed', deleteError);
+      }
+
+      if (!roundState.activeClaimSelfie && roundState.selfieArchive.length === 0) return;
+      const nextRound: RoundState = {
+        ...roundState,
+        activeClaimSelfie: null,
+        selfieArchive: [],
+      };
+      const { error: cleanupError } = await supabase
+        .from('games_v2')
+        .update({ round_state: nextRound })
+        .eq('id', game.id);
+      if (cleanupError) {
+        console.warn('[ONLINE GAME] selfie cleanup failed', cleanupError);
+      }
+    } catch (err) {
+      console.warn('[ONLINE GAME] selfie cleanup failed', err);
+    }
+  }, [allSummarySelfiesLoaded, game, myRole, roundState]);
+
   const handleQuitGame = useCallback(() => {
     console.log('[OnlineGameV2] Leave Game pressed (no confirm)');
+    void clearFinishedMatchSelfies(false);
     router.push('/online' as const);
-  }, [router]);
+  }, [clearFinishedMatchSelfies, router]);
+
+  const handleMainMenuPress = useCallback(async () => {
+    await clearFinishedMatchSelfies(false);
+    router.replace('/');
+  }, [clearFinishedMatchSelfies, router]);
 
   const handleRematchPress = useCallback(async () => {
     if (!game || !userId) return;
@@ -1346,6 +1778,7 @@ export default function OnlineGameV2Screen() {
     try {
       const newGameId = await requestRematchForGame(game, userId);
       if (newGameId) {
+        await clearFinishedMatchSelfies(true);
         router.replace(`/online/game-v2/${newGameId}`);
       }
     } catch (err) {
@@ -1357,7 +1790,7 @@ export default function OnlineGameV2Screen() {
     } finally {
       setIsRequestingRematch(false);
     }
-  }, [game, userId, router]);
+  }, [clearFinishedMatchSelfies, game, userId, router]);
 
   if (loading) {
     return (
@@ -1466,20 +1899,17 @@ export default function OnlineGameV2Screen() {
             </View>
 
             {banner && (
-              // NOTE: bannerContainer is a full-width overlay; the inner banner view is
-              // constrained so we don't briefly see a full-width block during updates.
-              // Wink glow is applied only to the compact wink banner, not the full overlay,
-              // to avoid a large rectangular flash when the glow animates.
               <Animated.View pointerEvents="none" style={styles.bannerContainer}>
-                {banner.type === 'wink' ? (
-                  <Animated.View style={glowStyle}>
+                {banner.type === 'selfie' ? (
+                  <Animated.View>
                     <LinearGradient
-                      colors={['#FE9902', '#FE9902']}
+                      colors={['#FE9902', '#D97706']}
                       start={{ x: 0, y: 0.5 }}
                       end={{ x: 1, y: 0.5 }}
-                      style={styles.winkBanner}
+                      style={styles.selfieBanner}
                     >
-                      <Text style={styles.winkText}>{banner.text}</Text>
+                      <MaterialIcons name="photo-camera" size={18} color="#161B22" />
+                      <Text style={styles.selfieBannerText}>{banner.text}</Text>
                     </LinearGradient>
                   </Animated.View>
                 ) : (
@@ -1514,6 +1944,43 @@ export default function OnlineGameV2Screen() {
                 )}
               </Animated.View>
             </Pressable>
+
+            {activeOpponentSelfie ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`View ${opponentName}'s claim selfie`}
+                disabled={!activeOpponentSelfieUri}
+                onPress={() => {
+                  if (activeOpponentSelfieUri) setSelfieViewerUri(activeOpponentSelfieUri);
+                }}
+                style={({ pressed }) => [
+                  styles.opponentSelfieNotice,
+                  pressed && styles.opponentSelfieNoticePressed,
+                ]}
+              >
+                <Animated.View style={[styles.opponentSelfieThumbFrame, selfieGlowStyle]}>
+                  {activeOpponentSelfieUri ? (
+                    <Image
+                      source={{ uri: activeOpponentSelfieUri }}
+                      style={styles.opponentSelfieThumb}
+                    />
+                  ) : activeOpponentSelfieLoadComplete ? (
+                    <MaterialIcons name="broken-image" size={24} color="#8B949E" />
+                  ) : (
+                    <ActivityIndicator color="#FE9902" />
+                  )}
+                </Animated.View>
+                <View style={styles.opponentSelfieCopy}>
+                  <Text style={styles.opponentSelfieTitle} numberOfLines={1}>
+                    {opponentName}&apos;s claim selfie
+                  </Text>
+                  <Text style={styles.opponentSelfieMeta}>
+                    Claim {formatClaim(lastClaim)}
+                  </Text>
+                </View>
+                <MaterialIcons name="open-in-full" size={20} color="#FE9902" />
+              </Pressable>
+            ) : null}
 
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
@@ -1564,6 +2031,53 @@ export default function OnlineGameV2Screen() {
         </View>
 
               <View style={styles.controls}>
+              {showSelfiePrompt ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    pendingSelfie
+                      ? 'Review attached selfie'
+                      : `Add live selfie, ${selfieUsesRemaining} remaining`
+                  }
+                  disabled={!canPrepareSelfie}
+                  onPress={handleOpenSelfieCamera}
+                  style={({ pressed }) => [
+                    styles.selfiePrompt,
+                    pendingSelfie && styles.selfiePromptReady,
+                    !canPrepareSelfie && styles.selfiePromptDisabled,
+                    pressed && canPrepareSelfie && styles.selfiePromptPressed,
+                  ]}
+                >
+                  {pendingSelfie ? (
+                    <Image source={{ uri: pendingSelfie.uri }} style={styles.selfiePromptThumb} />
+                  ) : (
+                    <View style={styles.selfiePromptIcon}>
+                      <MaterialIcons name="photo-camera" size={24} color="#FFFFFF" />
+                    </View>
+                  )}
+                  <View style={styles.selfiePromptCopy}>
+                    <Text style={styles.selfiePromptTitle}>
+                      {pendingSelfie
+                        ? 'Selfie attached'
+                        : cameraPermissionDenied
+                          ? 'Camera denied'
+                          : selfieUsesRemaining === 0
+                            ? 'Selfies used'
+                            : 'Add live selfie'}
+                    </Text>
+                    <Text style={styles.selfiePromptMeta}>
+                      {pendingSelfie
+                        ? `Sends with claim · ${selfieUsesRemaining} left`
+                        : `${selfieUsesRemaining} of ${SELFIE_LIMIT} left`}
+                    </Text>
+                  </View>
+                  <MaterialIcons
+                    name={pendingSelfie ? 'edit' : 'chevron-right'}
+                    size={24}
+                    color={canPrepareSelfie ? '#FFFFFF' : '#8B949E'}
+                  />
+                </Pressable>
+              ) : null}
               <View style={styles.actionRow}>
                 <StyledButton
                   label={canRoll ? 'Roll' : 'Claim'}
@@ -1573,7 +2087,7 @@ export default function OnlineGameV2Screen() {
                       ? handleRoll
                       : () => {
                           if (!canClaim || myRoll == null) return;
-                          handleClaim(myRoll, winkArmed);
+                          handleClaim(myRoll);
                         }
                   }
                   disabled={isRevealAnimating || (canRoll ? !canRoll : !canClaim || !canClaimTruthfully)}
@@ -1622,10 +2136,10 @@ export default function OnlineGameV2Screen() {
                       style={[
                         styles.btn,
                         styles.bottomRowButton,
-                        styles.winkButton,
+                        styles.compactActionButton,
                         !myRole || hasRequestedRematch || isRequestingRematch
-                          ? styles.winkButtonDisabled
-                          : styles.winkButtonActive,
+                          ? styles.compactActionButtonDisabled
+                          : styles.compactActionButtonActive,
                       ]}
                       textStyle={styles.rematchLabel}
                     >
@@ -1641,39 +2155,7 @@ export default function OnlineGameV2Screen() {
                       ) : undefined}
                     </StyledButton>
                   </View>
-                ) : (
-                  <StyledButton
-                    label={winkLabel}
-                    variant="ghost"
-                    onPress={() => {
-                      if (!canSendWink) return;
-                      setWinkArmed((prev) => !prev);
-                    }}
-                    disabled={!canSendWink}
-                    style={[
-                      styles.btn,
-                      styles.winkButton,
-                      showAsActive ? styles.winkButtonActive : styles.winkButtonDisabled,
-                    ]}
-                  >
-                    <View style={styles.winkLabelContainer}>
-                      <Text
-                        style={styles.winkLabelLine}
-                        numberOfLines={1}
-                        ellipsizeMode="clip"
-                      >
-                        Send
-                      </Text>
-                      <Text
-                        style={styles.winkLabelLine}
-                        numberOfLines={1}
-                        ellipsizeMode="clip"
-                      >
-                        {`😉 (${winkUsesRemaining})`}
-                      </Text>
-                    </View>
-                  </StyledButton>
-                )}
+                ) : null}
 
                 <StyledButton
                   label="Rules"
@@ -1705,7 +2187,7 @@ export default function OnlineGameV2Screen() {
         visible={claimPickerOpen}
         options={claimOptions}
         onCancel={() => setClaimPickerOpen(false)}
-        onSelect={(value) => handleClaim(value, winkArmed)}
+        onSelect={(value) => handleClaim(value)}
         canShowSocial={canShowSocial}
         onShowSocial={handleShowSocial}
       />
@@ -1767,6 +2249,142 @@ export default function OnlineGameV2Screen() {
         </View>
       </Modal>
 
+      <Modal
+        visible={selfieCameraOpen}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setSelfieCameraOpen(false)}
+      >
+        <SafeAreaView style={styles.cameraModal}>
+          <View style={styles.cameraHeader}>
+            <Text style={styles.cameraTitle}>
+              {pendingSelfie ? 'Selfie preview' : 'Live claim selfie'}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close camera"
+              onPress={() => setSelfieCameraOpen(false)}
+              style={({ pressed }) => [styles.cameraCloseButton, pressed && { opacity: 0.7 }]}
+            >
+              <MaterialIcons name="close" size={28} color="#FFFFFF" />
+            </Pressable>
+          </View>
+
+          {pendingSelfie ? (
+            <View style={styles.selfiePreviewContainer}>
+              <Image source={{ uri: pendingSelfie.uri }} style={styles.selfiePreviewImage} />
+              <View style={styles.selfiePreviewActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove selfie"
+                  onPress={handleRemoveSelfie}
+                  style={({ pressed }) => [
+                    styles.selfiePreviewAction,
+                    styles.selfiePreviewActionRemove,
+                    pressed && styles.selfiePreviewActionPressed,
+                  ]}
+                >
+                  <MaterialIcons name="delete-outline" size={22} color="#FFFFFF" />
+                  <Text style={styles.selfiePreviewActionText}>Remove</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Retake selfie"
+                  onPress={handleRetakeSelfie}
+                  style={({ pressed }) => [
+                    styles.selfiePreviewAction,
+                    styles.selfiePreviewActionRetake,
+                    pressed && styles.selfiePreviewActionPressed,
+                  ]}
+                >
+                  <MaterialIcons name="replay" size={22} color="#FFFFFF" />
+                  <Text style={styles.selfiePreviewActionText}>Retake</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Attach selfie"
+                  onPress={() => setSelfieCameraOpen(false)}
+                  style={({ pressed }) => [
+                    styles.selfiePreviewAction,
+                    styles.selfiePreviewActionDone,
+                    pressed && styles.selfiePreviewActionPressed,
+                  ]}
+                >
+                  <MaterialIcons name="check" size={22} color="#FFFFFF" />
+                  <Text style={styles.selfiePreviewActionText}>Attach</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.cameraBody}>
+              <CameraView
+                ref={cameraRef}
+                style={styles.cameraPreview}
+                facing="front"
+                mode="picture"
+                mirror
+                onCameraReady={() => setCameraReady(true)}
+                onMountError={(event) => {
+                  console.error('[ONLINE GAME] camera mount failed', event);
+                  setCameraPermissionDenied(true);
+                  setSelfieCameraOpen(false);
+                  Alert.alert('Camera unavailable', 'Selfies are disabled for this match.');
+                }}
+              />
+              {!cameraReady ? (
+                <View style={styles.cameraLoading}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                </View>
+              ) : null}
+              <View style={styles.cameraControls}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Take selfie"
+                  disabled={!cameraReady || selfieCaptureBusy}
+                  onPress={handleCaptureSelfie}
+                  style={({ pressed }) => [
+                    styles.shutterButton,
+                    (!cameraReady || selfieCaptureBusy) && styles.shutterButtonDisabled,
+                    pressed && cameraReady && !selfieCaptureBusy && styles.shutterButtonPressed,
+                  ]}
+                >
+                  {selfieCaptureBusy ? (
+                    <ActivityIndicator color="#161B22" />
+                  ) : (
+                    <View style={styles.shutterButtonInner} />
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
+
+      <Modal
+        visible={!!selfieViewerUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelfieViewerUri(null)}
+      >
+        <View style={styles.selfieViewer}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSelfieViewerUri(null)}
+          />
+          {selfieViewerUri ? (
+            <Image source={{ uri: selfieViewerUri }} style={styles.selfieViewerImage} />
+          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close selfie"
+            onPress={() => setSelfieViewerUri(null)}
+            style={({ pressed }) => [styles.selfieViewerClose, pressed && { opacity: 0.7 }]}
+          >
+            <MaterialIcons name="close" size={28} color="#FFFFFF" />
+          </Pressable>
+        </View>
+      </Modal>
+
       <OnlineMatchSummaryOverlay
         visible={showMatchSummary}
         didPlayerWin={didPlayerWin}
@@ -1774,8 +2392,10 @@ export default function OnlineGameV2Screen() {
         opponentScore={opponentScore}
         opponentName={myOpponentRecordName}
         finalBlowText={finalBlowText}
-        myWinksUsed={myWinksUsed}
-        opponentWinksUsed={opponentWinksUsed}
+        mySelfiesUsed={mySelfiesUsed}
+        opponentSelfiesUsed={opponentSelfiesUsed}
+        selfies={summarySelfieItems}
+        selfiesLoading={!allSummarySelfiesLoaded}
         recordWins={onlineOpponentRecord?.wins ?? null}
         recordLosses={onlineOpponentRecord?.losses ?? null}
         recordGamesPlayed={onlineOpponentRecord?.gamesPlayed ?? null}
@@ -1783,7 +2403,7 @@ export default function OnlineGameV2Screen() {
         rematchLabel={rematchButtonLabel}
         rematchDisabled={!myRole || hasRequestedRematch || isRequestingRematch}
         onRematch={handleRematchPress}
-        onMainMenu={() => router.replace('/')}
+        onMainMenu={handleMainMenuPress}
       />
 
     </View>
@@ -1942,20 +2562,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#8C6B2F',
     borderColor: '#5E471F',
   },
-  bannerWink: {
-    borderColor: '#D9A307',
-  },
-  winkBanner: {
+  selfieBanner: {
+    flexDirection: 'row',
+    gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  winkText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#222',
+  selfieBannerText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#161B22',
   },
   historyBox: {
     alignSelf: 'center',
@@ -1977,6 +2596,52 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 13,
     marginVertical: 2,
+  },
+  opponentSelfieNotice: {
+    alignSelf: 'center',
+    width: '88%',
+    minHeight: 74,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#FE9902',
+    borderRadius: 8,
+    backgroundColor: '#161B22',
+    padding: 10,
+    marginBottom: 10,
+    zIndex: 4,
+  },
+  opponentSelfieNoticePressed: {
+    opacity: 0.82,
+  },
+  opponentSelfieThumbFrame: {
+    width: 54,
+    height: 54,
+    borderRadius: 6,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0D1117',
+  },
+  opponentSelfieThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  opponentSelfieCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  opponentSelfieTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  opponentSelfieMeta: {
+    color: '#FE9902',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
   },
   diceArea: {
     flexGrow: 1,
@@ -2021,6 +2686,60 @@ const styles = StyleSheet.create({
       default: -10,
     }),
   },
+  selfiePrompt: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C87400',
+    backgroundColor: '#2B3440',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  selfiePromptReady: {
+    borderColor: '#53A7F3',
+    backgroundColor: '#1C3145',
+  },
+  selfiePromptDisabled: {
+    borderColor: '#30363D',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    opacity: 0.65,
+  },
+  selfiePromptPressed: {
+    opacity: 0.82,
+  },
+  selfiePromptIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#C21807',
+  },
+  selfiePromptThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 6,
+    backgroundColor: '#0D1117',
+  },
+  selfiePromptCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  selfiePromptTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  selfiePromptMeta: {
+    color: '#B7C0C9',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2061,28 +2780,17 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#B26B01',
   },
-  winkButton: {
+  compactActionButton: {
     borderWidth: 2,
     borderRadius: 12,
   },
-  winkButtonActive: {
+  compactActionButtonActive: {
     backgroundColor: '#FE9902',
     borderColor: '#C87400',
   },
-  winkButtonDisabled: {
+  compactActionButtonDisabled: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderColor: '#30363D',
-  },
-  winkLabelContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  winkLabelLine: {
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: '#FFFFFF',
-    lineHeight: 24,
   },
   rematchWrapper: {
     flex: 1,
@@ -2230,5 +2938,141 @@ const styles = StyleSheet.create({
   },
   rulesScroll: {
     maxHeight: '100%',
+  },
+  cameraModal: {
+    flex: 1,
+    backgroundColor: '#0D1117',
+  },
+  cameraHeader: {
+    height: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#30363D',
+  },
+  cameraTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  cameraCloseButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraBody: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  cameraPreview: {
+    flex: 1,
+  },
+  cameraLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  cameraControls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 28,
+    alignItems: 'center',
+  },
+  shutterButton: {
+    width: 78,
+    height: 78,
+    borderRadius: 39,
+    borderWidth: 5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  shutterButtonInner: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#FFFFFF',
+  },
+  shutterButtonDisabled: {
+    opacity: 0.55,
+  },
+  shutterButtonPressed: {
+    transform: [{ scale: 0.94 }],
+  },
+  selfiePreviewContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  selfiePreviewImage: {
+    flex: 1,
+    width: '100%',
+    borderRadius: 8,
+    backgroundColor: '#000000',
+  },
+  selfiePreviewActions: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingTop: 16,
+  },
+  selfiePreviewAction: {
+    flex: 1,
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  selfiePreviewActionRemove: {
+    backgroundColor: '#661313',
+    borderColor: '#8B0000',
+  },
+  selfiePreviewActionRetake: {
+    backgroundColor: '#2B3440',
+    borderColor: '#55606D',
+  },
+  selfiePreviewActionDone: {
+    backgroundColor: '#0F7A43',
+    borderColor: '#0FA958',
+  },
+  selfiePreviewActionPressed: {
+    opacity: 0.8,
+  },
+  selfiePreviewActionText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  selfieViewer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+  },
+  selfieViewerImage: {
+    width: '100%',
+    maxWidth: 520,
+    aspectRatio: 1,
+    borderRadius: 8,
+    backgroundColor: '#0D1117',
+  },
+  selfieViewerClose: {
+    position: 'absolute',
+    top: 44,
+    right: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(13,17,23,0.8)',
   },
 });
