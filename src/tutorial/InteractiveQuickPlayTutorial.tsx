@@ -8,7 +8,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText as Text } from '../components/AppText';
 import Dice from '../components/Dice';
@@ -48,6 +48,7 @@ const formatClaim = (claim: number | null) => {
 
 export default function InteractiveQuickPlayTutorial({ visible, onComplete, onExit }: Props) {
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const compact = height < 740;
   const dieSize = compact ? 66 : 78;
   const scoreDieSize = compact ? 42 : 48;
@@ -143,28 +144,28 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
       animationType="fade"
       presentationStyle="fullScreen"
       statusBarTranslucent
-      onRequestClose={requestExit}
+      onRequestClose={() => {
+        if (exitConfirmationVisible) {
+          setExitConfirmationVisible(false);
+        } else {
+          requestExit();
+        }
+      }}
     >
       <FeltBackground>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.topBar}>
-            <View>
-              <Text style={styles.topEyebrow}>QUICK PLAY TUTORIAL</Text>
-              <Text style={styles.topProgress}>
-                {state.round === 0
-                  ? `Lesson ${prompt.lesson} of 6`
-                  : `Round ${state.round} of ${TUTORIAL_ROUND_COUNT}`}
-              </Text>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Exit tutorial"
-              onPress={requestExit}
-              style={({ pressed }) => [styles.exitButton, pressed && styles.pressed]}
-              testID="tutorial-exit"
-            >
-              <Text style={styles.exitButtonText}>✕</Text>
-            </Pressable>
+        <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+          <View
+            style={[
+              styles.topBar,
+              { paddingTop: Math.max(insets.top + 8, 18) },
+            ]}
+          >
+            <Text style={styles.topEyebrow}>QUICK PLAY TUTORIAL</Text>
+            <Text style={styles.topProgress}>
+              {state.round === 0
+                ? `Lesson ${prompt.lesson} of 6`
+                : `Round ${state.round} of ${TUTORIAL_ROUND_COUNT}`}
+            </Text>
           </View>
 
           <ScrollView
@@ -324,6 +325,22 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
             </Text>
           </ScrollView>
 
+          <View
+            style={[
+              styles.exitFooter,
+              { paddingBottom: Math.max(insets.bottom, 10) },
+            ]}
+          >
+            <StyledButton
+              label="Exit Tutorial"
+              variant="ghost"
+              onPress={requestExit}
+              style={styles.exitFooterButton}
+              textStyle={styles.exitFooterButtonText}
+              testID="tutorial-exit"
+            />
+          </View>
+
           <Modal
             visible={state.historyOpen}
             transparent
@@ -370,52 +387,49 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
             </View>
           </Modal>
 
-          <Modal
-            visible={exitConfirmationVisible}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setExitConfirmationVisible(false)}
-          >
-            <View style={styles.modalBackdrop}>
-              <View style={[styles.modalCard, styles.exitConfirmationCard]}>
-                <View style={styles.exitConfirmationHeader}>
-                  <View style={styles.exitConfirmationAvatarWrap}>
-                    <Image source={ICEMAN} style={styles.exitConfirmationAvatar} resizeMode="contain" />
+          {exitConfirmationVisible && (
+            <View style={styles.inlineModalLayer}>
+              <View style={styles.modalBackdrop}>
+                <View style={[styles.modalCard, styles.exitConfirmationCard]}>
+                  <View style={styles.exitConfirmationHeader}>
+                    <View style={styles.exitConfirmationAvatarWrap}>
+                      <Image source={ICEMAN} style={styles.exitConfirmationAvatar} resizeMode="contain" />
+                    </View>
+                    <View style={styles.exitConfirmationHeading}>
+                      <Text style={styles.modalEyebrow}>ICEMAN • HOLD UP</Text>
+                      <Text style={styles.modalTitle}>Leave the tutorial?</Text>
+                    </View>
                   </View>
-                  <View style={styles.exitConfirmationHeading}>
-                    <Text style={styles.modalEyebrow}>ICEMAN • HOLD UP</Text>
-                    <Text style={styles.modalTitle}>Leave the tutorial?</Text>
-                  </View>
-                </View>
 
-                <Text style={styles.exitConfirmationBody}>
-                  We haven’t finished freezing out Infernoman yet. Leaving now discards this tutorial match.
-                </Text>
-
-                <View style={styles.exitResetNotice}>
-                  <Text style={styles.exitResetIcon}>↻</Text>
-                  <Text style={styles.exitResetText}>
-                    Your next tutorial will restart from the beginning.
+                  <Text style={styles.exitConfirmationBody}>
+                    We haven’t finished freezing out Infernoman yet. Leaving now discards this tutorial match.
                   </Text>
-                </View>
 
-                <StyledButton
-                  label="Keep Playing"
-                  variant="success"
-                  onPress={() => setExitConfirmationVisible(false)}
-                  style={[styles.exitKeepPlayingButton, styles.gameBlueButton]}
-                  testID="tutorial-exit-cancel"
-                />
-                <StyledButton
-                  label="Exit Tutorial"
-                  variant="primary"
-                  onPress={confirmExit}
-                  style={styles.exitConfirmButton}
-                  testID="tutorial-exit-confirm"
-                />
+                  <View style={styles.exitResetNotice}>
+                    <Text style={styles.exitResetIcon}>↻</Text>
+                    <Text style={styles.exitResetText}>
+                      Your next tutorial will restart from the beginning.
+                    </Text>
+                  </View>
+
+                  <StyledButton
+                    label="Keep Playing"
+                    variant="success"
+                    onPress={() => setExitConfirmationVisible(false)}
+                    style={[styles.exitKeepPlayingButton, styles.gameBlueButton]}
+                    testID="tutorial-exit-cancel"
+                  />
+                  <StyledButton
+                    label="Exit Tutorial"
+                    variant="primary"
+                    onPress={confirmExit}
+                    style={styles.exitConfirmButton}
+                    testID="tutorial-exit-confirm"
+                  />
+                </View>
               </View>
             </View>
-          </Modal>
+          )}
 
           <Modal
             visible={state.bluffOptionsOpen}
@@ -480,29 +494,16 @@ const MUTED = '#B8C0C8';
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   topBar: {
-    minHeight: 58,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    flexDirection: 'row',
+    paddingBottom: 12,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     backgroundColor: '#171A1E',
     borderBottomWidth: 1,
     borderBottomColor: '#343A40',
   },
-  topEyebrow: { color: BLUE, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
-  topProgress: { color: TEXT, fontSize: 15, fontWeight: '800', marginTop: 2 },
-  exitButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#5A626B',
-    backgroundColor: PANEL,
-  },
-  exitButtonText: { color: TEXT, fontSize: 21, fontWeight: '700' },
+  topEyebrow: { color: BLUE, fontSize: 11, fontWeight: '900', letterSpacing: 1.2, textAlign: 'center' },
+  topProgress: { color: TEXT, fontSize: 15, fontWeight: '800', marginTop: 2, textAlign: 'center' },
   scroll: { flex: 1 },
   content: { padding: 14, paddingBottom: 26, rowGap: 12 },
   contentCompact: { paddingTop: 9, rowGap: 9 },
@@ -612,12 +613,32 @@ const styles = StyleSheet.create({
     elevation: 7,
   },
   sandboxNote: { color: '#8F99A3', fontSize: 10, textAlign: 'center', lineHeight: 14 },
+  exitFooter: {
+    paddingTop: 8,
+    paddingHorizontal: 14,
+    backgroundColor: '#171A1E',
+    borderTopWidth: 1,
+    borderTopColor: '#343A40',
+  },
+  exitFooterButton: {
+    minHeight: 46,
+    borderWidth: 2,
+    borderColor: '#8F1D23',
+    borderRadius: 12,
+    backgroundColor: '#24191C',
+  },
+  exitFooterButtonText: { color: '#FFB7BB' },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.82)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  inlineModalLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+    elevation: 100,
   },
   modalCard: {
     width: '100%',
