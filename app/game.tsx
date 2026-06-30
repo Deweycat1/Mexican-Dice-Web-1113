@@ -27,7 +27,7 @@ import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import RoundRecapOverlay, { RoundRecapData } from '../src/components/RoundRecapOverlay';
 import StyledButton from '../src/components/StyledButton';
 import { InlineFlameText } from '../src/components/InlineFlameText';
-import { MEXICAN_ICON, getNextWompWompMessage } from '../src/lib/constants';
+import { MEXICAN_ICON } from '../src/lib/constants';
 import { logEvent } from '../src/analytics/logEvent';
 import {
   compareClaims,
@@ -231,7 +231,6 @@ export default function Game() {
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
   const [scoreDiceAnimKey, setScoreDiceAnimKey] = useState(0);
   const socialRevealNonceRef = useRef<number | null>(null);
-  const socialBannerNonceRef = useRef(0);
   const [showSocialReveal, setShowSocialReveal] = useState(false);
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
@@ -247,12 +246,6 @@ export default function Game() {
   // Rival opening taunt state
   const [hasRolledThisGame, setHasRolledThisGame] = useState<boolean>(false);
   const [shouldRevealCpuDice, setShouldRevealCpuDice] = useState(false);
-  const [rivalBluffBannerVisible, setRivalBluffBannerVisible] = useState(false);
-  const [rivalBluffBannerType, setRivalBluffBannerType] = useState<'got-em' | 'womp-womp' | 'social' | null>(null);
-  const [rivalBluffBannerSecondary, setRivalBluffBannerSecondary] = useState<string | null>(null);
-  const lastWompWompIndexRef = useRef(-1);
-  const rivalBluffBannerOpacity = useRef(new Animated.Value(0)).current;
-  const rivalBluffBannerScale = useRef(new Animated.Value(0.95)).current;
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
   const [cupPhase, setCupPhase] = useState<DiceCupPhase>('ready');
   const [cupDiscardDirection, setCupDiscardDirection] = useState<'left' | 'right'>('right');
@@ -311,7 +304,6 @@ export default function Game() {
     mustBluff,
     cpuSocialDice,
     cpuSocialRevealNonce,
-    socialBannerNonce,
     lastPointEvent,
     lastSocialEvent,
     cpuCupAction,
@@ -584,21 +576,6 @@ export default function Game() {
     narration,
     turn,
   ]);
-
-  const currentBluffBannerStyle = useMemo(() => {
-    if (rivalBluffBannerType === 'social') return styles.bluffBannerSocial;
-    if (rivalBluffBannerType === 'got-em') return styles.bluffBannerSuccess;
-    return styles.bluffBannerFail;
-  }, [rivalBluffBannerType]);
-
-  const currentBluffBannerPrimary = useMemo(() => {
-    if (rivalBluffBannerType === 'social') return '🍻 SOCIAL!!! 🍻';
-    if (rivalBluffBannerType === 'got-em') return "GOT 'EM!!!";
-    if (rivalBluffBannerType === 'womp-womp') {
-      return rivalBluffBannerSecondary ?? 'WOMP WOMP';
-    }
-    return '';
-  }, [rivalBluffBannerSecondary, rivalBluffBannerType]);
 
   const claimOptions = useMemo(
     () => getQuickPlayClaimOptions(lastClaimValue, lastPlayerRoll),
@@ -877,74 +854,6 @@ export default function Game() {
       };
     }
   }, [gameOver, refreshSummaryBadges, showEndBanner]);
-
-  const triggerRivalBluffBanner = useCallback((type: 'got-em' | 'womp-womp' | 'social') => {
-    setRivalBluffBannerSecondary(null);
-
-    if (type === 'got-em') {
-      const options = [
-        'They were bluffing.',
-        'Caught the lie.',
-        'Bluff exposed.',
-        'Nice call.',
-        'Too bold.',
-      ];
-      const pick = options[Math.floor(Math.random() * options.length)];
-      setRivalBluffBannerSecondary(pick);
-    } else if (type === 'womp-womp') {
-      const { text } = getNextWompWompMessage(lastWompWompIndexRef);
-      setRivalBluffBannerSecondary(text);
-    } else {
-      setRivalBluffBannerSecondary(null);
-    }
-
-    setRivalBluffBannerType(type);
-    setRivalBluffBannerVisible(true);
-    rivalBluffBannerOpacity.stopAnimation();
-    rivalBluffBannerScale.stopAnimation();
-    rivalBluffBannerOpacity.setValue(0);
-    rivalBluffBannerScale.setValue(0.92);
-
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(rivalBluffBannerOpacity, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rivalBluffBannerScale, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.delay(450),
-      Animated.parallel([
-        Animated.timing(rivalBluffBannerOpacity, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rivalBluffBannerScale, {
-          toValue: 1.05,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start(() => {
-      setRivalBluffBannerVisible(false);
-      rivalBluffBannerScale.setValue(1);
-      setRivalBluffBannerType(null);
-      setRivalBluffBannerSecondary(null);
-    });
-  }, [rivalBluffBannerOpacity, rivalBluffBannerScale]);
-
-  useEffect(() => {
-    if (socialBannerNonce > socialBannerNonceRef.current) {
-      triggerRivalBluffBanner('social');
-    }
-    socialBannerNonceRef.current = socialBannerNonce;
-  }, [socialBannerNonce, triggerRivalBluffBanner]);
 
   useEffect(() => {
     if (!lastPointEvent) return;
@@ -1373,38 +1282,6 @@ export default function Game() {
         )}
 
         <SafeAreaView style={styles.safe}>
-          {rivalBluffBannerVisible && rivalBluffBannerType && (
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.gotEmBannerContainer,
-                {
-                  opacity: rivalBluffBannerOpacity,
-                  transform: [{ scale: rivalBluffBannerScale }],
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.bluffBanner,
-                  currentBluffBannerStyle,
-                ]}
-              >
-                {!!currentBluffBannerPrimary && (
-                  <Text style={styles.gotEmBannerText}>
-                    {currentBluffBannerPrimary}
-                  </Text>
-                )}
-                {rivalBluffBannerType !== 'social' &&
-                  rivalBluffBannerType !== 'womp-womp' &&
-                  !!rivalBluffBannerSecondary && (
-                  <Text style={styles.gotEmBannerTextSecondary}>
-                    {rivalBluffBannerSecondary}
-                  </Text>
-                )}
-              </View>
-            </Animated.View>
-          )}
           <View style={[styles.content, layoutTweaks.contentPadding]}>
             {/* HEADER */}
             <View style={[styles.headerCard, layoutTweaks.headerPadding]}>
@@ -2162,51 +2039,6 @@ const styles = StyleSheet.create({
   iconCpu: {
     color: '#6BFF89',
     fontWeight: '700',
-  },
-  gotEmBannerContainer: {
-    position: 'absolute',
-    top: 270,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 25,
-  },
-  bluffBanner: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  bluffBannerSuccess: {
-    backgroundColor: '#53A7F3',
-    borderColor: '#1C75BC',
-  },
-  bluffBannerFail: {
-    backgroundColor: '#E63946',
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-  },
-  bluffBannerSocial: {
-    backgroundColor: '#C0C0C0',
-    borderColor: 'rgba(255, 255, 255, 0.65)',
-  },
-  gotEmBannerText: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '900',
-    letterSpacing: 0.6,
-    textAlign: 'center',
-  },
-  gotEmBannerTextSecondary: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginTop: 2,
   },
   footer: {
     alignItems: 'center',

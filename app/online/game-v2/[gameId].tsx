@@ -70,7 +70,6 @@ import {
   recordPlayerRoll,
 } from '../../../src/stats/supabasePlayerStats';
 import { initPushNotifications } from '../../../src/lib/pushNotifications';
-import { getNextWompWompMessage } from '../../../src/lib/constants';
 import { getRollDiceColorways } from '../../../src/theme/dice';
 
 const formatClaim = (value: number | null | undefined) => {
@@ -358,10 +357,7 @@ export default function OnlineGameV2Screen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
-  const [banner, setBanner] = useState<{
-    type: 'got-em' | 'womp-womp' | 'social' | 'selfie';
-    text: string;
-  } | null>(null);
+  const [banner, setBanner] = useState<{ text: string } | null>(null);
   const bannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hostName, setHostName] = useState<string>('Host');
@@ -409,35 +405,12 @@ export default function OnlineGameV2Screen() {
   const prevScoresRef = useRef<{ host: number; guest: number } | null>(null);
   const prevHistoryLengthRef = useRef<number>(0);
   const historyInitializedRef = useRef(false);
-  const localHandledBluffBannerRef = useRef(false);
-  const lastWompWompIndexRef = useRef(-1);
   const matchStartLoggedRef = useRef<string | null>(null);
   const matchEndLoggedRef = useRef<string | null>(null);
   const onlineMatchFinalizedRef = useRef<string | null>(null);
   const summarySeenMarkedRef = useRef<string | null>(null);
   const cameraRef = useRef<CameraView | null>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-
-  const showBluffResultBanner = useCallback(
-    (liar: boolean, iAmCaller: boolean) => {
-      if (liar) {
-        if (iAmCaller) {
-          setBanner({ type: 'got-em', text: 'You caught their bluff.' });
-        } else {
-          const { text } = getNextWompWompMessage(lastWompWompIndexRef);
-          setBanner({ type: 'womp-womp', text });
-        }
-      } else {
-        if (iAmCaller) {
-          const { text } = getNextWompWompMessage(lastWompWompIndexRef);
-          setBanner({ type: 'womp-womp', text });
-        } else {
-          setBanner({ type: 'got-em', text: "GOT 'EM!!!" });
-        }
-      }
-    },
-    [setBanner]
-  );
 
   useEffect(() => {
     let isMounted = true;
@@ -1225,7 +1198,7 @@ export default function OnlineGameV2Screen() {
     lastSelfieNonceRef.current = selfieNonce;
     if (selfieBy === myRole) return;
     if (game.status !== 'in_progress') return;
-    setBanner({ type: 'selfie', text: 'Live selfie received' });
+    setBanner({ text: 'Live selfie received' });
     selfieGlowAnim.setValue(0);
     Animated.sequence([
       Animated.timing(selfieGlowAnim, { toValue: 1, duration: 250, useNativeDriver: false }),
@@ -1252,11 +1225,9 @@ export default function OnlineGameV2Screen() {
     if (bluffNonce <= bluffResultNonceRef.current) return;
     bluffResultNonceRef.current = bluffNonce;
 
-    const liar = !defenderTruth;
     const iAmCaller = myRole === caller;
 
     if (isRevealingBluff || revealDiceValues) return;
-    if (iAmCaller && localHandledBluffBannerRef.current) return;
 
     if (cupPrototypeEnabled && !iAmCaller && lastLocalRollRef.current != null) {
       setRevealDiceValues(facesFromRoll(lastLocalRollRef.current));
@@ -1268,7 +1239,6 @@ export default function OnlineGameV2Screen() {
       return;
     }
 
-    showBluffResultBanner(liar, iAmCaller);
   }, [
     roundState.bluffResultNonce,
     roundState.lastBluffCaller,
@@ -1276,7 +1246,6 @@ export default function OnlineGameV2Screen() {
     myRole,
     isRevealingBluff,
     revealDiceValues,
-    showBluffResultBanner,
     cupPrototypeEnabled,
     hapticsEnabled,
   ]);
@@ -1662,9 +1631,6 @@ export default function OnlineGameV2Screen() {
         setPendingSelfie(null);
         setSelfieCameraOpen(false);
         setCameraReady(false);
-        if (claim === 41) {
-          setBanner({ type: 'social', text: '🍻 SOCIAL!!! 🍻' });
-        }
       } catch (err: any) {
         if (insertedSelfieId) {
           const failedSelfieId = insertedSelfieId;
@@ -1751,7 +1717,6 @@ export default function OnlineGameV2Screen() {
       roundState.lastAction === 'reverseVsMexican'
     );
     const liar = outcome === +1;
-    const iAmCaller = true;
     logEvent({
       eventType: 'bluff_called',
       mode: 'online',
@@ -1784,8 +1749,6 @@ export default function OnlineGameV2Screen() {
       revealTimer.current = setTimeout(() => {
         setIsRevealingBluff(false);
         setRevealDiceValues(null);
-        localHandledBluffBannerRef.current = true;
-        showBluffResultBanner(liar, iAmCaller);
       }, 1800);
     }
     const eventText = liar
@@ -1829,10 +1792,6 @@ export default function OnlineGameV2Screen() {
     try {
       await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
       void recordPlayerBluffCall({ correct: liar });
-      if (cupPrototypeEnabled) {
-        localHandledBluffBannerRef.current = true;
-        showBluffResultBanner(liar, true);
-      }
     } catch (err: any) {
       if (err?.message === OUT_OF_TURN_ERROR) {
         Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
@@ -1861,7 +1820,6 @@ export default function OnlineGameV2Screen() {
     normalizedGameId,
     userId,
     hapticsEnabled,
-    showBluffResultBanner,
     cupPrototypeEnabled,
   ]);
 
@@ -1919,7 +1877,6 @@ export default function OnlineGameV2Screen() {
           setRevealDiceValues(null);
           setIsRevealAnimating(false);
           lastLocalRollRef.current = null;
-          showBluffResultBanner(!roundState.lastBluffDefenderTruth, false);
         }, cupTheatrical ? 1500 : 900);
         return;
       }
@@ -1933,8 +1890,6 @@ export default function OnlineGameV2Screen() {
       handleRoll,
       handleSocialRevealComplete,
       hapticsEnabled,
-      roundState.lastBluffDefenderTruth,
-      showBluffResultBanner,
       sfxEnabled,
     ]
   );
@@ -2223,30 +2178,17 @@ export default function OnlineGameV2Screen() {
 
             {banner && (
               <Animated.View pointerEvents="none" style={styles.bannerContainer}>
-                {banner.type === 'selfie' ? (
-                  <Animated.View>
-                    <LinearGradient
-                      colors={['#FE9902', '#D97706']}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={styles.selfieBanner}
-                    >
-                      <MaterialIcons name="photo-camera" size={18} color="#161B22" />
-                      <Text style={styles.selfieBannerText}>{banner.text}</Text>
-                    </LinearGradient>
-                  </Animated.View>
-                ) : (
-                  <View
-                    style={[
-                      styles.banner,
-                      banner.type === 'got-em' && styles.bannerSuccess,
-                      banner.type === 'womp-womp' && styles.bannerFail,
-                      banner.type === 'social' && styles.bannerSocial,
-                    ]}
+                <Animated.View>
+                  <LinearGradient
+                    colors={['#FE9902', '#D97706']}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.selfieBanner}
                   >
-                    <Text style={styles.bannerText}>{banner.text}</Text>
-                  </View>
-                )}
+                    <MaterialIcons name="photo-camera" size={18} color="#161B22" />
+                    <Text style={styles.selfieBannerText}>{banner.text}</Text>
+                  </LinearGradient>
+                </Animated.View>
               </Animated.View>
             )}
 
@@ -2899,19 +2841,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
-  banner: {
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    maxWidth: '80%',
-  },
-  bannerText: {
-    color: '#F0F6FC',
-    fontWeight: '800',
-    fontSize: 18,
-  },
   bannerContainer: {
     position: 'absolute',
     top: 270,
@@ -2919,18 +2848,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 30,
-  },
-  bannerSuccess: {
-    backgroundColor: '#53A7F3',
-    borderColor: '#1C75BC',
-  },
-  bannerFail: {
-    backgroundColor: '#661313',
-    borderColor: '#520E0E',
-  },
-  bannerSocial: {
-    backgroundColor: '#8C6B2F',
-    borderColor: '#5E471F',
   },
   selfieBanner: {
     flexDirection: 'row',

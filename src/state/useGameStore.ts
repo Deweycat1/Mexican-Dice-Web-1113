@@ -339,7 +339,6 @@ export type Store = {
   mexicanFlashNonce: number;
   cpuSocialDice: DicePair | null;
   cpuSocialRevealNonce: number;
-  socialBannerNonce: number;
   lastBluffCaller: Turn | null;
   lastBluffDefenderTruth: boolean | null;
   bluffResultNonce: number;
@@ -1018,7 +1017,6 @@ export const useGameStore = create<Store>((set, get) => {
       mexicanFlashNonce: 0,
       cpuSocialDice: null,
       cpuSocialRevealNonce: 0,
-      socialBannerNonce: 0,
       lastBluffCaller: null,
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
@@ -1061,7 +1059,6 @@ export const useGameStore = create<Store>((set, get) => {
       mexicanFlashNonce: 0,
       cpuSocialDice: null,
       cpuSocialRevealNonce: 0,
-      socialBannerNonce: 0,
       lastBluffCaller: null,
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
@@ -1118,7 +1115,6 @@ export const useGameStore = create<Store>((set, get) => {
       mexicanFlashNonce: 0,
       cpuSocialDice: null,
       cpuSocialRevealNonce: 0,
-      socialBannerNonce: 0,
       lastBluffCaller: null,
       lastBluffDefenderTruth: null,
       bluffResultNonce: 0,
@@ -1429,7 +1425,6 @@ export const useGameStore = create<Store>((set, get) => {
         set((prevState) => ({
           cpuSocialDice: socialDice,
           cpuSocialRevealNonce: prevState.cpuSocialRevealNonce + 1,
-          socialBannerNonce: prevState.socialBannerNonce + 1,
           lastSocialEvent: {
             nonce: (prevState.lastSocialEvent?.nonce ?? 0) + 1,
             mode: state.mode,
@@ -1681,7 +1676,6 @@ export const useGameStore = create<Store>((set, get) => {
     mexicanFlashNonce: 0,
     cpuSocialDice: null,
     cpuSocialRevealNonce: 0,
-    socialBannerNonce: 0,
     lastBluffCaller: null,
     lastBluffDefenderTruth: null,
     bluffResultNonce: 0,
@@ -1751,7 +1745,6 @@ export const useGameStore = create<Store>((set, get) => {
         mexicanFlashNonce: 0,
         cpuSocialDice: null,
         cpuSocialRevealNonce: 0,
-        socialBannerNonce: 0,
         lastPointEvent: null,
         lastSocialEvent: null,
         cpuCupAction: null,
@@ -1923,7 +1916,6 @@ export const useGameStore = create<Store>((set, get) => {
         resetRoundState();
         set((prevState) => ({
           turn: 'cpu',
-          socialBannerNonce: prevState.socialBannerNonce + 1,
           lastSocialEvent: {
             nonce: (prevState.lastSocialEvent?.nonce ?? 0) + 1,
             mode: state.mode,
