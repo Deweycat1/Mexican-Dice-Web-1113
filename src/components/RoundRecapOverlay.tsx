@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 
 import { splitClaim } from '../engine/mexican';
+import { getRollDiceColorways, type RollOwner } from '../theme/dice';
 import { AppText as Text } from './AppText';
 import Dice from './Dice';
 
@@ -20,6 +21,7 @@ export type RoundRecapData = {
   actual: number;
   diceMode?: 'claimActual' | 'single';
   singleDiceLabel?: string;
+  diceOwner?: RollOwner;
   rows: RoundRecapRow[];
 };
 
@@ -31,14 +33,15 @@ type Props = {
 
 const MINI_DIE_SIZE = 30;
 
-function DicePair({ value }: { value: number }) {
+function DicePair({ value, owner }: { value: number; owner?: RollOwner }) {
   const [hi, lo] = splitClaim(value);
+  const colorways = owner ? getRollDiceColorways(owner) : null;
 
   return (
     <View style={styles.dicePair}>
-      <Dice value={hi} size={MINI_DIE_SIZE} />
+      <Dice value={hi} size={MINI_DIE_SIZE} colorway={colorways?.[0]} />
       <View style={styles.diceGap} />
-      <Dice value={lo} size={MINI_DIE_SIZE} />
+      <Dice value={lo} size={MINI_DIE_SIZE} colorway={colorways?.[1]} />
     </View>
   );
 }
@@ -140,18 +143,18 @@ export default function RoundRecapOverlay({ recap, onDone, durationMs = 5000 }: 
           {isSingleDice ? (
             <View style={styles.singleDiceSummary}>
               <Text style={styles.diceLabel}>{recap.singleDiceLabel ?? 'Roll'}</Text>
-              <DicePair value={recap.claimed} />
+              <DicePair value={recap.claimed} owner={recap.diceOwner} />
             </View>
           ) : (
             <View style={styles.diceSummary}>
               <View style={styles.diceSummaryColumn}>
                 <Text style={styles.diceLabel}>Claimed</Text>
-                <DicePair value={recap.claimed} />
+                <DicePair value={recap.claimed} owner={recap.diceOwner} />
               </View>
               <View style={styles.divider} />
               <View style={styles.diceSummaryColumn}>
                 <Text style={styles.diceLabel}>Actual</Text>
-                <DicePair value={recap.actual} />
+                <DicePair value={recap.actual} owner={recap.diceOwner} />
               </View>
             </View>
           )}

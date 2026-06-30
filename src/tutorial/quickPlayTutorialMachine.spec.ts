@@ -9,6 +9,7 @@ const play = (actions: TutorialAction[]) => actions.reduce(tutorialReducer, crea
 const COMPLETE_MATCH: TutorialAction[] = [
   { type: 'CONTINUE' },
   { type: 'CONTINUE' },
+  { type: 'CONTINUE' },
   { type: 'ROLL' },
   { type: 'CLAIM_TRUTH' },
   { type: 'ROLL' },
@@ -52,7 +53,7 @@ describe('Quick Play interactive tutorial', () => {
   });
 
   test('only accepts the guided 65 bluff and allows backing out of the picker', () => {
-    const beforePicker = play(COMPLETE_MATCH.slice(0, 10));
+    const beforePicker = play(COMPLETE_MATCH.slice(0, 11));
     expect(beforePicker.stage).toBe('select-65');
     expect(beforePicker.bluffOptionsOpen).toBe(true);
 
@@ -65,7 +66,7 @@ describe('Quick Play interactive tutorial', () => {
   });
 
   test('Social resets the round without changing either score', () => {
-    const throughSocial = play(COMPLETE_MATCH.slice(0, 16));
+    const throughSocial = play(COMPLETE_MATCH.slice(0, 17));
 
     expect(throughSocial.stage).toBe('social-result');
     expect(throughSocial.playerScore).toBe(4);

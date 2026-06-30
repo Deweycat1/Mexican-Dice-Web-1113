@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
 import Dice from './Dice';
-import { DIE_SIZE } from '../theme/dice';
+import { DIE_SIZE, getRollDiceColorways, type RollOwner } from '../theme/dice';
 
 type AnimatedDiceRevealProps = {
   hidden: boolean;
   diceValues: [number | null, number | null];
+  diceOwner?: RollOwner;
   size?: number;
   onRevealComplete?: () => void;
 };
@@ -18,6 +19,7 @@ type AnimatedDiceRevealProps = {
 export default function AnimatedDiceReveal({
   hidden,
   diceValues,
+  diceOwner,
   size = DIE_SIZE,
   onRevealComplete,
 }: AnimatedDiceRevealProps) {
@@ -107,7 +109,7 @@ export default function AnimatedDiceReveal({
       revealInProgressRef.current = false;
       clearRevealTimers();
     };
-  }, [hidden, completeOnce, rotation]);
+  }, [hidden, completeOnce, rotation, MAX_REVEAL_MS]);
 
   // Interpolate rotateY for 3D flip effect
   const rotateY = rotation.interpolate({
@@ -148,6 +150,7 @@ export default function AnimatedDiceReveal({
   };
 
   const [hi, lo] = diceValues;
+  const diceColorways = diceOwner ? getRollDiceColorways(diceOwner) : null;
   const dieGap = size * 0.24;
   const wrapperSize = size + size * 0.16;
   const wrapperPadding = size * 0.08;
@@ -161,6 +164,7 @@ export default function AnimatedDiceReveal({
             value={showActual ? hi : null}
             size={size}
             displayMode={showActual ? 'values' : 'question'}
+            colorway={diceColorways?.[0]}
           />
         </Animated.View>
       </View>
@@ -174,6 +178,7 @@ export default function AnimatedDiceReveal({
             value={showActual ? lo : null}
             size={size}
             displayMode={showActual ? 'values' : 'question'}
+            colorway={diceColorways?.[1]}
           />
         </Animated.View>
       </View>

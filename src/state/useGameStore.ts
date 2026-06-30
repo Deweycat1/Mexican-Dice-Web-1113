@@ -72,6 +72,13 @@ export type SocialEvent = {
   who: Turn;
   nextTurn: Turn;
 };
+export type CpuCupAction = {
+  nonce: number;
+  type: 'call_bluff' | 'believe' | 'roll';
+  diceRoll: number | null;
+  nextRoll: number | null;
+  claim: number | null;
+};
 type LossResult = {
   gameOver: boolean;
   loser: Turn | null;
@@ -96,6 +103,8 @@ void loadAiState<ReturnType<typeof aiOpponent.state>>().then((state) => {
 
 let roundIndexCounter = 0;
 let pendingCpuRaise: { claim: number; roll: DicePair; normalized: number } | null = null;
+let cpuCupActionNonce = 0;
+let completePendingCpuCupAnimation: (() => void) | null = null;
 
 // Dev-only counters to measure softened call_bluff behavior in Survival streak 5–8
 let surv_5_8_totalWouldCall = 0;
@@ -336,6 +345,7 @@ export type Store = {
   bluffResultNonce: number;
   lastPointEvent: PointEvent | null;
   lastSocialEvent: SocialEvent | null;
+  cpuCupAction: CpuCupAction | null;
   pendingInfernoDelay: boolean;
   // Per-game bluff tracking for ranking
   playerBluffEventsThisGame: number;
@@ -382,6 +392,7 @@ export type Store = {
   playerClaim(claim: number): void;
   callBluff(): void;
   cpuTurn(): Promise<void> | void;
+  completeCpuCupAction(): void;
 
   addHistory(entry: { text: string; who: 'player' | 'cpu' }): void;
 
@@ -440,6 +451,34 @@ const isTestEnv = process.env.NODE_ENV === 'test';
 export const useGameStore = create<Store>((set, get) => {
   const beginTurnLock = () => set({ turnLock: true });
   const endTurnLock = () => set({ turnLock: false });
+  const completeCpuCupAction = () => {
+    const complete = completePendingCpuCupAnimation;
+    completePendingCpuCupAnimation = null;
+    set({ cpuCupAction: null });
+    complete?.();
+  };
+  const waitForCpuCupAnimation = (
+    action: Omit<CpuCupAction, 'nonce'>
+  ): Promise<void> => {
+    if (isTestEnv || Platform.OS === 'web') {
+      return Promise.resolve();
+    }
+
+    completeCpuCupAction();
+    const nextAction: CpuCupAction = {
+      ...action,
+      nonce: ++cpuCupActionNonce,
+    };
+
+    return new Promise((resolve) => {
+      const fallbackTimer = setTimeout(completeCpuCupAction, 4500);
+      completePendingCpuCupAnimation = () => {
+        clearTimeout(fallbackTimer);
+        resolve();
+      };
+      set({ cpuCupAction: nextAction });
+    });
+  };
   const startQuickPlayMatch = () => {
     const state = get();
     if (state.currentMatchId) return;
@@ -1356,6 +1395,24 @@ export const useGameStore = create<Store>((set, get) => {
       }
 
       if (actual === 41) {
+        if (previousClaim != null && state.lastPlayerRoll != null) {
+          await waitForCpuCupAnimation({
+            type: 'believe',
+            diceRoll: state.lastPlayerRoll,
+            nextRoll: actual,
+            claim: previousClaim,
+          });
+        } else {
+          await waitForCpuCupAnimation({
+            type: 'roll',
+            diceRoll: null,
+            nextRoll: actual,
+            claim: null,
+          });
+        }
+        const current = get();
+        if (current.gameOver || current.turn !== 'cpu' || current.mode !== startMode) return;
+
         void playSpecialClaimHaptic(41, hapticsEnabled);
         // Record CPU showing Social in history BEFORE resetting
         pushSurvivalClaim('cpu', 41, 41);
@@ -1452,6 +1509,14 @@ export const useGameStore = create<Store>((set, get) => {
 
       if (action.type === 'call_bluff') {
         pendingCpuRaise = null;
+        await waitForCpuCupAnimation({
+          type: 'call_bluff',
+          diceRoll: state.lastPlayerRoll,
+          nextRoll: null,
+          claim: lastClaim,
+        });
+        const current = get();
+        if (current.gameOver || current.turn !== 'cpu' || current.mode !== startMode) return;
         const result = processCallBluff('cpu');
         endTurnLock();
         set({ isBusy: false });
@@ -1499,6 +1564,24 @@ export const useGameStore = create<Store>((set, get) => {
         roll: dicePair,
         normalized: actual,
       };
+
+      if (previousClaim != null && state.lastPlayerRoll != null) {
+        await waitForCpuCupAnimation({
+          type: 'believe',
+          diceRoll: state.lastPlayerRoll,
+          nextRoll: actual,
+          claim: previousClaim,
+        });
+      } else {
+        await waitForCpuCupAnimation({
+          type: 'roll',
+          diceRoll: null,
+          nextRoll: actual,
+          claim: null,
+        });
+      }
+      const current = get();
+      if (current.gameOver || current.turn !== 'cpu' || current.mode !== startMode) return;
 
       const message = (() => {
         if (previousClaim != null && isReverseOf(previousClaim, claim)) {
@@ -1604,6 +1687,7 @@ export const useGameStore = create<Store>((set, get) => {
     bluffResultNonce: 0,
     lastPointEvent: null,
     lastSocialEvent: null,
+    cpuCupAction: null,
     playerBluffEventsThisGame: 0,
     playerSuccessfulBluffsThisGame: 0,
     quickPlayRoundsPlayed: 0,
@@ -1632,10 +1716,12 @@ export const useGameStore = create<Store>((set, get) => {
       isSurvivalOver: false,
 
       startQuickPlayMatch,
+      completeCpuCupAction,
       newGame: () => {
         const matchId = createAnalyticsId();
         roundIndexCounter = 0;
         pendingCpuRaise = null;
+        completeCpuCupAction();
         set({
           playerScore: STARTING_SCORE,
           cpuScore: STARTING_SCORE,
@@ -1668,6 +1754,7 @@ export const useGameStore = create<Store>((set, get) => {
         socialBannerNonce: 0,
         lastPointEvent: null,
         lastSocialEvent: null,
+        cpuCupAction: null,
           playerBluffEventsThisGame: 0,
           playerSuccessfulBluffsThisGame: 0,
           survivalInfernosRolled: 0,

@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
-import { DIE_SIZE } from '../theme/dice';
+import { DIE_SIZE, type DiceColorway } from '../theme/dice';
 import { FlameEmojiIcon } from './FlameEmojiIcon';
 
 type DiceProps = {
@@ -23,12 +23,38 @@ type DiceProps = {
   overlayText?: string;
   thinkingOverlay?: 'rival' | 'thought';
   angryThinking?: boolean;
+  colorway?: DiceColorway;
 };
 
-const VEGAS_RED = '#B80F15';
-const EDGE = '#70090C';
-const PIP = '#fcfafaff';
-const BASE_RED = '#C81D25';
+const DICE_PALETTES: Record<
+  DiceColorway,
+  { base: string; start: string; middle: string; edge: string; rim: string; pip: string }
+> = {
+  red: {
+    base: '#C81D25',
+    start: '#E21D25',
+    middle: '#B80F15',
+    edge: '#70090C',
+    rim: '#5C060A',
+    pip: '#FCFAFA',
+  },
+  blue: {
+    base: '#078AD1',
+    start: '#35D4FF',
+    middle: '#078ED8',
+    edge: '#034A8C',
+    rim: '#032F62',
+    pip: '#FFF1C7',
+  },
+  orange: {
+    base: '#F26A16',
+    start: '#FFB62E',
+    middle: '#F46A12',
+    edge: '#A52E06',
+    rim: '#702006',
+    pip: '#FFF1C7',
+  },
+};
 const THINKING_RIVAL = require('../../assets/images/ThinkingRival.png');
 const ANGRY_RIVAL = require('../../assets/images/angryrival..png');
 
@@ -74,6 +100,7 @@ export default function Dice({
   overlayText,
   thinkingOverlay,
   angryThinking = false,
+  colorway = 'red',
 }: DiceProps) {
   const rotate = useSharedValue(0);
   const tilt = useSharedValue(0);
@@ -135,6 +162,7 @@ export default function Dice({
   const pipRadius = size * 0.07;
   const overlayLabel = displayMode === 'question' ? '?' : overlayText ?? '';
   const showOverlay = thinkingOverlay != null || displayMode !== 'values';
+  const palette = DICE_PALETTES[colorway];
   const thinkingImageSource = angryThinking ? ANGRY_RIVAL : THINKING_RIVAL;
   const faceGradientId = useMemo(
     () => `dice-face-${Math.random().toString(36).slice(2, 9)}`,
@@ -152,13 +180,19 @@ export default function Dice({
   const overlayFontSize = displayMode === 'question' ? size * 0.52 : size * 0.28;
 
   return (
-    <Animated.View style={[styles.wrap, { width: size, height: size, borderRadius }, animatedStyle]}>
+    <Animated.View
+      style={[
+        styles.wrap,
+        { width: size, height: size, borderRadius, backgroundColor: palette.base },
+        animatedStyle,
+      ]}
+    >
       <Svg width={size} height={size}>
         <Defs>
           <LinearGradient id={faceGradientId} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0%" stopColor="#E21D25" />
-            <Stop offset="60%" stopColor={VEGAS_RED} />
-            <Stop offset="100%" stopColor={EDGE} />
+            <Stop offset="0%" stopColor={palette.start} stopOpacity={0.94} />
+            <Stop offset="58%" stopColor={palette.middle} stopOpacity={0.9} />
+            <Stop offset="100%" stopColor={palette.edge} />
           </LinearGradient>
           <LinearGradient id={highlightGradientId} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0%" stopColor="#ffffff" stopOpacity={0.35} />
@@ -173,6 +207,8 @@ export default function Dice({
           height={size - faceInset * 2}
           rx={svgRx}
           fill={`url(#${faceGradientId})`}
+          stroke={palette.rim}
+          strokeWidth={size * 0.025}
         />
         <Rect
           x={size * 0.08}
@@ -184,7 +220,13 @@ export default function Dice({
         />
 
         {pipLayout?.map(({ x, y }, index) => (
-          <Circle key={index} cx={x * size} cy={y * size} r={pipRadius} fill={PIP} />
+          <Circle
+            key={index}
+            cx={x * size}
+            cy={y * size}
+            r={pipRadius}
+            fill={palette.pip}
+          />
         ))}
       </Svg>
       {showOverlay &&
@@ -226,7 +268,6 @@ export default function Dice({
 const styles = StyleSheet.create({
   wrap: {
     position: 'relative',
-    backgroundColor: BASE_RED,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

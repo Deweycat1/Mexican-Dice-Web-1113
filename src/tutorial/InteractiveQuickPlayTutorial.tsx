@@ -12,10 +12,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { AppText as Text } from '../components/AppText';
 import Dice from '../components/Dice';
+import DiceCupStage, { type DiceCupPhase } from '../components/DiceCupStage';
 import FeltBackground from '../components/FeltBackground';
 import { ScoreDie } from '../components/ScoreDie';
 import StyledButton from '../components/StyledButton';
 import { getClaimActionLabel } from '../lib/claimActionLabel';
+import { getRollDiceColorways } from '../theme/dice';
 import {
   TUTORIAL_ROUND_COUNT,
   createTutorialState,
@@ -38,38 +40,36 @@ const splitRoll = (roll: number | null): [number | null, number | null] => {
   return [Math.floor(roll / 10), roll % 10];
 };
 
-const formatClaim = (claim: number | null) => {
-  if (claim == null) return '—';
-  if (claim === 21) return '21 (Inferno)';
-  if (claim === 31) return '31 (Reverse)';
-  if (claim === 41) return '41 (Social)';
-  return String(claim);
-};
-
 export default function InteractiveQuickPlayTutorial({ visible, onComplete, onExit }: Props) {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const compact = height < 740;
-  const dieSize = compact ? 66 : 78;
   const scoreDieSize = compact ? 42 : 48;
   const [state, dispatch] = useReducer(tutorialReducer, undefined, createTutorialState);
   const [rolling, setRolling] = useState(false);
+  const [cupPhase, setCupPhase] = useState<DiceCupPhase>('ready');
+  const [hasPeeked, setHasPeeked] = useState(false);
+  const [discardDirection, setDiscardDirection] = useState<'left' | 'right'>('right');
+  const pendingCupActionRef = useRef<'accept' | 'call' | null>(null);
   const [exitConfirmationVisible, setExitConfirmationVisible] = useState(false);
-  const rollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (visible) {
       dispatch({ type: 'RESET' });
       setRolling(false);
+      setCupPhase('ready');
+      setHasPeeked(false);
+      pendingCupActionRef.current = null;
       setExitConfirmationVisible(false);
     }
-    return () => {
-      if (rollTimerRef.current) clearTimeout(rollTimerRef.current);
-    };
   }, [visible]);
 
   const prompt = tutorialPrompts[state.stage];
   const [firstDie, secondDie] = splitRoll(state.activeRoll);
+  const [claimHi, claimLo] = splitRoll(state.currentClaim);
+  const [claimHighColor, claimLowColor] = getRollDiceColorways(
+    state.claimOwner === 'cpu' ? 'cpu' : 'player'
+  );
 
   const isRollStep =
     state.stage === 'roll-53' ||
@@ -82,31 +82,110 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
   const isBluffOptionsStep = state.stage === 'open-bluff-options';
   const isSocialStep = state.stage === 'show-social';
   const isReverseStep = state.stage === 'claim-reverse';
+  const isCupLesson = state.stage === 'cup-controls';
+
+  useEffect(() => {
+    if (rolling) return;
+    if (isCupLesson) {
+      setCupPhase('handed');
+      setHasPeeked(false);
+      return;
+    }
+    if (state.diceHidden) {
+      setCupPhase('handed');
+      setHasPeeked(false);
+      return;
+    }
+    if (state.activeRoll == null) {
+      setCupPhase('ready');
+      setHasPeeked(false);
+    }
+  }, [isCupLesson, rolling, state.activeRoll, state.diceHidden]);
 
   const primaryLabel = useMemo(() => {
+    if (cupPhase === 'rolling') return 'Rolling...';
+    if (cupPhase === 'discarding') return 'Clearing...';
+    if (cupPhase === 'revealing') return 'Lifting...';
+    if (state.activeRoll != null && !state.diceHidden && !hasPeeked) return 'Peek';
     if (isSocialStep) return getClaimActionLabel(41);
     if (isReverseStep) return getClaimActionLabel(31);
     if (isTruthClaimStep) return getClaimActionLabel(state.activeRoll);
     return 'Roll';
-  }, [isReverseStep, isSocialStep, isTruthClaimStep, state.activeRoll]);
+  }, [cupPhase, hasPeeked, isReverseStep, isSocialStep, isTruthClaimStep, state.activeRoll, state.diceHidden]);
 
   const send = useCallback((action: TutorialAction) => dispatch(action), []);
 
   const handlePrimaryAction = useCallback(() => {
     if (rolling) return;
+    if (state.activeRoll != null && !state.diceHidden && !hasPeeked) {
+      setCupPhase('revealing');
+      setRolling(true);
+      return;
+    }
     if (isRollStep) {
       setRolling(true);
-      rollTimerRef.current = setTimeout(() => {
-        dispatch({ type: 'ROLL' });
-        setRolling(false);
-        rollTimerRef.current = null;
-      }, 420);
+      if (state.diceHidden) {
+        pendingCupActionRef.current = 'accept';
+        setDiscardDirection('right');
+        setCupPhase('discarding');
+      } else {
+        setCupPhase('rolling');
+      }
       return;
     }
     if (isTruthClaimStep) dispatch({ type: 'CLAIM_TRUTH' });
     if (isSocialStep) dispatch({ type: 'SHOW_SOCIAL' });
     if (isReverseStep) dispatch({ type: 'CLAIM_REVERSE' });
-  }, [isReverseStep, isRollStep, isSocialStep, isTruthClaimStep, rolling]);
+  }, [hasPeeked, isReverseStep, isRollStep, isSocialStep, isTruthClaimStep, rolling, state.activeRoll, state.diceHidden]);
+
+  const handleCallAction = useCallback(() => {
+    if (!isCallStep || rolling) return;
+    pendingCupActionRef.current = 'call';
+    setCupPhase('revealing');
+    setRolling(true);
+  }, [isCallStep, rolling]);
+
+  const handleCupAnimationComplete = useCallback(
+    (completedPhase: DiceCupPhase) => {
+      if (completedPhase === 'discarding') {
+        pendingCupActionRef.current = null;
+        setCupPhase('rolling');
+        return;
+      }
+      if (completedPhase === 'rolling') {
+        dispatch({ type: 'ROLL' });
+        setCupPhase('covered');
+        setHasPeeked(false);
+        setRolling(false);
+        return;
+      }
+      if (completedPhase !== 'revealing') return;
+
+      if (pendingCupActionRef.current === 'call') {
+        pendingCupActionRef.current = null;
+        dispatch({ type: 'CALL_BLUFF' });
+      } else {
+        setHasPeeked(true);
+      }
+      setCupPhase('revealed');
+      setRolling(false);
+    },
+    []
+  );
+
+  const canTapCup = isRollStep && !state.diceHidden && cupPhase === 'ready' && !rolling;
+  const canSwipeUp = isCallStep && state.diceHidden && cupPhase === 'handed' && !rolling;
+  const canSwipeSide = isRollStep && state.diceHidden && cupPhase === 'handed' && !rolling;
+  const handleCupSwipeSide = useCallback(
+    (direction: 'left' | 'right') => {
+      if (!canSwipeSide) return;
+      pendingCupActionRef.current = 'accept';
+      setDiscardDirection(direction);
+      setCupPhase('discarding');
+      setRolling(true);
+    },
+    [canSwipeSide]
+  );
 
   const requestExit = useCallback(() => {
     setExitConfirmationVisible(true);
@@ -124,19 +203,6 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
     }
     dispatch({ type: 'CONTINUE' });
   }, [onComplete, state.stage]);
-
-  const diceDisplayMode = state.diceHidden
-    ? 'question'
-    : state.activeRoll == null
-      ? 'prompt'
-      : 'values';
-  const diceLabel = state.diceHidden
-    ? "Infernoman's hidden roll"
-    : state.diceOwner === 'cpu'
-      ? "Infernoman's actual roll"
-      : state.activeRoll == null
-        ? 'Ready to roll'
-        : 'Your roll';
 
   return (
     <Modal
@@ -163,7 +229,7 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
             <Text style={styles.topEyebrow}>QUICK PLAY TUTORIAL</Text>
             <Text style={styles.topProgress}>
               {state.round === 0
-                ? `Lesson ${prompt.lesson} of 6`
+                ? `Lesson ${prompt.lesson} of 7`
                 : `Round ${state.round} of ${TUTORIAL_ROUND_COUNT}`}
             </Text>
           </View>
@@ -181,8 +247,16 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
               </View>
 
               <View style={styles.claimBlock}>
-                <Text style={styles.claimLabel}>CURRENT CLAIM</Text>
-                <Text style={styles.claimValue}>{formatClaim(state.currentClaim)}</Text>
+                <Text style={styles.claimLabel}>Claim</Text>
+                {claimHi !== null && claimLo !== null ? (
+                  <View style={styles.tutorialClaimDiceRow}>
+                    <Dice value={claimHi} size={28} colorway={claimHighColor} />
+                    <View style={styles.tutorialClaimDiceGap} />
+                    <Dice value={claimLo} size={28} colorway={claimLowColor} />
+                  </View>
+                ) : (
+                  <Text style={styles.claimValue}>—</Text>
+                )}
                 <Text style={styles.healthText}>
                   {state.playerScore} – {state.cpuScore}
                 </Text>
@@ -263,24 +337,25 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
             </Pressable>
 
             <View style={styles.diceSection}>
-              <Text style={styles.diceLabel}>{diceLabel}</Text>
-              <View style={styles.diceRow}>
-                <Dice
-                  value={rolling ? 3 : firstDie}
-                  size={dieSize}
-                  rolling={rolling}
-                  displayMode={rolling ? 'values' : diceDisplayMode}
-                  overlayText={state.activeRoll == null ? 'Your' : undefined}
-                />
-                <View style={styles.diceGap} />
-                <Dice
-                  value={rolling ? 5 : secondDie}
-                  size={dieSize}
-                  rolling={rolling}
-                  displayMode={rolling ? 'values' : diceDisplayMode}
-                  overlayText={state.activeRoll == null ? 'Roll' : undefined}
-                />
-              </View>
+              <DiceCupStage
+                phase={cupPhase}
+                diceValues={[firstDie, secondDie]}
+                rollOwner={state.diceOwner === 'cpu' ? 'cpu' : 'player'}
+                discardDirection={discardDirection}
+                readyStatus={canTapCup ? 'TAP CUP TO ROLL' : undefined}
+                handedStatus={
+                  isCupLesson
+                    ? 'TAP = ROLL  •  ↑ = CALL  •  ↔ = BELIEVE'
+                    : canSwipeUp || canSwipeSide
+                      ? 'SWIPE ↑ CALL  •  SWIPE ↔ BELIEVE'
+                      : undefined
+                }
+                theatrical={state.currentClaim === 21 || state.activeRoll === 21}
+                onCupTap={canTapCup ? handlePrimaryAction : undefined}
+                onCupSwipeUp={canSwipeUp ? handleCallAction : undefined}
+                onCupSwipeSide={canSwipeSide ? handleCupSwipeSide : undefined}
+                onAnimationComplete={handleCupAnimationComplete}
+              />
             </View>
 
             <View style={styles.controls}>
@@ -304,7 +379,7 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
                 <StyledButton
                   label="Call Bluff"
                   variant="primary"
-                  onPress={() => send({ type: 'CALL_BLUFF' })}
+                  onPress={handleCallAction}
                   disabled={!isCallStep}
                   style={[styles.actionButton, isCallStep && styles.guidedAction]}
                   testID="tutorial-call-bluff"
@@ -524,8 +599,16 @@ const styles = StyleSheet.create({
   playerName: { color: BLUE, fontWeight: '900', fontSize: 13, marginBottom: 4 },
   rivalName: { color: ORANGE, fontWeight: '900', fontSize: 12, marginBottom: 4 },
   claimBlock: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
-  claimLabel: { color: MUTED, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  claimLabel: {
+    color: '#C0C0C0',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 1,
+    textDecorationLine: 'underline',
+  },
   claimValue: { color: ORANGE, fontSize: 19, fontWeight: '900', marginVertical: 4, textAlign: 'center' },
+  tutorialClaimDiceRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 4 },
+  tutorialClaimDiceGap: { width: 5 },
   healthText: { color: TEXT, fontWeight: '900', fontSize: 13 },
   coachCard: {
     backgroundColor: '#1E242B',
@@ -587,9 +670,6 @@ const styles = StyleSheet.create({
   historyHint: { color: BLUE, fontSize: 10, fontWeight: '900', letterSpacing: 0.6 },
   historyLine: { color: '#D8E0D2', fontSize: 12, lineHeight: 17, marginTop: 5 },
   diceSection: { alignItems: 'center', minHeight: 105, justifyContent: 'center' },
-  diceLabel: { color: MUTED, fontSize: 11, fontWeight: '800', marginBottom: 7, textTransform: 'uppercase', letterSpacing: 0.7 },
-  diceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  diceGap: { width: 14 },
   controls: { backgroundColor: 'rgba(24,27,31,0.86)', borderRadius: 15, padding: 10, rowGap: 9 },
   actionRow: { flexDirection: 'row', columnGap: 9 },
   actionButton: { flex: 1, minHeight: 52 },

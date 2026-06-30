@@ -6,6 +6,7 @@ import {
   playLosePointHaptic,
   playRollHaptic,
   playSpecialClaimHaptic,
+  playToggleHaptic,
   playWinRoundHaptic,
 } from '../../../src/lib/haptics';
 import { useSettingsStore } from '../../../src/state/useSettingsStore';
@@ -33,6 +34,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AnimatedDiceReveal from '../../../src/components/AnimatedDiceReveal';
 import BluffModal from '../../../src/components/BluffModal';
 import Dice from '../../../src/components/Dice';
+import DiceCupStage, { type DiceCupPhase } from '../../../src/components/DiceCupStage';
 import FeltBackground from '../../../src/components/FeltBackground';
 import OnlineMatchSummaryOverlay from '../../../src/components/OnlineMatchSummaryOverlay';
 import RulesContent from '../../../src/components/RulesContent';
@@ -46,7 +48,6 @@ import {
   isChallengeClaim,
   isLegalRaise,
   isReverseOf,
-  rankValue,
   resolveActiveChallenge,
   resolveBluff,
   splitClaim,
@@ -70,6 +71,7 @@ import {
 } from '../../../src/stats/supabasePlayerStats';
 import { initPushNotifications } from '../../../src/lib/pushNotifications';
 import { getNextWompWompMessage } from '../../../src/lib/constants';
+import { getRollDiceColorways } from '../../../src/theme/dice';
 
 const formatClaim = (value: number | null | undefined) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -344,6 +346,7 @@ async function requestRematchForGame(game: OnlineGameV2, myPlayerId: string): Pr
 export default function OnlineGameV2Screen() {
   const params = useLocalSearchParams<{ gameId?: string | string[] }>();
   const router = useRouter();
+  const cupPrototypeEnabled = Platform.OS !== 'web';
   const normalizedGameId = useMemo(() => {
     const raw = params.gameId;
     if (Array.isArray(raw)) return raw[0];
@@ -372,6 +375,23 @@ export default function OnlineGameV2Screen() {
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
+  const [cupPhase, setCupPhase] = useState<DiceCupPhase>('ready');
+  const [cupDiscardDirection, setCupDiscardDirection] = useState<'left' | 'right'>('right');
+  const [hasPeeked, setHasPeeked] = useState(false);
+  const pendingCupActionRef = useRef<
+    | 'believe'
+    | 'bluff'
+    | 'remote-believe'
+    | 'remote-roll'
+    | 'remote-bluff'
+    | 'social'
+    | null
+  >(null);
+  const pendingDiscardDirectionRef = useRef<'left' | 'right' | null>(null);
+  const cupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onlineBluffRevealReadyRef = useRef(false);
+  const lastLocalRollRef = useRef<number | null>(null);
+  const lastOpponentClaimKeyRef = useRef('none');
   const [pendingSelfie, setPendingSelfie] = useState<PendingSelfie | null>(null);
   const [selfieCameraOpen, setSelfieCameraOpen] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
@@ -768,14 +788,6 @@ export default function OnlineGameV2Screen() {
     }
     prevScoresRef.current = current;
   }, [game?.host_score, game?.guest_score, myRole, hapticsEnabled]);
-  const claimSummary = useMemo(() => {
-    const selfie = roundState.activeClaimSelfie;
-    const hasActiveSelfie =
-      !!selfie &&
-      selfie.claim === lastClaim &&
-      selfie.from === roundState.lastClaimer;
-    return `Claim: ${formatClaim(lastClaim)}${hasActiveSelfie ? ' + selfie' : ''}`;
-  }, [lastClaim, roundState.activeClaimSelfie, roundState.lastClaimer]);
   const isOpponentClaimPhase = useMemo(() => {
     if (!game) return false;
     if (!isMyTurn) return false;
@@ -788,6 +800,84 @@ export default function OnlineGameV2Screen() {
     if (isMyTurn) return myRoll == null ? 'prompt' : 'values';
     return 'values';
   }, [isOpponentClaimPhase, isMyTurn, myRoll]);
+  const [opponentRollHi, opponentRollLo] = facesFromRoll(roundState.lastClaimRoll);
+  const latestSocialOwner = useMemo(() => {
+    const socialClaim = [...roundState.history]
+      .reverse()
+      .find((entry) => entry.type === 'claim' && entry.claim === 41);
+    return socialClaim?.type === 'claim' && socialClaim.who === myRole ? 'player' : 'cpu';
+  }, [myRole, roundState.history]);
+  const cupDiceValues: [number | null, number | null] = showSocialReveal
+    ? socialDiceValues
+    : revealDiceValues ??
+      (isOpponentClaimPhase ? [opponentRollHi, opponentRollLo] : [dieHi, dieLo]);
+  const cupRollOwner = showSocialReveal
+    ? latestSocialOwner
+    : pendingCupActionRef.current === 'remote-bluff'
+      ? 'player'
+      : isOpponentClaimPhase || isRevealingBluff
+        ? 'cpu'
+        : 'player';
+  const cupTheatrical =
+    lastClaim === 21 || myRoll === 21 || roundState.lastClaimRoll === 21;
+  const claimDiceOwner = roundState.lastClaimer === myRole ? 'player' : 'cpu';
+  const [claimHi, claimLo] = facesFromRoll(lastClaim);
+  const [claimHighColor, claimLowColor] = getRollDiceColorways(claimDiceOwner);
+  const opponentClaimKey = useMemo(() => {
+    const latest = [...roundState.history]
+      .reverse()
+      .find((entry) => entry.type === 'claim' && entry.who !== myRole);
+    return latest?.type === 'claim' ? latest.id : 'none';
+  }, [myRole, roundState.history]);
+  useEffect(() => {
+    if (!cupPrototypeEnabled || showSocialReveal || isRevealingBluff) return;
+    if (game?.status !== 'in_progress') return;
+
+    if (isOpponentClaimPhase) {
+      setHasPeeked(false);
+      if (opponentClaimKey !== lastOpponentClaimKeyRef.current) {
+        lastOpponentClaimKeyRef.current = opponentClaimKey;
+        if (lastLocalRollRef.current != null) {
+          pendingCupActionRef.current = 'remote-believe';
+          setCupDiscardDirection('right');
+          setCupPhase('discarding');
+        } else {
+          pendingCupActionRef.current = 'remote-roll';
+          setCupPhase('rolling');
+          void playRollHaptic(hapticsEnabled);
+          void playDiceRollSound(sfxEnabled);
+        }
+        setIsRevealAnimating(true);
+        return;
+      }
+      setCupPhase('handed');
+      setIsRevealAnimating(false);
+      return;
+    }
+    if (!isMyTurn) {
+      setHasPeeked(false);
+      setCupPhase(lastLocalRollRef.current != null ? 'covered' : 'ready');
+      setIsRevealAnimating(false);
+      return;
+    }
+    if (myRoll == null && lastClaim == null) {
+      setHasPeeked(false);
+      setCupPhase('ready');
+      setIsRevealAnimating(false);
+    }
+  }, [
+    cupPrototypeEnabled,
+    game?.status,
+    isMyTurn,
+    isOpponentClaimPhase,
+    isRevealingBluff,
+    lastClaim,
+    myRoll,
+    opponentClaimKey,
+    showSocialReveal,
+    hapticsEnabled,
+    sfxEnabled,
+  ]);
   const angryRivalThinking = useMemo(() => {
     if (isMyTurn) return false;
     if (!myRole) return false;
@@ -1069,17 +1159,22 @@ export default function OnlineGameV2Screen() {
     showMatchSummary,
   ]);
 
-  const overlayTextHi = diceDisplayMode === 'prompt' ? 'Your' : undefined;
-  const overlayTextLo = diceDisplayMode === 'prompt' ? 'Roll' : undefined;
   const rolling = rollingAnim;
   const startSocialReveal = useCallback((dice: [number | null, number | null]) => {
     setSocialDiceValues(dice);
     setShowSocialReveal(true);
-    setSocialRevealHidden(true);
     setIsRevealAnimating(true);
-    requestAnimationFrame(() => setSocialRevealHidden(false));
-  }, []);
+    if (cupPrototypeEnabled) {
+      pendingCupActionRef.current = 'social';
+      setCupPhase('revealing');
+      void playToggleHaptic(hapticsEnabled);
+    } else {
+      setSocialRevealHidden(true);
+      requestAnimationFrame(() => setSocialRevealHidden(false));
+    }
+  }, [cupPrototypeEnabled, hapticsEnabled]);
   const handleSocialRevealComplete = useCallback(() => {
+    pendingCupActionRef.current = null;
     setShowSocialReveal(false);
     setSocialRevealHidden(true);
     setIsRevealAnimating(false);
@@ -1163,6 +1258,16 @@ export default function OnlineGameV2Screen() {
     if (isRevealingBluff || revealDiceValues) return;
     if (iAmCaller && localHandledBluffBannerRef.current) return;
 
+    if (cupPrototypeEnabled && !iAmCaller && lastLocalRollRef.current != null) {
+      setRevealDiceValues(facesFromRoll(lastLocalRollRef.current));
+      pendingCupActionRef.current = 'remote-bluff';
+      setCupPhase('revealing');
+      setIsRevealingBluff(true);
+      setIsRevealAnimating(true);
+      void playToggleHaptic(hapticsEnabled);
+      return;
+    }
+
     showBluffResultBanner(liar, iAmCaller);
   }, [
     roundState.bluffResultNonce,
@@ -1172,6 +1277,8 @@ export default function OnlineGameV2Screen() {
     isRevealingBluff,
     revealDiceValues,
     showBluffResultBanner,
+    cupPrototypeEnabled,
+    hapticsEnabled,
   ]);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -1261,17 +1368,29 @@ export default function OnlineGameV2Screen() {
     [normalizedGameId]
   );
 
-  const handleRoll = useCallback(async () => {
-    if (!game || !myRole || !isMyTurn || game.status !== 'in_progress' || isRevealAnimating) return;
+  const handleRoll = useCallback(async (ignoreRevealLock?: boolean) => {
+    if (
+      !game ||
+      !myRole ||
+      !isMyTurn ||
+      game.status !== 'in_progress' ||
+      (isRevealAnimating && ignoreRevealLock !== true)
+    ) return;
     if ((myRole === 'host' && roundState.hostRoll !== null) || (myRole === 'guest' && roundState.guestRoll !== null)) {
       return;
     }
     setBanner(null);
-    setRollingAnim(true);
+    if (!cupPrototypeEnabled) setRollingAnim(true);
     void playRollHaptic(hapticsEnabled);
     void playDiceRollSound(sfxEnabled);
     try {
       const { values, normalized } = rollDice();
+      lastLocalRollRef.current = normalized;
+      if (cupPrototypeEnabled) {
+        setHasPeeked(false);
+        setCupPhase('rolling');
+        setIsRevealAnimating(true);
+      }
       const legalTruth = computeLegalTruth(claimToCheck ?? null, normalized);
       const nextRound: RoundState = {
         ...roundState,
@@ -1297,9 +1416,21 @@ export default function OnlineGameV2Screen() {
         Alert.alert('Roll failed', err.message ?? 'Could not save roll.');
       }
     } finally {
-      setTimeout(() => setRollingAnim(false), 400);
+      if (!cupPrototypeEnabled) setTimeout(() => setRollingAnim(false), 400);
     }
-  }, [game, myRole, isMyTurn, isRevealAnimating, roundState, claimToCheck, handleUpdate, userId, hapticsEnabled, sfxEnabled]);
+  }, [
+    game,
+    myRole,
+    isMyTurn,
+    isRevealAnimating,
+    roundState,
+    claimToCheck,
+    handleUpdate,
+    userId,
+    hapticsEnabled,
+    sfxEnabled,
+    cupPrototypeEnabled,
+  ]);
 
   const appendHistory = useCallback(
     (entry: HistoryItem): HistoryItem[] => {
@@ -1580,8 +1711,15 @@ export default function OnlineGameV2Screen() {
     handleClaim(41);
   }, [handleClaim]);
 
-  const handleCallBluff = useCallback(async () => {
-    if (!game || !myRole || !opponentRole || !isMyTurn || lastClaim == null || isRevealAnimating) {
+  const handleCallBluff = useCallback(async (ignoreRevealLock?: boolean) => {
+    if (
+      !game ||
+      !myRole ||
+      !opponentRole ||
+      !isMyTurn ||
+      lastClaim == null ||
+      (isRevealAnimating && ignoreRevealLock !== true)
+    ) {
       return;
     }
     const defendingRole = roundState.lastClaimer;
@@ -1594,6 +1732,18 @@ export default function OnlineGameV2Screen() {
       Alert.alert('Missing roll', 'Opponent has no recorded roll to challenge.');
       return;
     }
+
+    if (cupPrototypeEnabled && !onlineBluffRevealReadyRef.current) {
+      const [revealHi, revealLo] = splitClaim(defenderRoll);
+      setRevealDiceValues([revealHi, revealLo]);
+      pendingCupActionRef.current = 'bluff';
+      setCupPhase('revealing');
+      setIsRevealingBluff(true);
+      setIsRevealAnimating(true);
+      void playToggleHaptic(hapticsEnabled);
+      return;
+    }
+    onlineBluffRevealReadyRef.current = false;
 
     const { outcome, penalty } = resolveBluff(
       lastClaim,
@@ -1626,16 +1776,18 @@ export default function OnlineGameV2Screen() {
     }
     const callerName = myRole === 'host' ? hostName : guestName;
     const defenderName = defendingRole === 'host' ? hostName : guestName;
-    const [revealHi, revealLo] = splitClaim(defenderRoll);
-    setRevealDiceValues([revealHi, revealLo]);
-    setIsRevealingBluff(true);
-    if (revealTimer.current) clearTimeout(revealTimer.current);
-    revealTimer.current = setTimeout(() => {
-      setIsRevealingBluff(false);
-      setRevealDiceValues(null);
-      localHandledBluffBannerRef.current = true;
-      showBluffResultBanner(liar, iAmCaller);
-    }, 1800);
+    if (!cupPrototypeEnabled) {
+      const [revealHi, revealLo] = splitClaim(defenderRoll);
+      setRevealDiceValues([revealHi, revealLo]);
+      setIsRevealingBluff(true);
+      if (revealTimer.current) clearTimeout(revealTimer.current);
+      revealTimer.current = setTimeout(() => {
+        setIsRevealingBluff(false);
+        setRevealDiceValues(null);
+        localHandledBluffBannerRef.current = true;
+        showBluffResultBanner(liar, iAmCaller);
+      }, 1800);
+    }
     const eventText = liar
       ? `${callerName} caught ${defenderName} bluffing!`
       : `${callerName} was wrong, ${defenderName} told the truth.`;
@@ -1677,11 +1829,21 @@ export default function OnlineGameV2Screen() {
     try {
       await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
       void recordPlayerBluffCall({ correct: liar });
+      if (cupPrototypeEnabled) {
+        localHandledBluffBannerRef.current = true;
+        showBluffResultBanner(liar, true);
+      }
     } catch (err: any) {
       if (err?.message === OUT_OF_TURN_ERROR) {
         Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
       } else {
         Alert.alert('Bluff call failed', err.message ?? 'Could not resolve bluff.');
+      }
+    } finally {
+      if (cupPrototypeEnabled) {
+        setIsRevealingBluff(false);
+        setRevealDiceValues(null);
+        setIsRevealAnimating(false);
       }
     }
   }, [
@@ -1700,7 +1862,89 @@ export default function OnlineGameV2Screen() {
     userId,
     hapticsEnabled,
     showBluffResultBanner,
+    cupPrototypeEnabled,
   ]);
+
+  const handleCupAnimationComplete = useCallback(
+    (completedPhase: DiceCupPhase) => {
+      if (completedPhase === 'rolling') {
+        if (pendingCupActionRef.current === 'remote-roll') {
+          pendingCupActionRef.current = null;
+          lastLocalRollRef.current = null;
+          setCupPhase('handed');
+          setIsRevealAnimating(false);
+          return;
+        }
+        setCupPhase('covered');
+        setIsRevealAnimating(false);
+        return;
+      }
+      if (completedPhase === 'discarding') {
+        if (pendingCupActionRef.current === 'remote-believe') {
+          pendingCupActionRef.current = 'remote-roll';
+          setCupPhase('rolling');
+          void playRollHaptic(hapticsEnabled);
+          void playDiceRollSound(sfxEnabled);
+          return;
+        }
+        pendingCupActionRef.current = null;
+        void handleRoll(true);
+        return;
+      }
+      if (completedPhase !== 'revealing') return;
+
+      setCupPhase('revealed');
+      const pendingAction = pendingCupActionRef.current;
+      if (pendingAction === 'social') {
+        cupTimerRef.current = setTimeout(() => {
+          cupTimerRef.current = null;
+          handleSocialRevealComplete();
+        }, 1200);
+        return;
+      }
+      if (pendingAction === 'bluff') {
+        cupTimerRef.current = setTimeout(() => {
+          cupTimerRef.current = null;
+          pendingCupActionRef.current = null;
+          onlineBluffRevealReadyRef.current = true;
+          void handleCallBluff(true);
+        }, cupTheatrical ? 1500 : 900);
+        return;
+      }
+      if (pendingAction === 'remote-bluff') {
+        cupTimerRef.current = setTimeout(() => {
+          cupTimerRef.current = null;
+          pendingCupActionRef.current = null;
+          setIsRevealingBluff(false);
+          setRevealDiceValues(null);
+          setIsRevealAnimating(false);
+          lastLocalRollRef.current = null;
+          showBluffResultBanner(!roundState.lastBluffDefenderTruth, false);
+        }, cupTheatrical ? 1500 : 900);
+        return;
+      }
+
+      setHasPeeked(true);
+      setIsRevealAnimating(false);
+    },
+    [
+      cupTheatrical,
+      handleCallBluff,
+      handleRoll,
+      handleSocialRevealComplete,
+      hapticsEnabled,
+      roundState.lastBluffDefenderTruth,
+      showBluffResultBanner,
+      sfxEnabled,
+    ]
+  );
+
+  useEffect(
+    () => () => {
+      if (cupTimerRef.current) clearTimeout(cupTimerRef.current);
+    },
+    []
+  );
 
   const clearFinishedMatchSelfies = useCallback(async (force = false) => {
     if (!game || !myRole || game.status !== 'finished') return;
@@ -1853,6 +2097,72 @@ export default function OnlineGameV2Screen() {
   const canShowSocial = canClaim && myRoll === 41;
   const hasClaim = lastClaim != null;
   const canCallBluff = isMyTurn && lastClaim != null && roundState.lastClaimer && roundState.lastClaimer !== myRole;
+  const canTapCupToRoll =
+    cupPrototypeEnabled && canRoll && !isOpponentClaimPhase && cupPhase === 'ready' && !isRevealAnimating;
+  const canGestureRivalCup =
+    cupPrototypeEnabled &&
+    canRoll &&
+    isOpponentClaimPhase &&
+    cupPhase === 'handed' &&
+    !isRevealAnimating;
+  const primaryLabel = canRoll
+    ? cupPrototypeEnabled && cupPhase === 'discarding'
+      ? 'Clearing...'
+      : 'Roll'
+    : cupPrototypeEnabled && canClaim && !hasPeeked
+      ? 'Peek'
+      : getClaimActionLabel(myRoll);
+  const visibleTurnText = cupPrototypeEnabled
+    ? cupPhase === 'rolling'
+      ? pendingCupActionRef.current === 'remote-roll'
+        ? `${opponentName} shakes a fresh roll under the cup...`
+        : 'The dice rattle inside the leather cup...'
+      : cupPhase === 'covered' && canClaim && !hasPeeked
+        ? 'Your dice are hidden. Peek under the cup when ready.'
+        : cupPhase === 'discarding'
+          ? `You believe ${opponentName}. The hidden dice leave the table.`
+          : cupPhase === 'revealing' && pendingCupActionRef.current === 'bluff'
+            ? `Calling ${opponentName}'s bluff...lift the cup.`
+            : myTurnText
+    : myTurnText;
+
+  function handleOnlinePrimaryAction() {
+    if (canRoll) {
+      if (cupPrototypeEnabled && isOpponentClaimPhase) {
+        setCupDiscardDirection(pendingDiscardDirectionRef.current ?? 'right');
+        pendingDiscardDirectionRef.current = null;
+        pendingCupActionRef.current = 'believe';
+        setCupPhase('discarding');
+        setIsRevealAnimating(true);
+        void playToggleHaptic(hapticsEnabled);
+      } else {
+        void handleRoll();
+      }
+      return;
+    }
+    if (!canClaim || myRoll == null) return;
+    if (cupPrototypeEnabled && !hasPeeked) {
+      setCupPhase('revealing');
+      setIsRevealAnimating(true);
+      void playToggleHaptic(hapticsEnabled);
+      return;
+    }
+    void handleClaim(myRoll);
+  }
+
+  function handleCupTap() {
+    if (canTapCupToRoll) handleOnlinePrimaryAction();
+  }
+
+  function handleCupSwipeUp() {
+    if (canGestureRivalCup) void handleCallBluff();
+  }
+
+  function handleCupSwipeSide(direction: 'left' | 'right') {
+    if (!canGestureRivalCup) return;
+    pendingDiscardDirectionRef.current = direction;
+    handleOnlinePrimaryAction();
+  }
 
   return (
     <View style={styles.root}>
@@ -1873,7 +2183,19 @@ export default function OnlineGameV2Screen() {
                 </View>
 
                 <View style={styles.titleColumn}>
-                  <Text style={styles.claimText}>{claimSummary}</Text>
+                  <Text style={styles.claimVisualLabel}>Claim</Text>
+                  {claimHi !== null && claimLo !== null ? (
+                    <View style={styles.claimVisualDiceRow}>
+                      <Dice value={claimHi} size={34} colorway={claimHighColor} />
+                      <View style={styles.claimVisualGap} />
+                      <Dice value={claimLo} size={34} colorway={claimLowColor} />
+                    </View>
+                  ) : (
+                    <Text style={styles.claimVisualPlaceholder}>—</Text>
+                  )}
+                  {roundState.activeClaimSelfie?.claim === lastClaim && (
+                    <MaterialIcons name="photo-camera" size={14} color="#C0C0C0" />
+                  )}
                 </View>
 
                 <View style={styles.playerColumn}>
@@ -1895,7 +2217,7 @@ export default function OnlineGameV2Screen() {
               </View>
 
               <Text style={styles.status} numberOfLines={2}>
-                {myTurnText}
+                {visibleTurnText}
               </Text>
             </View>
 
@@ -1985,14 +2307,36 @@ export default function OnlineGameV2Screen() {
 
             <View style={styles.diceArea}>
               <View style={styles.diceRow}>
-            {showSocialReveal ? (
+            {showSocialReveal && !cupPrototypeEnabled ? (
               <AnimatedDiceReveal
                 hidden={socialRevealHidden}
                 diceValues={socialDiceValues}
                 onRevealComplete={handleSocialRevealComplete}
               />
-            ) : isRevealingBluff && revealDiceValues ? (
+            ) : isRevealingBluff && revealDiceValues && !cupPrototypeEnabled ? (
               <AnimatedDiceReveal hidden={false} diceValues={revealDiceValues} size={100} />
+            ) : cupPrototypeEnabled ? (
+              <DiceCupStage
+                phase={cupPhase}
+                diceValues={cupDiceValues}
+                rollOwner={cupRollOwner}
+                discardDirection={cupDiscardDirection}
+                readyStatus={canTapCupToRoll ? 'TAP CUP TO ROLL' : undefined}
+                handedStatus={
+                  canGestureRivalCup ? 'SWIPE ↑ CALL  •  SWIPE ↔ BELIEVE' : undefined
+                }
+                coveredStatus={!isMyTurn ? `${opponentName.toUpperCase()} IS DECIDING` : undefined}
+                rollingStatus={
+                  pendingCupActionRef.current === 'remote-roll'
+                    ? `${opponentName.toUpperCase()} IS ROLLING`
+                    : undefined
+                }
+                theatrical={cupTheatrical}
+                onCupTap={canTapCupToRoll ? handleCupTap : undefined}
+                onCupSwipeUp={canGestureRivalCup ? handleCupSwipeUp : undefined}
+                onCupSwipeSide={canGestureRivalCup ? handleCupSwipeSide : undefined}
+                onAnimationComplete={handleCupAnimationComplete}
+              />
             ) : isMyTurn ? (
               <>
                 <Dice
@@ -2081,17 +2425,16 @@ export default function OnlineGameV2Screen() {
               ) : null}
               <View style={styles.actionRow}>
                 <StyledButton
-                  label={canRoll ? 'Roll' : getClaimActionLabel(myRoll)}
+                  label={primaryLabel}
                   variant="success"
-                  onPress={
-                    canRoll
-                      ? handleRoll
-                      : () => {
-                          if (!canClaim || myRoll == null) return;
-                          handleClaim(myRoll);
-                        }
+                  onPress={handleOnlinePrimaryAction}
+                  disabled={
+                    isRevealAnimating ||
+                    (canRoll
+                      ? !canRoll
+                      : !canClaim ||
+                        ((!cupPrototypeEnabled || hasPeeked) && !canClaimTruthfully))
                   }
-                  disabled={isRevealAnimating || (canRoll ? !canRoll : !canClaim || !canClaimTruthfully)}
                   style={[styles.btn, styles.menuActionButtonSuccess]}
                 />
                 <StyledButton
@@ -2111,7 +2454,11 @@ export default function OnlineGameV2Screen() {
                   label="Bluff Options"
                   variant="outline"
                   onPress={() => setClaimPickerOpen(true)}
-                  disabled={!canClaim || isRevealAnimating}
+                  disabled={
+                    !canClaim ||
+                    isRevealAnimating ||
+                    (cupPrototypeEnabled && !hasPeeked)
+                  }
                   style={[styles.btnWide, shouldHighlightBluff && styles.bluffOptionsHighlightButton]}
                 />
               </View>
@@ -2498,6 +2845,28 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 12,
+  },
+  claimVisualLabel: {
+    color: '#C0C0C0',
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textDecorationLine: 'underline',
+    marginTop: Platform.select({ android: 18, default: 0 }),
+  },
+  claimVisualDiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    marginBottom: 3,
+  },
+  claimVisualGap: {
+    width: 7,
+  },
+  claimVisualPlaceholder: {
+    color: '#7F878E',
+    fontSize: 22,
+    lineHeight: 38,
   },
   claimText: {
     color: '#FE9902',

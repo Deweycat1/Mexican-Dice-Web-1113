@@ -1,6 +1,7 @@
 export type TutorialStage =
   | 'welcome'
   | 'ranking'
+  | 'cup-controls'
   | 'roll-53'
   | 'read-53'
   | 'answer-61'
@@ -88,6 +89,10 @@ export function tutorialReducer(state: TutorialState, action: TutorialAction): T
       return { ...state, stage: 'ranking' };
 
     case 'ranking':
+      if (action.type !== 'CONTINUE') return state;
+      return { ...state, stage: 'cup-controls' };
+
+    case 'cup-controls':
       if (action.type !== 'CONTINUE') return state;
       return { ...state, stage: 'roll-53', round: 1 };
 
@@ -344,8 +349,15 @@ export const tutorialPrompts: Record<TutorialStage, TutorialPrompt> = {
     eyebrow: 'ICEMAN • ROLL RANKING',
     title: 'Know what beats what',
     body: 'Read the higher die first. Match or beat the current claim. Mixed rolls rank by number, doubles beat every mixed roll, and 21 (Inferno) beats everything.',
-    actionLabel: 'Got It — Play',
+    actionLabel: 'Next — Cup Controls',
     lesson: 1,
+  },
+  'cup-controls': {
+    eyebrow: 'ICEMAN • THE DICE CUP',
+    title: 'Play with the cup or the buttons',
+    body: 'Tap a ready cup to shake. When Infernoman hands you a claim, swipe up to call bluff and lift the cup, or swipe sideways to believe him and clear the hidden dice. Every gesture has a matching button, so use whichever feels better.',
+    actionLabel: 'Practice in the Match',
+    lesson: 2,
   },
   'roll-53': {
     eyebrow: 'ICEMAN • ROUND 1',

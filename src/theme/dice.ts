@@ -13,3 +13,11 @@ export const SCORE_DIE_BASE_SIZE = BASE_DIE_SIZE * SCORE_DIE_RATIO;
 export const SMALL_SCORE_DIE_RATIO = 0.3;
 export const SMALL_SCORE_DIE_SIZE = DIE_SIZE * SMALL_SCORE_DIE_RATIO;
 export const SMALL_SCORE_DIE_BASE_SIZE = BASE_DIE_SIZE * SMALL_SCORE_DIE_RATIO;
+
+export type DiceColorway = 'red' | 'blue' | 'orange';
+export type RollOwner = 'player' | 'cpu';
+
+export const getRollDiceColorways = (
+  owner: RollOwner
+): readonly [DiceColorway, DiceColorway] =>
+  owner === 'player' ? ['blue', 'orange'] : ['orange', 'blue'];

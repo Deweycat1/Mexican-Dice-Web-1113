@@ -21,6 +21,7 @@ import { AppText as Text } from '../src/components/AppText';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import BluffModal from '../src/components/BluffModal';
 import Dice from '../src/components/Dice';
+import DiceCupStage, { type DiceCupPhase } from '../src/components/DiceCupStage';
 import FeltBackground from '../src/components/FeltBackground';
 import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import InfernoRunSummaryOverlay from '../src/components/InfernoRunSummaryOverlay';
@@ -40,6 +41,8 @@ import {
 } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { getClaimActionLabel } from '../src/lib/claimActionLabel';
+import { playDiceRollSound } from '../src/lib/diceRollSound';
+import { playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
 import { MEXICAN_ICON, getNextWompWompMessage } from '../src/lib/constants';
 import { awardBadge } from '../src/stats/badges';
@@ -57,7 +60,7 @@ import {
   saveCollectedLetters,
   setSeenInfernoLettersIntro,
 } from '../src/survival/infernoLetters';
-import { DICE_SPACING, DIE_SIZE } from '../src/theme/dice';
+import { DICE_SPACING, DIE_SIZE, getRollDiceColorways } from '../src/theme/dice';
 
 function formatClaimDetailed(value: number | null | undefined): string {
   if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
@@ -67,17 +70,6 @@ function formatClaimDetailed(value: number | null | undefined): string {
   const [hi, lo] = splitClaim(value);
   return `${hi}${lo}`;
 }
-function formatClaimSimple(value: number | null | undefined): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  const [hi, lo] = splitClaim(value);
-  return `${hi}${lo}`;
-}
-function formatRollDetailed(value: number | null | undefined): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  const [hi, lo] = splitClaim(value);
-  return `${hi}${lo}`;
-}
-const formatRollSimple = formatRollDetailed;
 function facesFromRoll(value: number | null | undefined): readonly [number | null, number | null] {
   if (typeof value !== 'number' || Number.isNaN(value)) return [null, null] as const;
   const [hi, lo] = splitClaim(value);
@@ -262,6 +254,7 @@ export default function Survival() {
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
+  const cupPrototypeEnabled = Platform.OS !== 'web';
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const musicEnabled = useSettingsStore((state) => state.musicEnabled);
   const sfxEnabled = useSettingsStore((state) => state.sfxEnabled);
@@ -277,6 +270,21 @@ export default function Survival() {
   const [pendingCpuBluffResolution, setPendingCpuBluffResolution] = useState(false);
   const [shouldRevealCpuDice, setShouldRevealCpuDice] = useState(false);
   const [isRevealAnimating, setIsRevealAnimating] = useState(false);
+  const [cupPhase, setCupPhase] = useState<DiceCupPhase>('ready');
+  const [cupDiscardDirection, setCupDiscardDirection] = useState<'left' | 'right'>('right');
+  const [hasPeeked, setHasPeeked] = useState(false);
+  const pendingCupActionRef = useRef<
+    | 'believe'
+    | 'bluff'
+    | 'cpu-believe'
+    | 'cpu-bluff'
+    | 'cpu-roll'
+    | 'cpu-social'
+    | null
+  >(null);
+  const pendingDiscardDirectionRef = useRef<'left' | 'right' | null>(null);
+  const lastCpuCupActionNonceRef = useRef(0);
+  const cupResolutionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const socialRevealNonceRef = useRef<number | null>(null);
   const socialBannerNonceRef = useRef(0);
   const socialBannerInitializedRef = useRef(false);
@@ -500,6 +508,8 @@ export default function Survival() {
     lastBluffDefenderTruth,
     bluffResultNonce,
     lastPointEvent,
+    cpuCupAction,
+    completeCpuCupAction,
     playerSuccessfulBluffsThisGame,
     survivalInfernosRolled,
     survivalSocialRolls,
@@ -1130,19 +1140,12 @@ export default function Survival() {
     </View>
   );
 
-  const claimText = useMemo(() => {
-    const hasClaim = lastClaimValue != null || lastPlayerRoll != null;
-    if (!hasClaim) return null;
-    const claimPart = formatClaimSimple(lastClaimValue);
-    return (
-      <>
-        Claim: {claimPart}
-      </>
-    );
-  }, [lastClaimValue, lastPlayerRoll]);
-
   const [playerHi, playerLo] = facesFromRoll(lastPlayerRoll);
   const [cpuHi, cpuLo] = facesFromRoll(lastCpuRoll);
+  const cpuActionShowsNewRoll = pendingCupActionRef.current === 'cpu-roll';
+  const [cpuActionHi, cpuActionLo] = facesFromRoll(
+    cpuActionShowsNewRoll ? cpuCupAction?.nextRoll : cpuCupAction?.diceRoll
+  );
   const rolling = rollingAnim || isRolling;
 
   const isGameOver = gameOver !== null;
@@ -1162,6 +1165,14 @@ export default function Survival() {
     lastSurvivalClaim?.type === 'claim' &&
     lastSurvivalClaim.who === 'player' &&
     lastSurvivalClaim.claim === 21;
+  const claimOwner =
+    lastSurvivalClaim?.type === 'claim' && lastSurvivalClaim.claim === lastClaim
+      ? lastSurvivalClaim.who
+      : turn === 'player'
+        ? 'cpu'
+        : 'player';
+  const [claimHi, claimLo] = facesFromRoll(lastClaim);
+  const [claimHighColor, claimLowColor] = getRollDiceColorways(claimOwner);
   const hasRolled = turn === 'player' && lastPlayerRoll !== null;
   const rolledValue = hasRolled ? lastPlayerRoll : null;
   const canClaimTruthfully =
@@ -1174,6 +1185,7 @@ export default function Survival() {
         compareClaims(rolledValue, lastClaimValue) >= 0);
   const shouldHighlightBluff =
     hasRolled &&
+    (!cupPrototypeEnabled || hasPeeked) &&
     rolledValue !== null &&
     lastClaimValue != null &&
     rankValue(rolledValue) <= rankValue(lastClaimValue);
@@ -1184,6 +1196,90 @@ export default function Survival() {
     if (lastClaim == null) return false;
     return lastPlayerRoll == null;
   }, [isGameOver, turn, lastClaim, lastPlayerRoll]);
+
+  const canTapCupToRoll =
+    cupPrototypeEnabled &&
+    cupPhase === 'ready' &&
+    turn === 'player' &&
+    lastPlayerRoll === null &&
+    lastClaim === null &&
+    !controlsDisabled &&
+    !isRevealAnimating;
+  const canGestureRivalCup =
+    cupPrototypeEnabled &&
+    cupPhase === 'handed' &&
+    isRivalClaimPhase &&
+    hasClaim &&
+    !controlsDisabled &&
+    !isRevealAnimating;
+
+  const cupDiceValues: [number | null, number | null] = showSocialReveal
+    ? socialDiceValues
+    : cpuCupAction
+      ? [cpuActionHi, cpuActionLo]
+      : isRivalClaimPhase
+        ? [cpuHi, cpuLo]
+        : [playerHi, playerLo];
+  const cupRollOwner = showSocialReveal
+    ? 'cpu'
+    : cpuCupAction
+      ? cpuActionShowsNewRoll
+        ? 'cpu'
+        : 'player'
+      : isRivalClaimPhase
+        ? 'cpu'
+        : 'player';
+  const cupTheatrical =
+    cpuCupAction?.claim === 21 ||
+    cpuCupAction?.diceRoll === 21 ||
+    cpuCupAction?.nextRoll === 21 ||
+    lastClaimValue === 21 ||
+    lastPlayerRoll === 21 ||
+    lastCpuRoll === 21;
+
+  const visibleNarration = useMemo(() => {
+    if (!cupPrototypeEnabled) return narration;
+    if (cupPhase === 'rolling') {
+      if (pendingCupActionRef.current === 'cpu-roll') {
+        return cupTheatrical
+          ? 'Infernoman shakes harder. Inferno may be inside...'
+          : 'Infernoman shakes a fresh roll under the cup...';
+      }
+      return cupTheatrical
+        ? 'Inferno is on the line. The cup shakes harder...'
+        : 'The dice rattle inside the leather cup...';
+    }
+    if (cupPhase === 'covered' && hasRolled && !hasPeeked) {
+      return 'Your dice are hidden. Peek under the cup when ready.';
+    }
+    if (cupPhase === 'discarding') {
+      return pendingCupActionRef.current === 'cpu-believe'
+        ? 'Infernoman believes you. Your hidden dice leave the table.'
+        : "You believe Infernoman. The hidden dice leave the table.";
+    }
+    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'cpu-bluff') {
+      return 'Infernoman calls your bluff and lifts the cup...';
+    }
+    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'cpu-social') {
+      return 'Infernoman lifts the cup and reveals Social...';
+    }
+    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'bluff') {
+      return "Calling the bluff...lift Infernoman's cup.";
+    }
+    if (cupPhase === 'revealing') return 'Lifting the cup to reveal your roll...';
+    if (turn === 'cpu' && cupPhase === 'covered') {
+      return 'Infernoman is deciding whether to believe you...';
+    }
+    return narration;
+  }, [
+    cupPhase,
+    cupPrototypeEnabled,
+    cupTheatrical,
+    hasPeeked,
+    hasRolled,
+    narration,
+    turn,
+  ]);
 
   const diceDisplayMode = useMemo(() => {
     if (isRivalClaimPhase) {
@@ -1294,6 +1390,74 @@ export default function Survival() {
       resolvedBluffIdRef.current = null;
     }
   }, [turn, lastCpuRoll, lastClaim]);
+
+  useEffect(() => {
+    if (!cupPrototypeEnabled || isGameOver || showSocialReveal) return;
+
+    if (turn === 'cpu') {
+      pendingCupActionRef.current = null;
+      setHasPeeked(false);
+      setCupPhase(lastPlayerRoll !== null ? 'covered' : 'ready');
+      setIsRevealAnimating(false);
+      return;
+    }
+    if (isRivalClaimPhase) {
+      pendingCupActionRef.current = null;
+      setHasPeeked(false);
+      setCupPhase('handed');
+      setIsRevealAnimating(false);
+      return;
+    }
+    if (turn === 'player' && lastPlayerRoll === null && lastClaim === null) {
+      pendingCupActionRef.current = null;
+      setHasPeeked(false);
+      setCupPhase('ready');
+      setIsRevealAnimating(false);
+    }
+  }, [
+    cupPrototypeEnabled,
+    isGameOver,
+    isRivalClaimPhase,
+    lastClaim,
+    lastPlayerRoll,
+    showSocialReveal,
+    turn,
+  ]);
+
+  useEffect(() => {
+    if (!cupPrototypeEnabled || !cpuCupAction) return;
+    if (cpuCupAction.nonce <= lastCpuCupActionNonceRef.current) return;
+
+    lastCpuCupActionNonceRef.current = cpuCupAction.nonce;
+    void playToggleHaptic(hapticsEnabled);
+    pendingCupActionRef.current =
+      cpuCupAction.type === 'call_bluff'
+        ? 'cpu-bluff'
+        : cpuCupAction.type === 'roll'
+          ? 'cpu-roll'
+          : 'cpu-believe';
+    if (cpuCupAction.type === 'believe') setCupDiscardDirection('right');
+    setCupPhase(
+      cpuCupAction.type === 'call_bluff'
+        ? 'revealing'
+        : cpuCupAction.type === 'roll'
+          ? 'rolling'
+          : 'discarding'
+    );
+    if (cpuCupAction.type === 'roll') {
+      void playRollHaptic(hapticsEnabled);
+      void playDiceRollSound(sfxEnabled);
+    }
+    setIsRevealAnimating(true);
+  }, [cpuCupAction, cupPrototypeEnabled, hapticsEnabled, sfxEnabled]);
+
+  useEffect(
+    () => () => {
+      if (cupResolutionTimerRef.current) clearTimeout(cupResolutionTimerRef.current);
+      completeCpuCupAction();
+    },
+    [completeCpuCupAction]
+  );
 
   useEffect(() => {
     if (__DEV__) {
@@ -1445,6 +1609,17 @@ export default function Survival() {
     triggerRivalBluffBanner(lastBluffDefenderTruth ? 'got-em' : 'womp-womp');
   }, [bluffResultNonce, lastBluffCaller, lastBluffDefenderTruth, triggerRivalBluffBanner]);
 
+  const beginPlayerCupRoll = useCallback(() => {
+    playerRoll();
+    if (useGameStore.getState().lastPlayerRoll === null) {
+      setIsRevealAnimating(false);
+      return;
+    }
+    setHasPeeked(false);
+    setCupPhase('rolling');
+    setIsRevealAnimating(true);
+  }, [playerRoll]);
+
   function handleRollOrClaim() {
     if (__DEV__) {
       console.log('[SURVIVAL][ACTION] handleRollOrClaim:start', {
@@ -1462,6 +1637,32 @@ export default function Survival() {
     }
     if (controlsDisabled || isRevealAnimating) {
       console.log('SURVIVAL: handleRollOrClaim blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
+      return;
+    }
+
+    if (cupPrototypeEnabled) {
+      if (hasRolled) {
+        if (!hasPeeked) {
+          void playToggleHaptic(hapticsEnabled);
+          setCupPhase('revealing');
+          setIsRevealAnimating(true);
+          return;
+        }
+        if (!mustBluff && lastPlayerRoll != null) playerClaim(lastPlayerRoll);
+        return;
+      }
+
+      if (isRivalClaimPhase) {
+        void playToggleHaptic(hapticsEnabled);
+        setCupDiscardDirection(pendingDiscardDirectionRef.current ?? 'right');
+        pendingDiscardDirectionRef.current = null;
+        pendingCupActionRef.current = 'believe';
+        setCupPhase('discarding');
+        setIsRevealAnimating(true);
+        return;
+      }
+
+      beginPlayerCupRoll();
       return;
     }
 
@@ -1543,9 +1744,19 @@ export default function Survival() {
 
   const primaryLabel = streakEnded
     ? 'New Game'
-    : hasRolled && !mustBluff
-      ? getClaimActionLabel(lastPlayerRoll)
-      : 'Roll';
+    : cupPrototypeEnabled && cupPhase === 'rolling'
+      ? 'Rolling...'
+      : cupPrototypeEnabled && cupPhase === 'discarding'
+        ? 'Clearing...'
+        : cupPrototypeEnabled && cupPhase === 'revealing'
+          ? 'Lifting...'
+          : cupPrototypeEnabled && hasRolled && !hasPeeked
+            ? 'Peek'
+            : cupPrototypeEnabled && isRivalClaimPhase
+              ? 'Believe & Roll'
+              : hasRolled && !mustBluff
+                ? getClaimActionLabel(lastPlayerRoll)
+                : 'Roll';
 
   function handleCallBluff() {
     if (__DEV__) {
@@ -1581,6 +1792,16 @@ export default function Survival() {
     }
 
     console.log('BLUFF: Revealing Rival dice regardless of truth state (Survival)');
+    if (cupPrototypeEnabled) {
+      void playToggleHaptic(hapticsEnabled);
+      pendingCupActionRef.current = 'bluff';
+      setCupPhase('revealing');
+      setIsRevealAnimating(true);
+      if (rivalToldTruth === false) triggerRivalBluffBanner('got-em');
+      if (rivalToldTruth === true) triggerRivalBluffBanner('womp-womp');
+      return;
+    }
+
     cpuBluffResolveInFlightRef.current = true;
     activeBluffIdRef.current += 1;
     resolvedBluffIdRef.current = null;
@@ -1607,6 +1828,22 @@ export default function Survival() {
       });
       logSurvivalSnapshot('handleCallBluff:end');
     }
+  }
+
+  function handleCupTap() {
+    if (!canTapCupToRoll) return;
+    handleRollOrClaim();
+  }
+
+  function handleCupSwipeUp() {
+    if (!canGestureRivalCup) return;
+    handleCallBluff();
+  }
+
+  function handleCupSwipeSide(direction: 'left' | 'right') {
+    if (!canGestureRivalCup) return;
+    pendingDiscardDirectionRef.current = direction;
+    handleRollOrClaim();
   }
 
   function handleOpenBluff() {
@@ -1719,10 +1956,74 @@ export default function Survival() {
     if (__DEV__) {
       console.log('[SURVIVAL][REVEAL] clear social', { source: 'onRevealComplete' });
     }
+    pendingCupActionRef.current = null;
     setShowSocialReveal(false);
     setSocialRevealHidden(true);
     setIsRevealAnimating(false);
   }, []);
+
+  const handleCupAnimationComplete = useCallback(
+    (completedPhase: DiceCupPhase) => {
+      if (completedPhase === 'rolling') {
+        if (pendingCupActionRef.current === 'cpu-roll') {
+          pendingCupActionRef.current = null;
+          setCupPhase('covered');
+          setIsRevealAnimating(false);
+          completeCpuCupAction();
+          return;
+        }
+        setCupPhase('covered');
+        setIsRevealAnimating(false);
+        return;
+      }
+
+      if (completedPhase === 'discarding') {
+        if (pendingCupActionRef.current === 'cpu-believe') {
+          pendingCupActionRef.current = 'cpu-roll';
+          void playRollHaptic(hapticsEnabled);
+          void playDiceRollSound(sfxEnabled);
+          setCupPhase('rolling');
+          return;
+        }
+        pendingCupActionRef.current = null;
+        beginPlayerCupRoll();
+        return;
+      }
+
+      if (completedPhase !== 'revealing') return;
+      setCupPhase('revealed');
+      const pendingAction = pendingCupActionRef.current;
+      if (pendingAction === 'cpu-social') {
+        cupResolutionTimerRef.current = setTimeout(() => {
+          cupResolutionTimerRef.current = null;
+          handleSocialRevealComplete();
+        }, 1200);
+        return;
+      }
+      if (pendingAction !== 'bluff' && pendingAction !== 'cpu-bluff') {
+        setHasPeeked(true);
+        setIsRevealAnimating(false);
+        return;
+      }
+
+      cupResolutionTimerRef.current = setTimeout(() => {
+        pendingCupActionRef.current = null;
+        cupResolutionTimerRef.current = null;
+        if (pendingAction === 'cpu-bluff') completeCpuCupAction();
+        else callBluff();
+        setIsRevealAnimating(false);
+      }, cupTheatrical ? 1500 : 900);
+    },
+    [
+      beginPlayerCupRoll,
+      callBluff,
+      completeCpuCupAction,
+      cupTheatrical,
+      handleSocialRevealComplete,
+      hapticsEnabled,
+      sfxEnabled,
+    ]
+  );
 
   const clearRevealState = useCallback(
     (reason: 'watchdog' | 'focus-resume') => {
@@ -1752,6 +2053,7 @@ export default function Survival() {
   );
 
   useEffect(() => {
+    if (cupPrototypeEnabled) return;
     if (mode !== 'survival') {
       if (revealWatchdogRef.current) {
         clearTimeout(revealWatchdogRef.current);
@@ -1781,7 +2083,7 @@ export default function Survival() {
         revealWatchdogRef.current = null;
       }
     };
-  }, [clearRevealState, isRevealAnimating, mode]);
+  }, [clearRevealState, cupPrototypeEnabled, isRevealAnimating, mode]);
 
   useEffect(() => {
     if (!isFocused && isRevealAnimating) {
@@ -1855,18 +2157,20 @@ export default function Survival() {
       socialRevealNonceRef.current = nonce;
       setSocialDiceValues(dice);
       setShowSocialReveal(true);
-      setSocialRevealHidden(true);
       if (__DEV__) {
         console.log('[SURVIVAL][REVEAL] start social', { nonce });
       }
       setIsRevealAnimating(true);
-      if (Platform.OS === 'android') {
-        setSocialRevealHidden(false);
+      if (cupPrototypeEnabled) {
+        pendingCupActionRef.current = 'cpu-social';
+        void playToggleHaptic(hapticsEnabled);
+        setCupPhase('revealing');
       } else {
+        setSocialRevealHidden(true);
         requestAnimationFrame(() => setSocialRevealHidden(false));
       }
     }
-  }, [cpuSocialDice, cpuSocialRevealNonce]);
+  }, [cpuSocialDice, cpuSocialRevealNonce, cupPrototypeEnabled, hapticsEnabled]);
 
   // Debug: lifecycle + initialization trace
   const initialStateLoggedRef = useRef(false);
@@ -1877,6 +2181,11 @@ export default function Survival() {
       }
       letterAttemptUsedRef.current = false;
       lastProcessedRollRef.current = null;
+      pendingCupActionRef.current = null;
+      pendingDiscardDirectionRef.current = null;
+      setCupPhase('ready');
+      setCupDiscardDirection('right');
+      setHasPeeked(false);
       startSurvival();
       return () => {
         if (__DEV__) {
@@ -1969,14 +2278,21 @@ export default function Survival() {
                 ))}
               </Animated.View>
               <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
-              {claimText ? (
-                <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall]}>{claimText}</Text>
-              ) : (
-                <Text style={[styles.subtle, isSmallScreen && styles.subtleSmall]}>No active claim yet.</Text>
-              )}
+              <View style={styles.claimVisualHeader}>
+                <Text style={styles.claimVisualLabel}>Claim</Text>
+                {claimHi !== null && claimLo !== null ? (
+                  <View style={styles.claimVisualDiceRow}>
+                    <Dice value={claimHi} size={30} colorway={claimHighColor} />
+                    <View style={styles.claimVisualGap} />
+                    <Dice value={claimLo} size={30} colorway={claimLowColor} />
+                  </View>
+                ) : (
+                  <Text style={styles.claimVisualPlaceholder}>—</Text>
+                )}
+              </View>
               <View style={[styles.narrationContainer, layoutTweaks.narrationHeight]}>
                 <InlineFlameText
-                  text={narration || 'Ready to roll.'}
+                  text={visibleNarration || 'Ready to roll.'}
                   style={[styles.status, isSmallScreen && styles.statusSmall]}
                   numberOfLines={2}
                   ellipsizeMode="tail"
@@ -2057,7 +2373,7 @@ export default function Survival() {
               ]}
             >
               <View style={styles.diceRow}>
-                {showCpuThinking ? (
+                {showCpuThinking && !cupPrototypeEnabled ? (
                   <>
                     <Dice
                       value={null}
@@ -2073,17 +2389,39 @@ export default function Survival() {
                       angryThinking={angryRivalThinking}
                     />
                   </>
-                ) : showSocialReveal ? (
+                ) : showSocialReveal && !cupPrototypeEnabled ? (
                   <AnimatedDiceReveal
                     hidden={socialRevealHidden}
                     diceValues={socialDiceValues}
                     onRevealComplete={handleSocialRevealComplete}
                   />
-                ) : showCpuRevealDice ? (
+                ) : showCpuRevealDice && !cupPrototypeEnabled ? (
                   <AnimatedDiceReveal
                     hidden={!cpuDiceRevealed}
                     diceValues={[cpuHi, cpuLo]}
                     onRevealComplete={handleCpuRevealComplete}
+                  />
+                ) : cupPrototypeEnabled ? (
+                  <DiceCupStage
+                    phase={cupPhase}
+                    diceValues={cupDiceValues}
+                    rollOwner={cupRollOwner}
+                    discardDirection={cupDiscardDirection}
+                    readyStatus={canTapCupToRoll ? 'TAP CUP TO ROLL' : undefined}
+                    handedStatus={
+                      canGestureRivalCup ? 'SWIPE ↑ CALL  •  SWIPE ↔ BELIEVE' : undefined
+                    }
+                    coveredStatus={turn === 'cpu' ? 'INFERNOMAN IS DECIDING' : undefined}
+                    rollingStatus={
+                      pendingCupActionRef.current === 'cpu-roll'
+                        ? 'INFERNOMAN IS ROLLING'
+                        : undefined
+                    }
+                    theatrical={cupTheatrical}
+                    onCupTap={canTapCupToRoll ? handleCupTap : undefined}
+                    onCupSwipeUp={canGestureRivalCup ? handleCupSwipeUp : undefined}
+                    onCupSwipeSide={canGestureRivalCup ? handleCupSwipeSide : undefined}
+                    onAnimationComplete={handleCupAnimationComplete}
                   />
                 ) : (
                   <>
@@ -2121,7 +2459,9 @@ export default function Survival() {
                       ? false
                       : controlsDisabled ||
                         isRevealAnimating ||
-                        (hasRolled && !canClaimTruthfully)
+                        (hasRolled &&
+                          (!cupPrototypeEnabled || hasPeeked) &&
+                          !canClaimTruthfully)
                   }
                 />
                 <StyledButton
@@ -2133,7 +2473,7 @@ export default function Survival() {
                     styles.menuActionButton,
                     !hasClaim && { opacity: 0.4 },
                   ]}
-                  disabled={controlsDisabled || hasRolled || !hasClaim}
+                  disabled={controlsDisabled || isRevealAnimating || hasRolled || !hasClaim}
                 />
               </View>
 
@@ -2143,7 +2483,11 @@ export default function Survival() {
                   variant="outline"
                   onPress={handleOpenBluff}
                   style={[styles.btnWide, shouldHighlightBluff && styles.bluffOptionsHighlightButton]}
-                  disabled={controlsDisabled || isRevealAnimating}
+                  disabled={
+                    controlsDisabled ||
+                    isRevealAnimating ||
+                    (cupPrototypeEnabled && (!hasRolled || !hasPeeked))
+                  }
                 />
               </View>
 
@@ -2551,6 +2895,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 2,
     textAlign: 'center',
+  },
+  claimVisualHeader: {
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  claimVisualLabel: {
+    color: '#C0C0C0',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    textDecorationLine: 'underline',
+  },
+  claimVisualDiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  claimVisualGap: {
+    width: 6,
+  },
+  claimVisualPlaceholder: {
+    color: '#7F878E',
+    fontSize: 18,
+    lineHeight: 30,
   },
   subtle: {
     color: '#FE9902',
