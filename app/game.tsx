@@ -1,12 +1,12 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Image,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -25,9 +25,7 @@ import { ScoreDie } from '../src/components/ScoreDie';
 import AnimatedDiceReveal from '../src/components/AnimatedDiceReveal';
 import RoundRecapOverlay, { RoundRecapData } from '../src/components/RoundRecapOverlay';
 import StyledButton from '../src/components/StyledButton';
-import { FlameEmojiIcon } from '../src/components/FlameEmojiIcon';
 import { InlineFlameText } from '../src/components/InlineFlameText';
-import RulesContent from '../src/components/RulesContent';
 import { MEXICAN_ICON, getNextWompWompMessage } from '../src/lib/constants';
 import { logEvent } from '../src/analytics/logEvent';
 import {
@@ -45,10 +43,10 @@ import { type BadgeMeta, getBadgeMeta } from '../src/stats/badgeMetadata';
 import { type PointEvent, type SocialEvent, useGameStore } from '../src/state/useGameStore';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { DIE_SIZE, DICE_SPACING, SCORE_DIE_BASE_SIZE } from '../src/theme/dice';
-import ScreenshotTutorial from '../src/tutorial/ScreenshotTutorial';
+import InteractiveQuickPlayTutorial from '../src/tutorial/InteractiveQuickPlayTutorial';
 import { requestReviewIfEligible } from '../src/utils/reviewPrompt';
 
-const TUTORIAL_SEEN_KEY = 'tutorial_seen_v1';
+const TUTORIAL_COMPLETED_KEY = 'quick_play_interactive_tutorial_completed_v1';
 // Set to true temporarily if you want to force the tutorial
 // to show again for testing. Leave as false in production.
 const FORCE_SHOW_TUTORIAL = false;
@@ -67,12 +65,6 @@ function formatClaimSimple(value: number | null | undefined): string {
   const [hi, lo] = splitClaim(value);
   return `${hi}${lo}`;
 }
-function formatRollDetailed(value: number | null | undefined): string {
-  if (typeof value !== 'number' || Number.isNaN(value)) return ' - ';
-  const [hi, lo] = splitClaim(value);
-  return `${hi}${lo}`;
-}
-const formatRollSimple = formatRollDetailed;
 function facesFromRoll(value: number | null | undefined): readonly [number | null, number | null] {
   if (typeof value !== 'number' || Number.isNaN(value)) return [null, null] as const;
   const [hi, lo] = splitClaim(value);
@@ -236,7 +228,6 @@ export default function Game() {
   const [showSocialReveal, setShowSocialReveal] = useState(false);
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const tutorialFirstSeenRef = useRef(false);
@@ -306,7 +297,6 @@ export default function Game() {
     quickPlaySocialRolls,
     quickPlayBestMoment,
     playerSuccessfulBluffsThisGame,
-    mode,
     startQuickPlayMatch,
     exitSurvivalToNormal,
   } = useGameStore();
@@ -357,7 +347,7 @@ export default function Game() {
       }
 
       try {
-        const stored = await AsyncStorage.getItem(TUTORIAL_SEEN_KEY);
+        const stored = await AsyncStorage.getItem(TUTORIAL_COMPLETED_KEY);
         if (!stored && isMounted) {
           tutorialFirstSeenRef.current = true;
           setShowTutorial(true);
@@ -941,9 +931,45 @@ export default function Game() {
   });
 
   const handleTutorialReplay = useCallback(() => {
-    setRulesOpen(false);
-    setShowTutorial(true);
-  }, []);
+    const hasActiveMatch =
+      hasRolledThisGame ||
+      playerScore < 5 ||
+      cpuScore < 5 ||
+      lastClaim != null ||
+      lastPlayerRoll != null ||
+      (claims?.length ?? 0) > 0;
+
+    const startTutorial = () => {
+      if (hasActiveMatch) startFreshGame();
+      setShowTutorial(true);
+    };
+
+    if (!hasActiveMatch) {
+      startTutorial();
+      return;
+    }
+
+    if (Platform.OS === 'web') {
+      if (
+        typeof window !== 'undefined' &&
+        window.confirm(
+          'Start tutorial?\n\nYour current Quick Play game will be discarded and replaced with a new game after the tutorial.'
+        )
+      ) {
+        startTutorial();
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Start tutorial?',
+      'Your current Quick Play game will be discarded and replaced with a new game after the tutorial.',
+      [
+        { text: 'Keep Playing', style: 'cancel' },
+        { text: 'Discard & Start', style: 'destructive', onPress: startTutorial },
+      ]
+    );
+  }, [claims, cpuScore, hasRolledThisGame, lastClaim, lastPlayerRoll, playerScore, startFreshGame]);
 
   const handleTutorialDone = useCallback(() => {
     setShowTutorial(false);
@@ -953,12 +979,16 @@ export default function Game() {
     }
     const persist = async () => {
       try {
-        await AsyncStorage.setItem(TUTORIAL_SEEN_KEY, '1');
+        await AsyncStorage.setItem(TUTORIAL_COMPLETED_KEY, '1');
       } catch {
         // ignore persistence failures; tutorial will show again next launch
       }
     };
     void persist();
+  }, []);
+
+  const handleTutorialExit = useCallback(() => {
+    setShowTutorial(false);
   }, []);
 
   return (
@@ -1296,9 +1326,9 @@ export default function Game() {
                   textStyle={styles.footerButtonTextSmall}
                 />
                 <StyledButton
-                  label="Rules"
+                  label="Tutorial"
                   variant="ghost"
-                  onPress={() => setRulesOpen(true)}
+                  onPress={handleTutorialReplay}
                   style={[styles.btn, styles.newGameBtn]}
                   textStyle={styles.footerButtonTextSmall}
                 />
@@ -1370,36 +1400,6 @@ export default function Game() {
                   ) : (
                     <Text style={styles.noHistoryText}>No history yet.</Text>
                   )}
-                </View>
-              </View>
-            </View>
-          </Modal>
-
-          <Modal
-            visible={rulesOpen}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setRulesOpen(false)}
-          >
-            <Pressable style={styles.rulesBackdrop} onPress={() => setRulesOpen(false)} />
-            <View style={styles.rulesCenter}>
-              <View style={styles.rulesContent}>
-                <View style={styles.rulesHeader}>
-                  <Text style={styles.rulesTitle}>Game Rules</Text>
-                  <Pressable onPress={() => setRulesOpen(false)} style={styles.rulesCloseButton}>
-                    <Text style={styles.rulesClose}>✕</Text>
-                  </Pressable>
-                </View>
-                <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
-                  <RulesContent />
-                </ScrollView>
-                <View style={styles.rulesActions}>
-                  <StyledButton
-                    label="Quick Play Tutorial"
-                    variant="primary"
-                    onPress={handleTutorialReplay}
-                    style={styles.rulesTutorialButton}
-                  />
                 </View>
               </View>
             </View>
@@ -1488,7 +1488,11 @@ export default function Game() {
           onPlayAgain={startFreshGame}
           onMainMenu={handleMainMenuPress}
         />
-        <ScreenshotTutorial visible={showTutorial} onDone={handleTutorialDone} />
+        <InteractiveQuickPlayTutorial
+          visible={showTutorial}
+          onComplete={handleTutorialDone}
+          onExit={handleTutorialExit}
+        />
       </FeltBackground>
     </View>
   );
@@ -1877,58 +1881,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginVertical: 20,
   },
-  rulesBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  rulesCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rulesContent: {
-    backgroundColor: '#3C4045',
-    borderRadius: 12,
-    padding: 20,
-    width: '85%',
-    maxHeight: '75%',
-    borderColor: '#B26B01',
-    borderWidth: 2,
-  },
-  rulesActions: {
-    marginTop: 16,
-  },
-  rulesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  rulesTitle: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 20,
-  },
-  rulesCloseButton: {
-    padding: 4,
-  },
-  rulesClose: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  rulesScroll: {
-    maxHeight: '100%',
-  },
-  rulesTutorialButton: {
-    backgroundColor: '#FE9902',
-    borderColor: '#FFEA70',
-    borderWidth: 2,
-  },
   settingsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2016,5 +1968,4 @@ const styles = StyleSheet.create({
   endBannerSubtitleLose: {
     color: '#ffcccc',
   },
-  // rulesButton styles removed; using StyledButton with newGameBtn styling instead
 });
