@@ -39,6 +39,7 @@ import {
   splitClaim,
 } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
+import { getClaimActionLabel } from '../src/lib/claimActionLabel';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
 import { MEXICAN_ICON, getNextWompWompMessage } from '../src/lib/constants';
 import { awardBadge } from '../src/stats/badges';
@@ -1543,7 +1544,7 @@ export default function Survival() {
   const primaryLabel = streakEnded
     ? 'New Game'
     : hasRolled && !mustBluff
-      ? 'Claim Roll'
+      ? getClaimActionLabel(lastPlayerRoll)
       : 'Roll';
 
   function handleCallBluff() {

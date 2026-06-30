@@ -1,9 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
-  Alert,
   Image,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,6 +15,7 @@ import Dice from '../components/Dice';
 import FeltBackground from '../components/FeltBackground';
 import { ScoreDie } from '../components/ScoreDie';
 import StyledButton from '../components/StyledButton';
+import { getClaimActionLabel } from '../lib/claimActionLabel';
 import {
   TUTORIAL_ROUND_COUNT,
   createTutorialState,
@@ -54,12 +53,14 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
   const scoreDieSize = compact ? 42 : 48;
   const [state, dispatch] = useReducer(tutorialReducer, undefined, createTutorialState);
   const [rolling, setRolling] = useState(false);
+  const [exitConfirmationVisible, setExitConfirmationVisible] = useState(false);
   const rollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (visible) {
       dispatch({ type: 'RESET' });
       setRolling(false);
+      setExitConfirmationVisible(false);
     }
     return () => {
       if (rollTimerRef.current) clearTimeout(rollTimerRef.current);
@@ -82,9 +83,9 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
   const isReverseStep = state.stage === 'claim-reverse';
 
   const primaryLabel = useMemo(() => {
-    if (isSocialStep) return 'Show Social';
-    if (isReverseStep) return 'Claim Reverse';
-    if (isTruthClaimStep) return `Claim ${state.activeRoll}`;
+    if (isSocialStep) return getClaimActionLabel(41);
+    if (isReverseStep) return getClaimActionLabel(31);
+    if (isTruthClaimStep) return getClaimActionLabel(state.activeRoll);
     return 'Roll';
   }, [isReverseStep, isSocialStep, isTruthClaimStep, state.activeRoll]);
 
@@ -107,26 +108,12 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
   }, [isReverseStep, isRollStep, isSocialStep, isTruthClaimStep, rolling]);
 
   const requestExit = useCallback(() => {
-    if (Platform.OS === 'web') {
-      if (
-        typeof window !== 'undefined' &&
-        window.confirm(
-          'Exit tutorial?\n\nYour tutorial progress will be discarded. The tutorial will restart from the beginning next time.'
-        )
-      ) {
-        onExit();
-      }
-      return;
-    }
+    setExitConfirmationVisible(true);
+  }, []);
 
-    Alert.alert(
-      'Exit tutorial?',
-      'Your tutorial progress will be discarded. The tutorial will restart from the beginning next time.',
-      [
-        { text: 'Keep Playing', style: 'cancel' },
-        { text: 'Exit Tutorial', style: 'destructive', onPress: onExit },
-      ]
-    );
+  const confirmExit = useCallback(() => {
+    setExitConfirmationVisible(false);
+    onExit();
   }, [onExit]);
 
   const handleCoachAction = useCallback(() => {
@@ -220,14 +207,14 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
               {state.stage === 'ranking' && (
                 <View style={styles.rankingCard}>
                   <View style={styles.rankingGroup}>
-                    <Text style={styles.rankingLabel}>MIXED ROLLS • LOW TO HIGH</Text>
+                    <Text style={styles.rankingLabel}>MIXED ROLLS • HIGH TO LOW</Text>
                     <Text style={styles.rankingValue}>
-                      32 ‹ 42 ‹ 43 ‹ 51 ‹ 52 ‹ 53 ‹ 54 ‹ 61 ‹ 62 ‹ 63 ‹ 64 ‹ 65
+                      65 &gt; 64 &gt; 63 &gt; 62 &gt; 61 &gt; 54 &gt; 53 &gt; 52 &gt; 51 &gt; 43 &gt; 42 &gt; 32
                     </Text>
                   </View>
                   <View style={styles.rankingGroup}>
                     <Text style={styles.rankingLabel}>DOUBLES • ABOVE EVERY MIXED ROLL</Text>
-                    <Text style={styles.rankingValue}>11 ‹ 22 ‹ 33 ‹ 44 ‹ 55 ‹ 66</Text>
+                    <Text style={styles.rankingValue}>66 &gt; 55 &gt; 44 &gt; 33 &gt; 22 &gt; 11</Text>
                   </View>
                   <View style={styles.rankingRow}>
                     <Text style={styles.rankingLabel}>Top roll</Text>
@@ -244,7 +231,7 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
                   label={prompt.actionLabel}
                   variant="success"
                   onPress={handleCoachAction}
-                  style={styles.coachAction}
+                  style={[styles.coachAction, styles.gameBlueButton]}
                   testID="tutorial-coach-action"
                 />
               )}
@@ -307,6 +294,7 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
                   }
                   style={[
                     styles.actionButton,
+                    styles.gameBlueButton,
                     (isRollStep || isTruthClaimStep || isSocialStep || isReverseStep) &&
                       styles.guidedAction,
                   ]}
@@ -376,7 +364,54 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
                   label="Close Recent Events"
                   variant="success"
                   onPress={() => send({ type: 'CLOSE_HISTORY' })}
-                  style={styles.coachAction}
+                  style={[styles.coachAction, styles.gameBlueButton]}
+                />
+              </View>
+            </View>
+          </Modal>
+
+          <Modal
+            visible={exitConfirmationVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setExitConfirmationVisible(false)}
+          >
+            <View style={styles.modalBackdrop}>
+              <View style={[styles.modalCard, styles.exitConfirmationCard]}>
+                <View style={styles.exitConfirmationHeader}>
+                  <View style={styles.exitConfirmationAvatarWrap}>
+                    <Image source={ICEMAN} style={styles.exitConfirmationAvatar} resizeMode="contain" />
+                  </View>
+                  <View style={styles.exitConfirmationHeading}>
+                    <Text style={styles.modalEyebrow}>ICEMAN • HOLD UP</Text>
+                    <Text style={styles.modalTitle}>Leave the tutorial?</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.exitConfirmationBody}>
+                  We haven’t finished freezing out Infernoman yet. Leaving now discards this tutorial match.
+                </Text>
+
+                <View style={styles.exitResetNotice}>
+                  <Text style={styles.exitResetIcon}>↻</Text>
+                  <Text style={styles.exitResetText}>
+                    Your next tutorial will restart from the beginning.
+                  </Text>
+                </View>
+
+                <StyledButton
+                  label="Keep Playing"
+                  variant="success"
+                  onPress={() => setExitConfirmationVisible(false)}
+                  style={[styles.exitKeepPlayingButton, styles.gameBlueButton]}
+                  testID="tutorial-exit-cancel"
+                />
+                <StyledButton
+                  label="Exit Tutorial"
+                  variant="primary"
+                  onPress={confirmExit}
+                  style={styles.exitConfirmButton}
+                  testID="tutorial-exit-confirm"
                 />
               </View>
             </View>
@@ -519,6 +554,12 @@ const styles = StyleSheet.create({
   coachTitle: { color: TEXT, fontSize: 20, fontWeight: '900', lineHeight: 24, marginBottom: 5 },
   coachBody: { color: '#DCE4EA', fontSize: 14, lineHeight: 20 },
   coachAction: { marginTop: 12, minHeight: 46, borderWidth: 2, borderColor: '#BFE9FF' },
+  gameBlueButton: {
+    backgroundColor: '#42C6FF',
+    borderColor: '#1E8AC4',
+    borderWidth: 2,
+    borderRadius: 12,
+  },
   rankingCard: {
     backgroundColor: '#171B20',
     borderRadius: 12,
@@ -595,6 +636,53 @@ const styles = StyleSheet.create({
   modalClose: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1B1F24' },
   modalCloseText: { color: TEXT, fontSize: 20, fontWeight: '800' },
   modalCoachText: { color: '#D7E0E7', fontSize: 14, lineHeight: 20, marginVertical: 12 },
+  exitConfirmationCard: {
+    borderColor: BLUE,
+    shadowColor: BLUE,
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 10,
+  },
+  exitConfirmationHeader: { flexDirection: 'row', alignItems: 'center' },
+  exitConfirmationAvatarWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#15394E',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: BLUE,
+  },
+  exitConfirmationAvatar: { width: 43, height: 48 },
+  exitConfirmationHeading: { flex: 1 },
+  exitConfirmationBody: { color: '#DCE4EA', fontSize: 15, lineHeight: 21, marginTop: 16 },
+  exitResetNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1A2026',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: '#3D5667',
+  },
+  exitResetIcon: { color: BLUE, fontSize: 24, fontWeight: '900', marginRight: 10 },
+  exitResetText: { color: '#C9D7E1', fontSize: 13, lineHeight: 18, flex: 1 },
+  exitKeepPlayingButton: {
+    marginTop: 16,
+    minHeight: 50,
+  },
+  exitConfirmButton: {
+    marginTop: 10,
+    minHeight: 48,
+    backgroundColor: '#8F1D23',
+    borderWidth: 1,
+    borderColor: '#E15B62',
+  },
   eventList: { maxHeight: 280 },
   eventRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#3B424A' },
   eventDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: ORANGE, marginTop: 6, marginRight: 10 },
@@ -605,7 +693,7 @@ const styles = StyleSheet.create({
   comparisonBad: { color: '#FF7276', fontSize: 24, fontWeight: '900', marginTop: 3 },
   comparisonGood: { color: '#69D795', fontSize: 24, fontWeight: '900', marginTop: 3 },
   comparisonArrow: { color: TEXT, fontSize: 24, marginHorizontal: 12 },
-  claimOption: { backgroundColor: '#176B43', borderRadius: 14, padding: 15, alignItems: 'center' },
+  claimOption: { backgroundColor: '#22272E', borderRadius: 14, padding: 15, alignItems: 'center' },
   claimOptionText: { color: TEXT, fontSize: 20, fontWeight: '900' },
   claimOptionSubtext: { color: '#D7F7E6', fontSize: 12, marginTop: 3 },
   cancelButton: { marginTop: 12, borderRadius: 12, padding: 12, backgroundColor: '#751A1F', alignItems: 'center' },

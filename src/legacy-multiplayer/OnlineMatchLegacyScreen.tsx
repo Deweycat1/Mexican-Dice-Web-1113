@@ -24,6 +24,7 @@ import { BASE_DIE_SIZE, DICE_SPACING_BASE } from '@/src/theme/dice';
 import { applyClaim, CoreGameState } from '@/src/engine/coreGame';
 import { rollDice } from '@/src/engine/onlineRoll';
 import { buildClaimOptions } from '@/src/lib/claimOptions';
+import { getClaimActionLabel } from '@/src/lib/claimActionLabel';
 import {
   checkRateLimit,
   clearHiddenRolls,
@@ -795,7 +796,7 @@ export default function OnlineMatchScreen() {
             <View style={styles.controls}>
               <View style={styles.actionRow}>
                 <StyledButton
-                  label={hasRolled ? 'Claim Roll' : 'Roll'}
+                  label={hasRolled ? getClaimActionLabel(myRoll) : 'Roll'}
                   variant="success"
                   onPress={() => {
                     if (hasRolled && myRoll !== null) handleClaim(myRoll);

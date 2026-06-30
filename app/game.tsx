@@ -37,6 +37,7 @@ import {
   splitClaim,
 } from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
+import { getClaimActionLabel } from '../src/lib/claimActionLabel';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { loadBadges } from '../src/stats/badges';
 import { type BadgeMeta, getBadgeMeta } from '../src/stats/badgeMetadata';
@@ -1269,7 +1270,7 @@ export default function Game() {
                     isGameOver
                       ? 'New Game'
                       : hasRolled && !mustBluff
-                        ? 'Claim Roll'
+                        ? getClaimActionLabel(lastPlayerRoll)
                         : 'Roll'
                   }
                   variant={isGameOver ? 'primary' : 'success'}

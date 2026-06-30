@@ -54,6 +54,7 @@ import {
 import { computeLegalTruth, rollDice } from '../../../src/engine/onlineRoll';
 import { ensureUserProfile, getCurrentUser } from '../../../src/lib/auth';
 import { getOnlineClaimOptions } from '../../../src/lib/claimOptionSources';
+import { getClaimActionLabel } from '../../../src/lib/claimActionLabel';
 import { supabase } from '../../../src/lib/supabase';
 import { logEvent } from '../../../src/analytics/logEvent';
 import { updatePersonalStatsOnGamePlayed } from '../../../src/stats/personalStats';
@@ -2080,7 +2081,7 @@ export default function OnlineGameV2Screen() {
               ) : null}
               <View style={styles.actionRow}>
                 <StyledButton
-                  label={canRoll ? 'Roll' : 'Claim'}
+                  label={canRoll ? 'Roll' : getClaimActionLabel(myRoll)}
                   variant="success"
                   onPress={
                     canRoll
