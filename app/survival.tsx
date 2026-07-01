@@ -41,6 +41,7 @@ import {
 } from '../src/engine/mexican';
 import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { getClaimActionLabel } from '../src/lib/claimActionLabel';
+import { getRestingCupPhase } from '../src/lib/cupState';
 import { playDiceRollSound } from '../src/lib/diceRollSound';
 import { playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
@@ -1363,7 +1364,13 @@ export default function Survival() {
   }, [turn, lastCpuRoll, lastClaim]);
 
   useEffect(() => {
-    if (!cupPrototypeEnabled || isGameOver || showSocialReveal) return;
+    if (
+      !cupPrototypeEnabled ||
+      !isFocused ||
+      mode !== 'survival' ||
+      isGameOver ||
+      showSocialReveal
+    ) return;
 
     if (turn === 'cpu') {
       pendingCupActionRef.current = null;
@@ -1387,16 +1394,18 @@ export default function Survival() {
     }
   }, [
     cupPrototypeEnabled,
+    isFocused,
     isGameOver,
     isRivalClaimPhase,
     lastClaim,
     lastPlayerRoll,
+    mode,
     showSocialReveal,
     turn,
   ]);
 
   useEffect(() => {
-    if (!cupPrototypeEnabled || !cpuCupAction) return;
+    if (!cupPrototypeEnabled || !isFocused || mode !== 'survival' || !cpuCupAction) return;
     if (cpuCupAction.nonce <= lastCpuCupActionNonceRef.current) return;
 
     lastCpuCupActionNonceRef.current = cpuCupAction.nonce;
@@ -1420,12 +1429,15 @@ export default function Survival() {
       void playDiceRollSound(sfxEnabled);
     }
     setIsRevealAnimating(true);
-  }, [cpuCupAction, cupPrototypeEnabled, hapticsEnabled, sfxEnabled]);
+  }, [cpuCupAction, cupPrototypeEnabled, hapticsEnabled, isFocused, mode, sfxEnabled]);
 
   useEffect(
     () => () => {
-      if (cupResolutionTimerRef.current) clearTimeout(cupResolutionTimerRef.current);
-      completeCpuCupAction();
+      if (cupResolutionTimerRef.current) {
+        clearTimeout(cupResolutionTimerRef.current);
+        cupResolutionTimerRef.current = null;
+      }
+      if (useGameStore.getState().mode === 'survival') completeCpuCupAction();
     },
     [completeCpuCupAction]
   );
@@ -1478,7 +1490,18 @@ export default function Survival() {
 
   const beginPlayerCupRoll = useCallback(() => {
     playerRoll();
-    if (useGameStore.getState().lastPlayerRoll === null) {
+    const state = useGameStore.getState();
+    if (state.lastPlayerRoll === null) {
+      pendingCupActionRef.current = null;
+      setCupPhase(
+        getRestingCupPhase({
+          isPlayerTurn: state.turn === 'player',
+          hasPlayerRoll: false,
+          hasOpponentClaim:
+            resolveActiveChallenge(state.baselineClaim, state.lastClaim) !== null,
+        })
+      );
+      setHasPeeked(false);
       setIsRevealAnimating(false);
       return;
     }
@@ -2012,9 +2035,15 @@ export default function Survival() {
       return;
     }
 
-    if (nonce != null && dice && nonce > socialRevealNonceRef.current) {
-      console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
+    if (nonce != null && nonce < socialRevealNonceRef.current) {
       socialRevealNonceRef.current = nonce;
+      return;
+    }
+
+    if (nonce != null && nonce > socialRevealNonceRef.current) {
+      socialRevealNonceRef.current = nonce;
+      if (!isFocused || mode !== 'survival' || !dice) return;
+      console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
       setSocialDiceValues(dice);
       setShowSocialReveal(true);
       if (__DEV__) {
@@ -2030,7 +2059,14 @@ export default function Survival() {
         requestAnimationFrame(() => setSocialRevealHidden(false));
       }
     }
-  }, [cpuSocialDice, cpuSocialRevealNonce, cupPrototypeEnabled, hapticsEnabled]);
+  }, [
+    cpuSocialDice,
+    cpuSocialRevealNonce,
+    cupPrototypeEnabled,
+    hapticsEnabled,
+    isFocused,
+    mode,
+  ]);
 
   // Debug: lifecycle + initialization trace
   const initialStateLoggedRef = useRef(false);
@@ -2051,9 +2087,21 @@ export default function Survival() {
         if (__DEV__) {
           console.log('SURVIVAL: screen blurred -> exitSurvivalToNormal()');
         }
+        if (cupResolutionTimerRef.current) {
+          clearTimeout(cupResolutionTimerRef.current);
+          cupResolutionTimerRef.current = null;
+        }
+        pendingCupActionRef.current = null;
+        pendingDiscardDirectionRef.current = null;
+        setCupPhase('ready');
+        setHasPeeked(false);
+        setShowSocialReveal(false);
+        setSocialRevealHidden(true);
+        setIsRevealAnimating(false);
+        if (useGameStore.getState().mode === 'survival') completeCpuCupAction();
         exitSurvivalToNormal();
       };
-    }, [startSurvival, exitSurvivalToNormal])
+    }, [completeCpuCupAction, startSurvival, exitSurvivalToNormal])
   );
 
   useEffect(() => {
@@ -2466,7 +2514,7 @@ export default function Survival() {
                 </ScrollView>
                 <View style={styles.rulesActions}>
                   <StyledButton
-                    label="View Inferno Tutorial"
+                    label="View Interactive Tutorial"
                     variant="primary"
                     onPress={() => {
                       setRulesOpen(false);

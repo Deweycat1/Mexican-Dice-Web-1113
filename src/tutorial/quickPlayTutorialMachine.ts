@@ -374,7 +374,7 @@ export const tutorialPrompts: Record<TutorialStage, TutorialPrompt> = {
   'answer-61': {
     eyebrow: 'ICEMAN • ACCEPT OR CHALLENGE',
     title: 'Infernoman claims 61',
-    body: 'Rolling accepts his claim. Your next roll must then match or beat 61. Calling Bluff would challenge whether he really rolled it. For now, tap Roll.',
+    body: 'Rolling accepts his claim. Your next roll must then match or beat 61. Calling Bluff would challenge whether he really rolled it. For now, swipe the cup sideways or tap Roll.',
     lesson: 1,
   },
   'claim-62': {
@@ -398,7 +398,7 @@ export const tutorialPrompts: Record<TutorialStage, TutorialPrompt> = {
   'answer-64': {
     eyebrow: 'ICEMAN • ROUND 2',
     title: 'Infernoman claims 64',
-    body: 'Roll to accept the claim. If your dice come up short, you’ll need to bluff or make a special play.',
+    body: 'Swipe the cup sideways or tap Roll to accept the claim. If your dice come up short, you’ll need to bluff or make a special play.',
     lesson: 3,
   },
   'open-bluff-options': {
@@ -423,7 +423,7 @@ export const tutorialPrompts: Record<TutorialStage, TutorialPrompt> = {
   'call-65': {
     eyebrow: 'ICEMAN • ROUND 3',
     title: 'Now test his claim',
-    body: 'Infernoman claims 65. You could roll to accept, but I don’t trust the heat coming off those dice. Tap Call Bluff.',
+    body: 'Infernoman claims 65. You could roll to accept, but I don’t trust the heat coming off those dice. Swipe the cup up or tap Call Bluff.',
     lesson: 4,
   },
   'cpu-bluff-caught': {
@@ -455,7 +455,7 @@ export const tutorialPrompts: Record<TutorialStage, TutorialPrompt> = {
   'answer-54-with-reverse': {
     eyebrow: 'ICEMAN • ROUND 5',
     title: 'Infernoman claims 54',
-    body: 'Roll to accept his claim. This time the dice have another special lesson ready.',
+    body: 'Swipe the cup sideways or tap Roll to accept his claim. This time the dice have another special lesson ready.',
     lesson: 5,
   },
   'claim-reverse': {
@@ -474,7 +474,7 @@ export const tutorialPrompts: Record<TutorialStage, TutorialPrompt> = {
   'call-inferno': {
     eyebrow: 'ICEMAN • ROUND 6',
     title: '21 Inferno puts two points at stake',
-    body: 'Inferno outranks every normal roll and double. Respond with a real 21, 31, or 41; bluff 21 or 31; or Call Bluff. Catch a false Inferno and the bluffer loses two points.',
+    body: 'Inferno outranks every normal roll and double. Respond with a real 21, 31, or 41; bluff 21 or 31; or swipe the cup up to Call Bluff. Catch a false Inferno and the bluffer loses two points.',
     lesson: 6,
   },
   complete: {

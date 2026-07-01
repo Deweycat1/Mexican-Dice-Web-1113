@@ -1000,6 +1000,7 @@ export const useGameStore = create<Store>((set, get) => {
 
   // Survival controls
   const startSurvival = () => {
+    completeCpuCupAction();
     const matchId = createAnalyticsId();
     // Reset survival scores and round state when starting a run
     const survivalReset = buildSurvivalChallengeReset();
@@ -1044,6 +1045,7 @@ export const useGameStore = create<Store>((set, get) => {
   };
 
   const restartSurvival = () => {
+    completeCpuCupAction();
     const matchId = createAnalyticsId();
     const survivalReset = buildSurvivalChallengeReset();
     set({
@@ -1089,12 +1091,14 @@ export const useGameStore = create<Store>((set, get) => {
 
   const stopSurvival = () => {
     // exit survival mode and restore normal play
+    completeCpuCupAction();
     set({ mode: 'normal', isSurvivalOver: false, currentStreak: 0 });
   };
 
   const exitSurvivalToNormal = () => {
     const state = get();
     if (state.mode !== 'survival') return;
+    completeCpuCupAction();
     pendingCpuRaise = null;
     set({
       mode: 'normal',

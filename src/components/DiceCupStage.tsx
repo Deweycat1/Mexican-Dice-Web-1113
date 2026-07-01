@@ -184,21 +184,47 @@ export default function DiceCupStage({
   const gestureX = useRef(new Animated.Value(0)).current;
   const gestureY = useRef(new Animated.Value(0)).current;
   const activeAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const completionFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completedPhaseRef = useRef<DiceCupPhase | null>(null);
+  const onAnimationCompleteRef = useRef(onAnimationComplete);
+  const onCupTapRef = useRef(onCupTap);
+  const onCupSwipeUpRef = useRef(onCupSwipeUp);
+  const onCupSwipeSideRef = useRef(onCupSwipeSide);
+
+  onAnimationCompleteRef.current = onAnimationComplete;
+  onCupTapRef.current = onCupTap;
+  onCupSwipeUpRef.current = onCupSwipeUp;
+  onCupSwipeSideRef.current = onCupSwipeSide;
 
   const finishPhase = useCallback(
     (completedPhase: DiceCupPhase) => {
       if (completedPhaseRef.current === completedPhase) return;
       completedPhaseRef.current = completedPhase;
-      onAnimationComplete?.(completedPhase);
+      if (completionFallbackRef.current) {
+        clearTimeout(completionFallbackRef.current);
+        completionFallbackRef.current = null;
+      }
+      onAnimationCompleteRef.current?.(completedPhase);
     },
-    [onAnimationComplete]
+    []
   );
 
   const stopActiveAnimation = useCallback(() => {
     activeAnimationRef.current?.stop();
     activeAnimationRef.current = null;
+    if (completionFallbackRef.current) {
+      clearTimeout(completionFallbackRef.current);
+      completionFallbackRef.current = null;
+    }
   }, []);
+
+  const scheduleCompletionFallback = useCallback(
+    (completedPhase: DiceCupPhase, delayMs: number) => {
+      if (completionFallbackRef.current) clearTimeout(completionFallbackRef.current);
+      completionFallbackRef.current = setTimeout(() => finishPhase(completedPhase), delayMs);
+    },
+    [finishPhase]
+  );
 
   const applyEndState = useCallback(
     (targetPhase: DiceCupPhase) => {
@@ -312,6 +338,7 @@ export default function DiceCupStage({
         }),
       ]);
       activeAnimationRef.current = animation;
+      scheduleCompletionFallback('rolling', theatrical ? 4000 : 2800);
       animation.start(({ finished }) => {
         if (finished) finishPhase('rolling');
       });
@@ -345,6 +372,7 @@ export default function DiceCupStage({
         }),
       ]);
       activeAnimationRef.current = animation;
+      scheduleCompletionFallback('revealing', duration + 800);
       animation.start(({ finished }) => {
         if (finished) finishPhase('revealing');
       });
@@ -366,6 +394,7 @@ export default function DiceCupStage({
         }),
       ]);
       activeAnimationRef.current = animation;
+      scheduleCompletionFallback('discarding', 1600);
       animation.start(({ finished }) => {
         if (finished) finishPhase('discarding');
       });
@@ -385,11 +414,14 @@ export default function DiceCupStage({
     groupY,
     phase,
     reducedMotion,
+    scheduleCompletionFallback,
     stopActiveAnimation,
     theatrical,
   ]);
 
   const gesturesEnabled = Boolean(onCupTap || onCupSwipeUp || onCupSwipeSide);
+  const gesturesEnabledRef = useRef(gesturesEnabled);
+  gesturesEnabledRef.current = gesturesEnabled;
   const resetGesturePosition = useCallback(() => {
     Animated.parallel([
       Animated.spring(gestureX, {
@@ -410,36 +442,35 @@ export default function DiceCupStage({
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => gesturesEnabled,
-        onMoveShouldSetPanResponder: () => gesturesEnabled,
+        onStartShouldSetPanResponder: () => gesturesEnabledRef.current,
+        onMoveShouldSetPanResponder: () => gesturesEnabledRef.current,
         onPanResponderMove: (_event, gestureState) => {
           gestureX.setValue(Math.max(-64, Math.min(64, gestureState.dx)));
           gestureY.setValue(Math.max(-72, Math.min(20, gestureState.dy)));
         },
         onPanResponderRelease: (_event, gestureState) => {
-          const gesture = resolveCupGesture(gestureState.dx, gestureState.dy);
+          const gesture = resolveCupGesture(
+            gestureState.dx,
+            gestureState.dy,
+            gestureState.vx,
+            gestureState.vy
+          );
           resetGesturePosition();
 
           if (gesture === 'tap') {
-            onCupTap?.();
+            onCupTapRef.current?.();
           } else if (gesture === 'swipe-up') {
-            onCupSwipeUp?.();
+            onCupSwipeUpRef.current?.();
           } else if (gesture === 'swipe-left' || gesture === 'swipe-right') {
-            onCupSwipeSide?.(gesture === 'swipe-left' ? 'left' : 'right');
+            onCupSwipeSideRef.current?.(gesture === 'swipe-left' ? 'left' : 'right');
           }
         },
         onPanResponderTerminate: resetGesturePosition,
-        onPanResponderTerminationRequest: () => true,
+        // A vertical ScrollView may otherwise take over before an upward cup swipe is released.
+        // Keep the responder while calling bluff is available; allow normal scrolling when it is not.
+        onPanResponderTerminationRequest: () => !onCupSwipeUpRef.current,
       }),
-    [
-      gestureX,
-      gestureY,
-      gesturesEnabled,
-      onCupSwipeSide,
-      onCupSwipeUp,
-      onCupTap,
-      resetGesturePosition,
-    ]
+    [gestureX, gestureY, resetGesturePosition]
   );
 
   const valuesVisible = phase === 'revealing' || phase === 'revealed';

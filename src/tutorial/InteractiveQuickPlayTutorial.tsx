@@ -346,8 +346,10 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
                 handedStatus={
                   isCupLesson
                     ? 'TAP = ROLL  •  ↑ = CALL  •  ↔ = BELIEVE'
-                    : canSwipeUp || canSwipeSide
-                      ? 'SWIPE ↑ CALL  •  SWIPE ↔ BELIEVE'
+                    : canSwipeUp
+                      ? 'SWIPE ↑ TO CALL'
+                      : canSwipeSide
+                        ? 'SWIPE ↔ TO BELIEVE'
                       : undefined
                 }
                 theatrical={state.currentClaim === 21 || state.activeRoll === 21}

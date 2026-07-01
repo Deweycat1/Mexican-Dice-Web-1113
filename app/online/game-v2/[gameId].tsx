@@ -10,6 +10,7 @@ import {
   playWinRoundHaptic,
 } from '../../../src/lib/haptics';
 import { useSettingsStore } from '../../../src/state/useSettingsStore';
+import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -345,6 +346,7 @@ async function requestRematchForGame(game: OnlineGameV2, myPlayerId: string): Pr
 export default function OnlineGameV2Screen() {
   const params = useLocalSearchParams<{ gameId?: string | string[] }>();
   const router = useRouter();
+  const isFocused = useIsFocused();
   const cupPrototypeEnabled = Platform.OS !== 'web';
   const normalizedGameId = useMemo(() => {
     const raw = params.gameId;
@@ -803,7 +805,7 @@ export default function OnlineGameV2Screen() {
     return latest?.type === 'claim' ? latest.id : 'none';
   }, [myRole, roundState.history]);
   useEffect(() => {
-    if (!cupPrototypeEnabled || showSocialReveal || isRevealingBluff) return;
+    if (!cupPrototypeEnabled || !isFocused || showSocialReveal || isRevealingBluff) return;
     if (game?.status !== 'in_progress') return;
 
     if (isOpponentClaimPhase) {
@@ -849,6 +851,7 @@ export default function OnlineGameV2Screen() {
     opponentClaimKey,
     showSocialReveal,
     hapticsEnabled,
+    isFocused,
     sfxEnabled,
   ]);
   const angryRivalThinking = useMemo(() => {
@@ -1180,9 +1183,17 @@ export default function OnlineGameV2Screen() {
     if (nonce != null && dice && nonce > socialRevealNonceRef.current) {
       console.log('[SOCIAL REVEAL] starting reveal due to nonce bump');
       socialRevealNonceRef.current = nonce;
+      if (!isFocused) return;
       startSocialReveal(dice);
     }
-  }, [roundState.socialRevealNonce, roundState.socialRevealDice, roundState.lastAction, lastClaim, startSocialReveal]);
+  }, [
+    roundState.socialRevealNonce,
+    roundState.socialRevealDice,
+    roundState.lastAction,
+    isFocused,
+    lastClaim,
+    startSocialReveal,
+  ]);
   const lastSelfieNonceRef = useRef(roundState.lastSelfieNonce ?? 0);
   const selfieGlowAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -1379,6 +1390,13 @@ export default function OnlineGameV2Screen() {
       );
       void recordPlayerRoll({ roll: normalized });
     } catch (err: any) {
+      if (cupPrototypeEnabled) {
+        lastLocalRollRef.current = null;
+        pendingCupActionRef.current = null;
+        setCupPhase(isOpponentClaimPhase ? 'handed' : 'ready');
+        setHasPeeked(false);
+        setIsRevealAnimating(false);
+      }
       if (err?.message === OUT_OF_TURN_ERROR) {
         Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
       } else {
@@ -1397,6 +1415,7 @@ export default function OnlineGameV2Screen() {
     handleUpdate,
     userId,
     hapticsEnabled,
+    isOpponentClaimPhase,
     sfxEnabled,
     cupPrototypeEnabled,
   ]);
@@ -1793,6 +1812,11 @@ export default function OnlineGameV2Screen() {
       await handleUpdate(payload, nextRound, { requireCurrentPlayerId: userId });
       void recordPlayerBluffCall({ correct: liar });
     } catch (err: any) {
+      if (cupPrototypeEnabled) {
+        pendingCupActionRef.current = null;
+        onlineBluffRevealReadyRef.current = false;
+        setCupPhase(isOpponentClaimPhase ? 'handed' : 'ready');
+      }
       if (err?.message === OUT_OF_TURN_ERROR) {
         Alert.alert('Move expired', 'This move is no longer valid. Please reload the match.');
       } else {
@@ -1821,6 +1845,7 @@ export default function OnlineGameV2Screen() {
     userId,
     hapticsEnabled,
     cupPrototypeEnabled,
+    isOpponentClaimPhase,
   ]);
 
   const handleCupAnimationComplete = useCallback(
@@ -1900,6 +1925,23 @@ export default function OnlineGameV2Screen() {
     },
     []
   );
+
+  useEffect(() => {
+    if (isFocused) return;
+    if (cupTimerRef.current) {
+      clearTimeout(cupTimerRef.current);
+      cupTimerRef.current = null;
+    }
+    pendingCupActionRef.current = null;
+    pendingDiscardDirectionRef.current = null;
+    onlineBluffRevealReadyRef.current = false;
+    setIsRevealingBluff(false);
+    setRevealDiceValues(null);
+    setShowSocialReveal(false);
+    setSocialRevealHidden(true);
+    setIsRevealAnimating(false);
+    setHasPeeked(false);
+  }, [isFocused]);
 
   const clearFinishedMatchSelfies = useCallback(async (force = false) => {
     if (!game || !myRole || game.status !== 'finished') return;

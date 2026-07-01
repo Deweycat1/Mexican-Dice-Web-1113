@@ -1,4 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -39,6 +40,7 @@ import {
 } from '../src/engine/mexican';
 import { getQuickPlayClaimOptions } from '../src/lib/claimOptionSources';
 import { getClaimActionLabel } from '../src/lib/claimActionLabel';
+import { getRestingCupPhase } from '../src/lib/cupState';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { playDiceRollSound } from '../src/lib/diceRollSound';
 import { playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
@@ -55,7 +57,8 @@ import {
 import InteractiveQuickPlayTutorial from '../src/tutorial/InteractiveQuickPlayTutorial';
 import { requestReviewIfEligible } from '../src/utils/reviewPrompt';
 
-const TUTORIAL_COMPLETED_KEY = 'quick_play_interactive_tutorial_completed_v1';
+// Keep the existing storage key so users who already completed the tutorial are not shown it again.
+const TUTORIAL_SEEN_KEY = 'quick_play_interactive_tutorial_completed_v1';
 // Set to true temporarily if you want to force the tutorial
 // to show again for testing. Leave as false in production.
 const FORCE_SHOW_TUTORIAL = false;
@@ -214,6 +217,7 @@ function buildSocialRecap(event: SocialEvent): RoundRecapData | null {
 
 export default function Game() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
@@ -287,6 +291,7 @@ export default function Game() {
     lastClaim,
     lastAction,
     baselineClaim,
+    mode,
     turn,
     lastPlayerRoll,
     lastCpuRoll,
@@ -349,7 +354,30 @@ export default function Game() {
     useCallback(() => {
       exitSurvivalToNormal();
       startQuickPlayMatch();
-    }, [exitSurvivalToNormal, startQuickPlayMatch])
+      return () => {
+        if (bluffResolutionTimerRef.current) {
+          clearTimeout(bluffResolutionTimerRef.current);
+          bluffResolutionTimerRef.current = null;
+        }
+        pendingCupActionRef.current = null;
+        pendingDiscardDirectionRef.current = null;
+        const state = useGameStore.getState();
+        setCupPhase(
+          getRestingCupPhase({
+            isPlayerTurn: state.turn === 'player',
+            hasPlayerRoll: state.lastPlayerRoll !== null,
+            hasOpponentClaim:
+              resolveActiveChallenge(state.baselineClaim, state.lastClaim) !== null,
+          })
+        );
+        setHasPeeked(false);
+        setShowSocialReveal(false);
+        setSocialRevealHidden(true);
+        pendingSocialRecapRef.current = null;
+        setIsRevealAnimating(false);
+        if (state.mode === 'normal') completeCpuCupAction();
+      };
+    }, [completeCpuCupAction, exitSurvivalToNormal, startQuickPlayMatch])
   );
 
   useEffect(() => {
@@ -363,8 +391,12 @@ export default function Game() {
       }
 
       try {
-        const stored = await AsyncStorage.getItem(TUTORIAL_COMPLETED_KEY);
+        const stored = await AsyncStorage.getItem(TUTORIAL_SEEN_KEY);
         if (!stored && isMounted) {
+          // Opening Quick Play is enough to consume the automatic tutorial prompt. Persist this
+          // before showing it so exiting early does not make it appear again on the next visit.
+          await AsyncStorage.setItem(TUTORIAL_SEEN_KEY, '1');
+          if (!isMounted) return;
           tutorialFirstSeenRef.current = true;
           setShowTutorial(true);
         } else {
@@ -596,7 +628,13 @@ export default function Game() {
   }, [turn, lastCpuRoll, lastClaim]);
 
   useEffect(() => {
-    if (!cupPrototypeEnabled || isGameOver || showSocialReveal) return;
+    if (
+      !cupPrototypeEnabled ||
+      !isFocused ||
+      mode !== 'normal' ||
+      isGameOver ||
+      showSocialReveal
+    ) return;
 
     if (turn === 'cpu') {
       pendingCupActionRef.current = null;
@@ -622,16 +660,18 @@ export default function Game() {
     }
   }, [
     cupPrototypeEnabled,
+    isFocused,
     isGameOver,
     isRivalClaimPhase,
     lastClaim,
     lastPlayerRoll,
+    mode,
     showSocialReveal,
     turn,
   ]);
 
   useEffect(() => {
-    if (!cupPrototypeEnabled || !cpuCupAction) return;
+    if (!cupPrototypeEnabled || !isFocused || mode !== 'normal' || !cpuCupAction) return;
     if (cpuCupAction.nonce <= lastCpuCupActionNonceRef.current) return;
 
     lastCpuCupActionNonceRef.current = cpuCupAction.nonce;
@@ -657,7 +697,7 @@ export default function Game() {
       void playDiceRollSound(sfxEnabled);
     }
     setIsRevealAnimating(true);
-  }, [cpuCupAction, cupPrototypeEnabled, hapticsEnabled, sfxEnabled]);
+  }, [cpuCupAction, cupPrototypeEnabled, hapticsEnabled, isFocused, mode, sfxEnabled]);
 
   useEffect(
     () => () => {
@@ -665,7 +705,7 @@ export default function Game() {
         clearTimeout(bluffResolutionTimerRef.current);
         bluffResolutionTimerRef.current = null;
       }
-      completeCpuCupAction();
+      if (useGameStore.getState().mode === 'normal') completeCpuCupAction();
     },
     [completeCpuCupAction]
   );
@@ -896,8 +936,18 @@ export default function Game() {
 
   const beginPlayerCupRoll = useCallback(() => {
     playerRoll();
-    const resolvedRoll = useGameStore.getState().lastPlayerRoll;
-    if (resolvedRoll === null) {
+    const state = useGameStore.getState();
+    if (state.lastPlayerRoll === null) {
+      pendingCupActionRef.current = null;
+      setCupPhase(
+        getRestingCupPhase({
+          isPlayerTurn: state.turn === 'player',
+          hasPlayerRoll: false,
+          hasOpponentClaim:
+            resolveActiveChallenge(state.baselineClaim, state.lastClaim) !== null,
+        })
+      );
+      setHasPeeked(false);
       setIsRevealAnimating(false);
       return;
     }
@@ -1135,9 +1185,15 @@ export default function Game() {
       return;
     }
 
-    if (nonce != null && dice && nonce > socialRevealNonceRef.current) {
-      console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
+    if (nonce != null && nonce < socialRevealNonceRef.current) {
       socialRevealNonceRef.current = nonce;
+      return;
+    }
+
+    if (nonce != null && nonce > socialRevealNonceRef.current) {
+      socialRevealNonceRef.current = nonce;
+      if (!isFocused || mode !== 'normal' || !dice) return;
+      console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
       setSocialDiceValues(dice);
       setShowSocialReveal(true);
       setIsRevealAnimating(true);
@@ -1151,7 +1207,14 @@ export default function Game() {
         requestAnimationFrame(() => setSocialRevealHidden(false));
       }
     }
-  }, [cpuSocialDice, cpuSocialRevealNonce, cupPrototypeEnabled, hapticsEnabled]);
+  }, [
+    cpuSocialDice,
+    cpuSocialRevealNonce,
+    cupPrototypeEnabled,
+    hapticsEnabled,
+    isFocused,
+    mode,
+  ]);
 
   // Animated interpolations for score loss animation
   const userScoreScale = userScoreAnim.interpolate({
@@ -1230,7 +1293,7 @@ export default function Game() {
     }
     const persist = async () => {
       try {
-        await AsyncStorage.setItem(TUTORIAL_COMPLETED_KEY, '1');
+        await AsyncStorage.setItem(TUTORIAL_SEEN_KEY, '1');
       } catch {
         // ignore persistence failures; tutorial will show again next launch
       }
