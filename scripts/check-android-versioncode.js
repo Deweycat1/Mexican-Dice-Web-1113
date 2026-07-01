@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
-const MIN_VERSION_CODE = 100;
+// Google Play has already accepted versionCode 145, so release sources must never
+// fall below the next available code.
+const MIN_VERSION_CODE = 146;
 const FORBIDDEN_VERSION_CODES = new Set([19]);
 
 function fail(message) {

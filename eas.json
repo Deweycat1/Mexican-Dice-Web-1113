@@ -12,6 +12,9 @@
       "distribution": "internal"
     },
     "production": {
+      "android": {
+        "autoIncrement": "versionCode"
+      },
       "ios": {
         "autoIncrement": "buildNumber"
       }
