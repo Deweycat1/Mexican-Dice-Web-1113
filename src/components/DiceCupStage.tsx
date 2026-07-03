@@ -560,7 +560,7 @@ export default function DiceCupStage({
       case 'rolling':
         return rollingStatus ?? (theatrical ? 'INFERNO SHAKE' : 'SHAKING');
       case 'covered':
-        return coveredStatus ?? 'CUP DOWN  •  PEEK TO REVEAL';
+        return coveredStatus ?? 'TAP OR LIFT ↑ TO PEEK';
       case 'handed':
         return handedStatus ?? "INFERNOMAN'S CUP";
       case 'revealing':

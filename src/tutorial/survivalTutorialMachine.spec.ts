@@ -1,5 +1,6 @@
 import {
   createSurvivalTutorialState,
+  survivalTutorialPrompts,
   survivalTutorialReducer,
   type SurvivalTutorialAction,
 } from './survivalTutorialMachine';
@@ -33,7 +34,10 @@ describe('Survival interactive tutorial', () => {
 
     expect(state.stage).toBe('normal-win');
     expect(state.streak).toBe(1);
+    expect(state.currentClaim).toBe(31);
     expect(state.activeRoll).toBe(32);
+    expect(state.history).toContain('You claimed 22');
+    expect(state.history).toContain('Infernoman claimed 31 (Reverse)');
   });
 
   it('adds two for an Inferno win and lights only an example letter', () => {
@@ -42,6 +46,14 @@ describe('Survival interactive tutorial', () => {
     expect(state.stage).toBe('inferno-win');
     expect(state.streak).toBe(3);
     expect(state.exampleLetterLit).toBe(true);
+  });
+
+  it('distinguishes the streak reward from real-roll letter rewards', () => {
+    const prompt = survivalTutorialPrompts['inferno-win'];
+
+    expect(prompt.body).toContain('Inferno win adds 2');
+    expect(prompt.body).toContain('first rolled 21 awards');
+    expect(prompt.body).toContain('Bluffing 21 never awards letters');
   });
 
   it('ignores actions that are not part of the current lesson', () => {

@@ -1192,6 +1192,13 @@ export default function Survival() {
     lastClaim === null &&
     !controlsDisabled &&
     !isRevealAnimating;
+  const canPeekCup =
+    cupPrototypeEnabled &&
+    cupPhase === 'covered' &&
+    hasRolled &&
+    !hasPeeked &&
+    !controlsDisabled &&
+    !isRevealAnimating;
   const canGestureRivalCup =
     cupPrototypeEnabled &&
     cupPhase === 'handed' &&
@@ -1237,7 +1244,7 @@ export default function Survival() {
         : 'The dice rattle inside the leather cup...';
     }
     if (cupPhase === 'covered' && hasRolled && !hasPeeked) {
-      return 'Your dice are hidden. Peek under the cup when ready.';
+      return 'Your dice are hidden. Tap or lift the cup to peek.';
     }
     if (cupPhase === 'discarding') {
       return pendingCupActionRef.current === 'cpu-believe'
@@ -1714,13 +1721,16 @@ export default function Survival() {
   }
 
   function handleCupTap() {
-    if (!canTapCupToRoll) return;
+    if (!canTapCupToRoll && !canPeekCup) return;
     handleRollOrClaim();
   }
 
   function handleCupSwipeUp() {
-    if (!canGestureRivalCup) return;
-    handleCallBluff();
+    if (canPeekCup) {
+      handleRollOrClaim();
+      return;
+    }
+    if (canGestureRivalCup) handleCallBluff();
   }
 
   function handleCupSwipeSide(direction: 'left' | 'right') {
@@ -2294,8 +2304,10 @@ export default function Survival() {
                         : undefined
                     }
                     theatrical={cupTheatrical}
-                    onCupTap={canTapCupToRoll ? handleCupTap : undefined}
-                    onCupSwipeUp={canGestureRivalCup ? handleCupSwipeUp : undefined}
+                    onCupTap={canTapCupToRoll || canPeekCup ? handleCupTap : undefined}
+                    onCupSwipeUp={
+                      canGestureRivalCup || canPeekCup ? handleCupSwipeUp : undefined
+                    }
                     onCupSwipeSide={canGestureRivalCup ? handleCupSwipeSide : undefined}
                     onAnimationComplete={handleCupAnimationComplete}
                   />

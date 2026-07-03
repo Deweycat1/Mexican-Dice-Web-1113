@@ -2096,6 +2096,12 @@ export default function OnlineGameV2Screen() {
   const canCallBluff = isMyTurn && lastClaim != null && roundState.lastClaimer && roundState.lastClaimer !== myRole;
   const canTapCupToRoll =
     cupPrototypeEnabled && canRoll && !isOpponentClaimPhase && cupPhase === 'ready' && !isRevealAnimating;
+  const canPeekCup =
+    cupPrototypeEnabled &&
+    canClaim &&
+    !hasPeeked &&
+    cupPhase === 'covered' &&
+    !isRevealAnimating;
   const canGestureRivalCup =
     cupPrototypeEnabled &&
     canRoll &&
@@ -2115,7 +2121,7 @@ export default function OnlineGameV2Screen() {
         ? `${opponentName} shakes a fresh roll under the cup...`
         : 'The dice rattle inside the leather cup...'
       : cupPhase === 'covered' && canClaim && !hasPeeked
-        ? 'Your dice are hidden. Peek under the cup when ready.'
+        ? 'Your dice are hidden. Tap or lift the cup to peek.'
         : cupPhase === 'discarding'
           ? `You believe ${opponentName}. The hidden dice leave the table.`
           : cupPhase === 'revealing' && pendingCupActionRef.current === 'bluff'
@@ -2148,10 +2154,14 @@ export default function OnlineGameV2Screen() {
   }
 
   function handleCupTap() {
-    if (canTapCupToRoll) handleOnlinePrimaryAction();
+    if (canTapCupToRoll || canPeekCup) handleOnlinePrimaryAction();
   }
 
   function handleCupSwipeUp() {
+    if (canPeekCup) {
+      handleOnlinePrimaryAction();
+      return;
+    }
     if (canGestureRivalCup) void handleCallBluff();
   }
 
@@ -2316,8 +2326,10 @@ export default function OnlineGameV2Screen() {
                     : undefined
                 }
                 theatrical={cupTheatrical}
-                onCupTap={canTapCupToRoll ? handleCupTap : undefined}
-                onCupSwipeUp={canGestureRivalCup ? handleCupSwipeUp : undefined}
+                onCupTap={canTapCupToRoll || canPeekCup ? handleCupTap : undefined}
+                onCupSwipeUp={
+                  canGestureRivalCup || canPeekCup ? handleCupSwipeUp : undefined
+                }
                 onCupSwipeSide={canGestureRivalCup ? handleCupSwipeSide : undefined}
                 onAnimationComplete={handleCupAnimationComplete}
               />

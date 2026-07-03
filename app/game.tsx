@@ -512,6 +512,13 @@ export default function Game() {
     lastClaim === null &&
     !controlsDisabled &&
     !isRevealAnimating;
+  const canPeekCup =
+    cupPrototypeEnabled &&
+    cupPhase === 'covered' &&
+    hasRolled &&
+    !hasPeeked &&
+    !controlsDisabled &&
+    !isRevealAnimating;
   const canGestureRivalCup =
     cupPrototypeEnabled &&
     cupPhase === 'handed' &&
@@ -575,7 +582,7 @@ export default function Game() {
         : 'The dice rattle inside the leather cup...';
     }
     if (cupPhase === 'covered' && hasRolled && !hasPeeked) {
-      return 'Your dice are hidden. Peek under the cup when ready.';
+      return 'Your dice are hidden. Tap or lift the cup to peek.';
     }
     if (cupPhase === 'discarding') {
       if (pendingCupActionRef.current === 'cpu-believe') {
@@ -1089,13 +1096,16 @@ export default function Game() {
   }
 
   function handleCupTap() {
-    if (!canTapCupToRoll) return;
+    if (!canTapCupToRoll && !canPeekCup) return;
     handleRollOrClaim();
   }
 
   function handleCupSwipeUp() {
-    if (!canGestureRivalCup) return;
-    handleCallBluff();
+    if (canPeekCup) {
+      handleRollOrClaim();
+      return;
+    }
+    if (canGestureRivalCup) handleCallBluff();
   }
 
   function handleCupSwipeSide(direction: 'left' | 'right') {
@@ -1191,8 +1201,16 @@ export default function Game() {
     }
 
     if (nonce != null && nonce > socialRevealNonceRef.current) {
+      if (!isFocused || mode !== 'normal' || !dice) {
+        socialRevealNonceRef.current = nonce;
+        return;
+      }
+      if (isRecapVisible) {
+        console.log('[CPU SOCIAL REVEAL] waiting for round recap to close');
+        return;
+      }
+
       socialRevealNonceRef.current = nonce;
-      if (!isFocused || mode !== 'normal' || !dice) return;
       console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
       setSocialDiceValues(dice);
       setShowSocialReveal(true);
@@ -1213,6 +1231,7 @@ export default function Game() {
     cupPrototypeEnabled,
     hapticsEnabled,
     isFocused,
+    isRecapVisible,
     mode,
   ]);
 
@@ -1557,8 +1576,10 @@ export default function Game() {
                         : undefined
                     }
                     theatrical={cupTheatrical}
-                    onCupTap={canTapCupToRoll ? handleCupTap : undefined}
-                    onCupSwipeUp={canGestureRivalCup ? handleCupSwipeUp : undefined}
+                    onCupTap={canTapCupToRoll || canPeekCup ? handleCupTap : undefined}
+                    onCupSwipeUp={
+                      canGestureRivalCup || canPeekCup ? handleCupSwipeUp : undefined
+                    }
                     onCupSwipeSide={canGestureRivalCup ? handleCupSwipeSide : undefined}
                     onAnimationComplete={handleCupAnimationComplete}
                   />

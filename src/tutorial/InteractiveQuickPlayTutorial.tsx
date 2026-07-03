@@ -174,7 +174,20 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
   );
 
   const canTapCup = isRollStep && !state.diceHidden && cupPhase === 'ready' && !rolling;
+  const canPeekCup =
+    state.activeRoll != null &&
+    !state.diceHidden &&
+    !hasPeeked &&
+    cupPhase === 'covered' &&
+    !rolling;
   const canSwipeUp = isCallStep && state.diceHidden && cupPhase === 'handed' && !rolling;
+  const handleCupSwipeUp = useCallback(() => {
+    if (canPeekCup) {
+      handlePrimaryAction();
+      return;
+    }
+    if (canSwipeUp) handleCallAction();
+  }, [canPeekCup, canSwipeUp, handleCallAction, handlePrimaryAction]);
   const canSwipeSide = isRollStep && state.diceHidden && cupPhase === 'handed' && !rolling;
   const handleCupSwipeSide = useCallback(
     (direction: 'left' | 'right') => {
@@ -353,8 +366,8 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
                       : undefined
                 }
                 theatrical={state.currentClaim === 21 || state.activeRoll === 21}
-                onCupTap={canTapCup ? handlePrimaryAction : undefined}
-                onCupSwipeUp={canSwipeUp ? handleCallAction : undefined}
+                onCupTap={canTapCup || canPeekCup ? handlePrimaryAction : undefined}
+                onCupSwipeUp={canSwipeUp || canPeekCup ? handleCupSwipeUp : undefined}
                 onCupSwipeSide={canSwipeSide ? handleCupSwipeSide : undefined}
                 onAnimationComplete={handleCupAnimationComplete}
               />

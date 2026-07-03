@@ -64,12 +64,12 @@ export function survivalTutorialReducer(
       return {
         ...state,
         stage: 'call-first-bluff',
-        currentClaim: 43,
+        currentClaim: 31,
         claimOwner: 'cpu',
         activeRoll: 32,
         rollOwner: 'cpu',
         diceHidden: true,
-        history: ['Infernoman claimed 43'],
+        history: ['You claimed 22', 'Infernoman claimed 31 (Reverse)'],
       };
 
     case 'call-first-bluff':
@@ -164,7 +164,7 @@ export const survivalTutorialPrompts: Record<
     lesson: 1,
     eyebrow: 'ICEMAN • NORMAL WIN',
     title: 'Catch one bluff',
-    body: 'Infernoman claims 43, but his covered dice are really 32. Swipe the cup up or tap Call Bluff.',
+    body: 'You claimed 22. Infernoman answers with 31 (Reverse), but his covered dice are really 32. Swipe the cup up or tap Call Bluff.',
   },
   'normal-win': {
     lesson: 1,
@@ -183,13 +183,13 @@ export const survivalTutorialPrompts: Record<
     lesson: 2,
     eyebrow: 'ICEMAN • REAL INFERNO',
     title: 'Claim your 21',
-    body: 'A Survival round won with an Inferno adds 2 to the streak instead of 1. Claim the real roll.',
+    body: 'You rolled a real 21—the highest roll. Claim it. Winning with an Inferno, whether real or bluffed, adds 2 to your streak instead of 1.',
   },
   'inferno-win': {
     lesson: 2,
     eyebrow: 'ICEMAN • STREAK +2',
-    title: 'Your streak jumped to 3',
-    body: 'Rolling a real 21 can also sometimes light a missing INFERNO letter. This example lights one; real letters are not guaranteed and are stored on this device.',
+    title: 'Real 21: two rewards',
+    body: 'Your streak was 1. The Inferno win adds 2, making it 3. In a real run, your first rolled 21 awards a missing INFERNO letter; later real 21s only have a chance. Bluffing 21 never awards letters. Collect all 7 for a badge.',
     actionLabel: 'See How a Run Ends',
   },
   'call-truth': {
