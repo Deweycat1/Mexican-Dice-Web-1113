@@ -8,7 +8,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   View,
@@ -28,8 +27,7 @@ import InfernoRunSummaryOverlay from '../src/components/InfernoRunSummaryOverlay
 import { InlineFlameText } from '../src/components/InlineFlameText';
 import StreakCelebrationOverlay from '../src/components/StreakCelebrationOverlay';
 import StyledButton from '../src/components/StyledButton';
-import SurvivalRulesContent from '../src/components/SurvivalRulesContent';
-import InfernoTutorial from '../src/tutorial/InfernoTutorial';
+import { InfernoTutorial } from '../src/tutorial/InfernoTutorial';
 import {
   compareClaims,
   isAlwaysClaimable,
@@ -262,6 +260,7 @@ export default function Survival() {
   const setHapticsEnabled = useSettingsStore((state) => state.setHapticsEnabled);
   const setMusicEnabled = useSettingsStore((state) => state.setMusicEnabled);
   const setSfxEnabled = useSettingsStore((state) => state.setSfxEnabled);
+  const settingsHydrated = useSettingsStore((state) => state.hasHydrated);
   const hasSeenSurvivalIntro = useSettingsStore((state) => state.hasSeenSurvivalIntro);
   const setHasSeenSurvivalIntro = useSettingsStore((state) => state.setHasSeenSurvivalIntro);
   const [claimPickerOpen, setClaimPickerOpen] = useState(false);
@@ -290,9 +289,8 @@ export default function Survival() {
   const [showSocialReveal, setShowSocialReveal] = useState(false);
   const [socialDiceValues, setSocialDiceValues] = useState<[number | null, number | null]>([null, null]);
   const [socialRevealHidden, setSocialRevealHidden] = useState(true);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [introVisible, setIntroVisible] = useState(false);
+  const [tutorialVisible, setTutorialVisible] = useState(false);
   const [collectedSlots, setCollectedSlots] = useState<Set<InfernoSlotId>>(new Set());
   const [infernoIntroSeen, setInfernoIntroSeen] = useState(false);
   const [infernoLetterModalOpen, setInfernoLetterModalOpen] = useState(false);
@@ -350,9 +348,13 @@ export default function Survival() {
 
   useEffect(() => {
     if (!isFocused) return;
+    if (!settingsHydrated) return;
     if (hasSeenSurvivalIntro) return;
-    setIntroVisible(true);
-  }, [isFocused, hasSeenSurvivalIntro]);
+    // Consume the automatic launch before showing it so exiting early does not make it open
+    // again the next time Inferno Mode is entered.
+    void setHasSeenSurvivalIntro(true);
+    setTutorialVisible(true);
+  }, [hasSeenSurvivalIntro, isFocused, setHasSeenSurvivalIntro, settingsHydrated]);
 
   useEffect(() => {
     let isMounted = true;
@@ -577,9 +579,8 @@ export default function Survival() {
         isRevealAnimating,
         showSocialReveal,
         historyModalOpen,
-        rulesOpen,
         settingsOpen,
-        introVisible,
+        tutorialVisible,
       });
     },
     [
@@ -589,7 +590,6 @@ export default function Survival() {
       currentStreak,
       gameOver,
       historyModalOpen,
-      introVisible,
       isBusy,
       isRevealAnimating,
       isRolling,
@@ -600,10 +600,10 @@ export default function Survival() {
       mode,
       pendingCpuBluffResolution,
       rollingAnim,
-      rulesOpen,
       settingsOpen,
       shouldRevealCpuDice,
       showSocialReveal,
+      tutorialVisible,
       turn,
       turnLock,
     ]
@@ -2395,16 +2395,15 @@ export default function Survival() {
                   textStyle={styles.footerButtonTextSmall}
                 />
                 <StyledButton
-                  label="Rules"
+                  label="Tutorial"
                   variant="ghost"
-                  onPress={() => setRulesOpen(true)}
+                  onPress={() => setTutorialVisible(true)}
                   style={[styles.btn, styles.newGameBtn]}
                   textStyle={styles.footerButtonTextSmall}
                 />
               </View>
             </View>
 
-            {/* FOOTER REMOVED: View Rules button omitted for Survival mode */}
           </View>
 
           <BluffModal
@@ -2507,39 +2506,6 @@ export default function Survival() {
           </Modal>
 
           <Modal
-            visible={rulesOpen}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setRulesOpen(false)}
-          >
-            <Pressable style={styles.rulesBackdrop} onPress={() => setRulesOpen(false)} />
-            <View style={styles.rulesCenter}>
-              <View style={styles.rulesContent}>
-                <View style={styles.rulesHeader}>
-                  <Text style={styles.rulesTitle}>Game Rules</Text>
-                  <Pressable onPress={() => setRulesOpen(false)} style={styles.rulesCloseButton}>
-                    <Text style={styles.rulesClose}>✕</Text>
-                  </Pressable>
-                </View>
-                <ScrollView style={styles.rulesScroll} showsVerticalScrollIndicator={false}>
-                  <SurvivalRulesContent />
-                </ScrollView>
-                <View style={styles.rulesActions}>
-                  <StyledButton
-                    label="View Interactive Tutorial"
-                    variant="primary"
-                    onPress={() => {
-                      setRulesOpen(false);
-                      setIntroVisible(true);
-                    }}
-                    style={styles.rulesTutorialButton}
-                  />
-                </View>
-              </View>
-            </View>
-          </Modal>
-
-          <Modal
             visible={settingsOpen}
             transparent
             animationType="fade"
@@ -2598,10 +2564,9 @@ export default function Survival() {
           </Modal>
 
           <InfernoTutorial
-            visible={introVisible}
+            visible={tutorialVisible}
             onDone={() => {
-              setIntroVisible(false);
-              void setHasSeenSurvivalIntro(true);
+              setTutorialVisible(false);
             }}
           />
 
@@ -3200,58 +3165,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0.5,
     textAlign: 'center',
-  },
-  rulesBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  rulesCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rulesContent: {
-    backgroundColor: '#161B22',
-    borderRadius: 12,
-    padding: 20,
-    width: '85%',
-    maxHeight: '75%',
-    borderColor: '#30363D',
-    borderWidth: 2,
-  },
-  rulesActions: {
-    marginTop: 16,
-  },
-  rulesHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  rulesTitle: {
-    color: '#F0F6FC',
-    fontWeight: '800',
-    fontSize: 20,
-  },
-  rulesCloseButton: {
-    padding: 4,
-  },
-  rulesClose: {
-    color: '#F0F6FC',
-    fontSize: 22,
-    fontWeight: '700',
-  },
-  rulesScroll: {
-    maxHeight: '100%',
-  },
-  rulesTutorialButton: {
-    backgroundColor: '#FE9902',
-    borderColor: '#FFEA70',
-    borderWidth: 2,
   },
   settingsRow: {
     flexDirection: 'row',

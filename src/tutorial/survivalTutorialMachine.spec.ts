@@ -49,11 +49,14 @@ describe('Survival interactive tutorial', () => {
   });
 
   it('distinguishes the streak reward from real-roll letter rewards', () => {
-    const prompt = survivalTutorialPrompts['inferno-win'];
+    const claimPrompt = survivalTutorialPrompts['claim-inferno'];
+    const resultPrompt = survivalTutorialPrompts['inferno-win'];
 
-    expect(prompt.body).toContain('Inferno win adds 2');
-    expect(prompt.body).toContain('first rolled 21 awards');
-    expect(prompt.body).toContain('Bluffing 21 never awards letters');
+    expect(claimPrompt.body).toContain('21 is claimed');
+    expect(claimPrompt.body).toContain('even if the claim is a bluff');
+    expect(resultPrompt.body).toContain('real roll did not create the +2');
+    expect(resultPrompt.body).toContain('first rolled 21 awards');
+    expect(resultPrompt.body).toContain('Bluffing 21 never awards letters');
   });
 
   it('ignores actions that are not part of the current lesson', () => {

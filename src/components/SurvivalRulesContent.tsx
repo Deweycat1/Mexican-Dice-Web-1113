@@ -38,7 +38,8 @@ export default function SurvivalRulesContent() {
       <Text style={styles.rollHeading}>21 Inferno</Text>
       <Text style={styles.paragraph}>The highest roll in the game.</Text>
       <Text style={styles.paragraph}>
-        If you win a round using an Inferno, whether truth or bluff, your streak increases by 2 instead of 1.
+        As soon as 21 is claimed, the round carries 2 streak points. This applies whether the
+        claim is truthful or a bluff.
       </Text>
       <Text style={styles.paragraph}>When an Inferno is claimed, the opponent must either:</Text>
       <Text style={styles.bullet}>• Roll a real 21</Text>
@@ -72,7 +73,7 @@ export default function SurvivalRulesContent() {
       <Text style={styles.paragraph}>If Infernoman was bluffing: You win the round and your streak increases.</Text>
       <Text style={styles.paragraph}>Streak increase amounts:</Text>
       <Text style={styles.bullet}>• Normal win → plus one</Text>
-      <Text style={styles.bullet}>• Win involving an Inferno → plus two</Text>
+      <Text style={styles.bullet}>• Win after an Inferno is claimed → plus two</Text>
 
       <Text style={styles.heading}>Winning a Round</Text>
       <Text style={styles.paragraph}>You win a round if:</Text>

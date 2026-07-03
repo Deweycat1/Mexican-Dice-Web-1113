@@ -474,7 +474,7 @@ export const tutorialPrompts: Record<TutorialStage, TutorialPrompt> = {
   'call-inferno': {
     eyebrow: 'ICEMAN • ROUND 6',
     title: '21 Inferno puts two points at stake',
-    body: 'Inferno outranks every normal roll and double. Respond with a real 21, 31, or 41; bluff 21 or 31; or swipe the cup up to Call Bluff. Catch a false Inferno and the bluffer loses two points.',
+    body: 'Once 21 is claimed, the round is worth two points whether the claim is real or a bluff. Inferno outranks every normal roll and double. Respond with a real 21, 31, or 41; bluff 21 or 31; or swipe the cup up to Call Bluff.',
     lesson: 6,
   },
   complete: {

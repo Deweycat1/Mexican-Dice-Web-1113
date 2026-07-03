@@ -116,7 +116,7 @@ export function survivalTutorialReducer(
         exampleLetterLit: true,
         history: addHistory(
           state,
-          'Real Inferno win: streak +2',
+          'Claimed Inferno win: streak +2',
           'Example INFERNO letter lit'
         ),
       };
@@ -176,20 +176,20 @@ export const survivalTutorialPrompts: Record<
   'roll-inferno': {
     lesson: 2,
     eyebrow: 'ICEMAN • INFERNO BONUS',
-    title: 'A real 21 is worth more',
-    body: 'Tap the cup or the Roll button. This sandbox rigs one real Inferno so you can see its Survival bonus.',
+    title: 'Roll a real 21',
+    body: 'Tap the cup or the Roll button. This sandbox rigs an actual 21 so you can make a truthful Inferno claim.',
   },
   'claim-inferno': {
     lesson: 2,
     eyebrow: 'ICEMAN • REAL INFERNO',
-    title: 'Claim your 21',
-    body: 'You rolled a real 21—the highest roll. Claim it. Winning with an Inferno, whether real or bluffed, adds 2 to your streak instead of 1.',
+    title: 'Claim 21: two points',
+    body: 'The moment 21 is claimed, the round carries 2 points—even if the claim is a bluff. Your roll is a real 21, so claim it truthfully.',
   },
   'inferno-win': {
     lesson: 2,
     eyebrow: 'ICEMAN • STREAK +2',
-    title: 'Real 21: two rewards',
-    body: 'Your streak was 1. The Inferno win adds 2, making it 3. In a real run, your first rolled 21 awards a missing INFERNO letter; later real 21s only have a chance. Bluffing 21 never awards letters. Collect all 7 for a badge.',
+    title: 'Claimed Inferno: +2',
+    body: 'You won the two-point round, raising your streak from 1 to 3. The real roll did not create the +2; it made your claim truthful and eligible for a letter. Your first rolled 21 awards one, while later real 21s only have a chance. Bluffing 21 never awards letters.',
     actionLabel: 'See How a Run Ends',
   },
   'call-truth': {
@@ -202,7 +202,7 @@ export const survivalTutorialPrompts: Record<
     lesson: 3,
     eyebrow: 'ICEMAN • RUN COMPLETE',
     title: 'The run ended at 3',
-    body: 'That is Survival: normal wins add 1, Inferno wins add 2, real 21s may award letters, and one loss ends the run. Use the Quick Play tutorial for the full dice rules.',
+    body: 'That is Survival: normal wins add 1, any round with a claimed Inferno carries 2 points, real rolled 21s may award letters, and one loss ends the run. Use the Quick Play tutorial for the full dice rules.',
     actionLabel: 'Enter Inferno Mode',
   },
 };
