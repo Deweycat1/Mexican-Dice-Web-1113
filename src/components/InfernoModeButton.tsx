@@ -17,7 +17,6 @@ const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 4,
   },
   image: {
     width: 182,

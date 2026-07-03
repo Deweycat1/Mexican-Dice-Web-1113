@@ -6,7 +6,10 @@ import { AppText as Text } from '../src/components/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import MexicanDiceLogo from '../assets/images/mexican-dice-logo.png';
+import MultiplayerButton from '../assets/images/multiplayer.png';
 import QuickPlayButton from '../assets/images/QuickPlay.png';
+import RankButton from '../assets/images/rank.png';
+import RulesButton from '../assets/images/rules.png';
 import { InfernoModeButton } from '../src/components/InfernoModeButton';
 import { useSettingsStore } from '../src/state/useSettingsStore';
 import { logEvent } from '../src/analytics/logEvent';
@@ -59,25 +62,37 @@ export default function HomeScreen() {
           <View style={styles.menuSection}>
             <Image source={MexicanDiceLogo} style={styles.logo} />
 
-            <Link href="/game" asChild>
-              <Pressable style={styles.quickPlayWrapper} onPress={() => handleModeSelect('normal')}>
-                <Image source={QuickPlayButton} style={styles.quickPlayImage} resizeMode="contain" />
-              </Pressable>
-            </Link>
+            <View style={styles.buttonStack}>
+              <Link href="/game" asChild>
+                <Pressable style={styles.quickPlayWrapper} onPress={() => handleModeSelect('normal')}>
+                  <Image source={QuickPlayButton} style={styles.quickPlayImage} resizeMode="contain" />
+                </Pressable>
+              </Link>
 
-            <Link href="/survival" asChild>
-              <InfernoModeButton onPress={() => handleModeSelect('survival')} />
-            </Link>
-            <Link href="/online" style={styles.button} onPress={() => handleModeSelect('online')}>
-              <Text style={styles.buttonText}>Online Multiplayer</Text>
-            </Link>
-            <Link href="/statistics" style={styles.buttonStats}>
-              <Text style={styles.buttonText}>Rank and Stats</Text>
-            </Link>
+              <Link href="/survival" asChild>
+                <InfernoModeButton onPress={() => handleModeSelect('survival')} />
+              </Link>
+              <Link href="/online" asChild>
+                <Pressable
+                  style={styles.imageButtonWrapper}
+                  onPress={() => handleModeSelect('online')}
+                  accessibilityLabel="Online Multiplayer"
+                >
+                  <Image source={MultiplayerButton} style={styles.menuButtonImage} resizeMode="stretch" />
+                </Pressable>
+              </Link>
+              <Link href="/statistics" asChild>
+                <Pressable style={styles.imageButtonWrapper} accessibilityLabel="Rank and Stats">
+                  <Image source={RankButton} style={styles.menuButtonImage} resizeMode="stretch" />
+                </Pressable>
+              </Link>
 
-            <Link href="/rules" style={styles.buttonRules}>
-              <Text style={styles.buttonText}>Rules</Text>
-            </Link>
+              <Link href="/rules" asChild>
+                <Pressable style={styles.imageButtonWrapper} accessibilityLabel="Rules">
+                  <Image source={RulesButton} style={styles.menuButtonImage} resizeMode="stretch" />
+                </Pressable>
+              </Link>
+            </View>
           </View>
 
           <View style={styles.simplePrefs}>
@@ -143,63 +158,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   logo: {
-    width: 160,
-    height: 160,
+    width: 270,
+    height: 270,
     resizeMode: 'contain',
-    marginBottom: 12,
+    transform: [{ translateY: -35 }],
+    marginBottom: -48,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 8,
   },
-  button: { 
-    backgroundColor: '#C21807',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    marginVertical: 4,
+  buttonStack: {
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    // @ts-ignore - boxShadow is web-only
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
-    borderWidth: 2,
-    borderStyle: 'solid',
-    borderColor: '#8B0000',
-  },
-  buttonStats: { 
-    backgroundColor: '#FE9902',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    marginVertical: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    // @ts-ignore - boxShadow is web-only
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
-    borderWidth: 2,
-    borderStyle: 'solid',
-    borderColor: '#B26B01',
-  },
-  buttonRules: { 
-    backgroundColor: '#42C6FF',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    marginVertical: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    // @ts-ignore - boxShadow is web-only
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.4)',
-    borderWidth: 2,
-    borderStyle: 'solid',
-    borderColor: '#1E8AC4',
+    gap: 8,
   },
   quickPlayWrapper: {
-    marginVertical: 4,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -208,18 +182,21 @@ const styles = StyleSheet.create({
     width: 190,
     height: 46,
   },
+  imageButtonWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  menuButtonImage: {
+    width: 190,
+    height: 48,
+  },
   infernoButton: {
     backgroundColor: '#FE9902',
     borderColor: '#B26B01',
   },
   infernoButtonText: {
     color: '#FF6A00',
-  },
-  buttonText: { 
-    color: '#fff', 
-    fontSize: 16, 
-    fontWeight: '700',
-    textAlign: 'center',
   },
   buttonLabelRow: {
     flexDirection: 'row',

@@ -462,8 +462,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#30363D',
   },
   shareLogo: {
-    width: 50,
-    height: 45,
+    width: 84.375,
+    height: 75.9375,
   },
   shareHeaderText: {
     marginLeft: 9,
