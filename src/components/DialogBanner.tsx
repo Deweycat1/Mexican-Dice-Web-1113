@@ -75,8 +75,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   dialogSpeakerImage: {
-    width: 20,
-    height: 20,
+    width: 45,
+    height: 45,
   },
   dialogTextWrapper: {
     flex: 1,

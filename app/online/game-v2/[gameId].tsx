@@ -2822,13 +2822,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   userAvatarImage: {
-    width: 35,
-    height: 35,
+    width: 78.75,
+    height: 78.75,
     resizeMode: 'contain',
   },
   rivalAvatarImage: {
-    width: 42,
-    height: 42,
+    width: 94.5,
+    height: 94.5,
     resizeMode: 'contain',
   },
   playerLabel: {
