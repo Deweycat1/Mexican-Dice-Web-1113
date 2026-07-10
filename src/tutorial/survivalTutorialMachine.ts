@@ -164,7 +164,7 @@ export const survivalTutorialPrompts: Record<
     lesson: 1,
     eyebrow: 'ICEMAN • NORMAL WIN',
     title: 'Catch one bluff',
-    body: 'You claimed 22. Infernoman answers with 31 (Reverse), but his covered dice are really 32. Swipe the cup up or tap Call Bluff.',
+    body: 'You claimed 22. Infernoman answers with 31 (Reverse), but his covered dice are really 32. Orange-first in the claim display means it is his claim. Swipe the cup up or tap Call Bluff.',
   },
   'normal-win': {
     lesson: 1,
@@ -183,7 +183,7 @@ export const survivalTutorialPrompts: Record<
     lesson: 2,
     eyebrow: 'ICEMAN • REAL INFERNO',
     title: 'Claim 21: two points',
-    body: 'The moment 21 is claimed, the round carries 2 points—even if the claim is a bluff. Your roll is a real 21, so claim it truthfully.',
+    body: 'The moment 21 is claimed, the round carries 2 points—even if the claim is a bluff. Your roll is a real 21, so claim it truthfully; blue-first in the claim display means it is yours.',
   },
   'inferno-win': {
     lesson: 2,

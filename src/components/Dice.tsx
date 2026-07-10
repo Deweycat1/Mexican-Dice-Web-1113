@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
 import { AppText as Text } from './AppText';
@@ -24,6 +24,8 @@ type DiceProps = {
   thinkingOverlay?: 'rival' | 'thought';
   angryThinking?: boolean;
   colorway?: DiceColorway;
+  glow?: boolean;
+  randomRestingPose?: boolean;
 };
 
 const DICE_PALETTES: Record<
@@ -105,6 +107,17 @@ const RESIN_STREAKS = [
   { x: 0.57, y: 0.64, width: 0.24, height: 0.01, opacity: 0.12 },
 ];
 
+const RESTING_POSES = [
+  { x: 0, y: 0, rotation: 0 },
+  { x: -0.04, y: 0.025, rotation: 9 },
+  { x: 0.035, y: -0.02, rotation: -14 },
+  { x: 0.025, y: 0.035, rotation: 15 },
+];
+
+const nextPoseIndex = (current: number) =>
+  (current + 1 + Math.floor(Math.random() * (RESTING_POSES.length - 1))) %
+  RESTING_POSES.length;
+
 const pipsFor: Record<number, { x: number; y: number }[]> = {
   1: [{ x: 0.5, y: 0.5 }],
   2: [
@@ -148,10 +161,13 @@ export default function Dice({
   thinkingOverlay,
   angryThinking = false,
   colorway = 'red',
+  glow = false,
+  randomRestingPose = false,
 }: DiceProps) {
   const rotate = useSharedValue(0);
   const tilt = useSharedValue(0);
   const pulse = useSharedValue(1);
+  const [restingPoseIndex, setRestingPoseIndex] = useState(0);
   const pipLayout: { x: number; y: number }[] | undefined =
     displayMode === 'values' && typeof value === 'number' ? pipsFor[value] : undefined;
 
@@ -193,8 +209,32 @@ export default function Dice({
     );
   }, [displayMode, pulse]);
 
+  useEffect(() => {
+    if (
+      !randomRestingPose ||
+      rolling ||
+      displayMode !== 'values' ||
+      typeof value !== 'number'
+    ) {
+      return;
+    }
+
+    setRestingPoseIndex(nextPoseIndex);
+  }, [displayMode, randomRestingPose, rolling, value]);
+
+  const restingPose =
+    randomRestingPose && displayMode === 'values' && !rolling
+      ? RESTING_POSES[restingPoseIndex]
+      : RESTING_POSES[0];
+  const restingTranslateX = restingPose.x * size;
+  const restingTranslateY = restingPose.y * size;
+  const restingRotation = restingPose.rotation;
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
+      { translateX: restingTranslateX },
+      { translateY: restingTranslateY },
+      { rotateZ: `${restingRotation}deg` },
       { rotate: `${rotate.value}deg` },
       { rotateZ: `${tilt.value}deg` },
       { scale: rolling ? 0.98 : 1 },
@@ -227,6 +267,15 @@ export default function Dice({
   const faceInset = size * 0.02;
   const highlightRx = size * 0.15;
   const overlayFontSize = displayMode === 'question' ? size * 0.52 : size * 0.28;
+  const outerGlowStyle = glow
+    ? {
+        shadowColor: palette.glow,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.52,
+        shadowRadius: size * 0.13,
+        elevation: 5,
+      }
+    : null;
 
   return (
     <Animated.View
@@ -237,9 +286,8 @@ export default function Dice({
           height: size,
           borderRadius,
           backgroundColor: palette.base,
-          shadowColor: palette.glow,
-          shadowRadius: size * 0.11,
         },
+        outerGlowStyle,
         animatedStyle,
       ]}
     >
@@ -418,9 +466,6 @@ export default function Dice({
 const styles = StyleSheet.create({
   wrap: {
     position: 'relative',
-    elevation: 5,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.38,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

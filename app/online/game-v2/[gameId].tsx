@@ -2199,9 +2199,9 @@ export default function OnlineGameV2Screen() {
                   <Text style={styles.claimVisualLabel}>Claim</Text>
                   {claimHi !== null && claimLo !== null ? (
                     <View style={styles.claimVisualDiceRow}>
-                      <Dice value={claimHi} size={34} colorway={claimHighColor} />
+                      <Dice value={claimHi} size={34} colorway={claimHighColor} glow />
                       <View style={styles.claimVisualGap} />
-                      <Dice value={claimLo} size={34} colorway={claimLowColor} />
+                      <Dice value={claimLo} size={34} colorway={claimLowColor} glow />
                     </View>
                   ) : (
                     <Text style={styles.claimVisualPlaceholder}>—</Text>
@@ -2347,6 +2347,7 @@ export default function OnlineGameV2Screen() {
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
                   size={100}
+                  randomRestingPose={diceDisplayMode === 'values'}
                 />
                 <View style={{ width: 24 }} />
                 <Dice
@@ -2355,6 +2356,7 @@ export default function OnlineGameV2Screen() {
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
                   size={100}
+                  randomRestingPose={diceDisplayMode === 'values'}
                 />
               </>
             ) : (

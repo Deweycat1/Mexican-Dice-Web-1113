@@ -263,9 +263,9 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
                 <Text style={styles.claimLabel}>Claim</Text>
                 {claimHi !== null && claimLo !== null ? (
                   <View style={styles.tutorialClaimDiceRow}>
-                    <Dice value={claimHi} size={28} colorway={claimHighColor} />
+                    <Dice value={claimHi} size={28} colorway={claimHighColor} glow />
                     <View style={styles.tutorialClaimDiceGap} />
-                    <Dice value={claimLo} size={28} colorway={claimLowColor} />
+                    <Dice value={claimLo} size={28} colorway={claimLowColor} glow />
                   </View>
                 ) : (
                   <Text style={styles.claimValue}>—</Text>

@@ -205,9 +205,9 @@ export function InfernoTutorial({ visible, onDone }: Props) {
                 <Text style={styles.claimLabel}>Claim</Text>
                 {claimHi !== null && claimLo !== null ? (
                   <View style={styles.claimDiceRow}>
-                    <Dice value={claimHi} size={30} colorway={claimHighColor} />
+                    <Dice value={claimHi} size={30} colorway={claimHighColor} glow />
                     <View style={styles.claimDiceGap} />
-                    <Dice value={claimLo} size={30} colorway={claimLowColor} />
+                    <Dice value={claimLo} size={30} colorway={claimLowColor} glow />
                   </View>
                 ) : (
                   <Text style={styles.noClaim}>—</Text>

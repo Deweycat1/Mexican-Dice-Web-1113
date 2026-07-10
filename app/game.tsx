@@ -1431,9 +1431,9 @@ export default function Game() {
                     <Text style={styles.claimHeaderLabel}>Claim</Text>
                     {claimHi !== null && claimLo !== null ? (
                       <View style={styles.claimDiceRow}>
-                        <Dice value={claimHi} size={34} colorway={claimHighColor} />
+                        <Dice value={claimHi} size={34} colorway={claimHighColor} glow />
                         <View style={styles.claimDiceGap} />
-                        <Dice value={claimLo} size={34} colorway={claimLowColor} />
+                        <Dice value={claimLo} size={34} colorway={claimLowColor} glow />
                       </View>
                     ) : (
                       <View style={styles.claimPlaceholderContainer}>
@@ -1591,6 +1591,7 @@ export default function Game() {
                       rolling={rolling}
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                      randomRestingPose={diceDisplayMode === 'values'}
                     />
                     <View style={{ width: DICE_SPACING }} />
                     <Dice
@@ -1598,6 +1599,7 @@ export default function Game() {
                       rolling={rolling}
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                      randomRestingPose={diceDisplayMode === 'values'}
                     />
                   </>
                 )}

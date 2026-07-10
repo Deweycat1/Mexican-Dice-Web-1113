@@ -165,6 +165,7 @@ export default function AnimatedDiceReveal({
             size={size}
             displayMode={showActual ? 'values' : 'question'}
             colorway={diceColorways?.[0]}
+            randomRestingPose={showActual}
           />
         </Animated.View>
       </View>
@@ -179,6 +180,7 @@ export default function AnimatedDiceReveal({
             size={size}
             displayMode={showActual ? 'values' : 'question'}
             colorway={diceColorways?.[1]}
+            randomRestingPose={showActual}
           />
         </Animated.View>
       </View>

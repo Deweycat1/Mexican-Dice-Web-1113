@@ -368,13 +368,13 @@ export const tutorialPrompts: Record<TutorialStage, TutorialPrompt> = {
   'read-53': {
     eyebrow: 'ICEMAN • READ YOUR DICE',
     title: 'Five and three make 53',
-    body: 'The higher die is always read first. Your real roll is legal, so claim it truthfully.',
+    body: 'The higher die is always read first. Your real roll is legal, so claim it truthfully. In the claim display, blue-first means it is your claim.',
     lesson: 1,
   },
   'answer-61': {
     eyebrow: 'ICEMAN • ACCEPT OR CHALLENGE',
     title: 'Infernoman claims 61',
-    body: 'Rolling accepts his claim. Your next roll must then match or beat 61. Calling Bluff would challenge whether he really rolled it. For now, swipe the cup sideways or tap Roll.',
+    body: 'Rolling accepts his claim. The claim display shows orange first for Infernoman, so your next roll must match or beat 61. Calling Bluff would challenge whether he really rolled it. For now, swipe the cup sideways or tap Roll.',
     lesson: 1,
   },
   'claim-62': {

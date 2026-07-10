@@ -2168,9 +2168,9 @@ export default function Survival() {
                 <Text style={styles.claimVisualLabel}>Claim</Text>
                 {claimHi !== null && claimLo !== null ? (
                   <View style={styles.claimVisualDiceRow}>
-                    <Dice value={claimHi} size={30} colorway={claimHighColor} />
+                    <Dice value={claimHi} size={30} colorway={claimHighColor} glow />
                     <View style={styles.claimVisualGap} />
-                    <Dice value={claimLo} size={30} colorway={claimLowColor} />
+                    <Dice value={claimLo} size={30} colorway={claimLowColor} glow />
                   </View>
                 ) : (
                   <Text style={styles.claimVisualPlaceholder}>—</Text>
@@ -2318,6 +2318,7 @@ export default function Survival() {
                       rolling={rolling}
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                      randomRestingPose={diceDisplayMode === 'values'}
                     />
                     <View style={{ width: DICE_SPACING }} />
                     <Dice
@@ -2325,6 +2326,7 @@ export default function Survival() {
                       rolling={rolling}
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                      randomRestingPose={diceDisplayMode === 'values'}
                     />
                   </>
                 )}

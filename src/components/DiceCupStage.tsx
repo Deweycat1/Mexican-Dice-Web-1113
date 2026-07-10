@@ -43,21 +43,49 @@ type DiceCupStageProps = {
   onAnimationComplete?: (phase: DiceCupPhase) => void;
 };
 
-const DIE_SIZE = 46;
+const DIE_SIZE = 46 * 0.8;
+const DIE_DEPTH_FAR_OFFSET = 5 * 0.8;
+const DIE_DEPTH_NEAR_OFFSET = 3 * 0.8;
+const DICE_GAP = 6 * 0.8;
 const DICE_ROW_TOP = 70;
 const STAGE_WIDTH = 270;
+const DICE_ROW_WIDTH = (DIE_SIZE + DIE_DEPTH_FAR_OFFSET) * 2 + DICE_GAP;
+const DICE_ROW_LEFT = (STAGE_WIDTH - DICE_ROW_WIDTH) / 2;
 const CUP_IMAGE = require('../../assets/images/cup.png');
 const CUP_SCALE = 1.8;
 const CUP_WIDTH = 178 * CUP_SCALE;
 const CUP_HEIGHT = 146 * CUP_SCALE;
 const CUP_TOP = 13 - (CUP_HEIGHT - 146) / 2;
 const CUP_LEFT = (STAGE_WIDTH - CUP_WIDTH) / 2;
-const DICE_PEEK_VISIBLE_HEIGHT = 14;
+const DICE_PEEK_VISIBLE_HEIGHT = DIE_SIZE * 0.3;
 const CUP_REVEAL_Y =
   DICE_ROW_TOP + DIE_SIZE - DICE_PEEK_VISIBLE_HEIGHT - (CUP_TOP + CUP_HEIGHT);
 const PLAY_GROUP_OFFSET_Y = 65;
 const TABLE_SHADOW_TOP = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT - 23;
 const STAGE_HEIGHT = TABLE_SHADOW_TOP + 47;
+
+const CUP_DICE_RESTING_POSES = [
+  {
+    left: { x: 0, y: 0, rotation: -8 },
+    right: { x: 0, y: 0, rotation: 9 },
+  },
+  {
+    left: { x: -4, y: 2, rotation: -17 },
+    right: { x: 3, y: -1, rotation: 5 },
+  },
+  {
+    left: { x: 3, y: -2, rotation: 2 },
+    right: { x: -2, y: 3, rotation: 18 },
+  },
+  {
+    left: { x: -2, y: 1, rotation: 11 },
+    right: { x: 4, y: 2, rotation: -12 },
+  },
+];
+
+const nextCupDicePoseIndex = (current: number) =>
+  (current + 1 + Math.floor(Math.random() * (CUP_DICE_RESTING_POSES.length - 1))) %
+  CUP_DICE_RESTING_POSES.length;
 
 function useReducedMotion() {
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -125,6 +153,7 @@ export default function DiceCupStage({
   const diceRoll = useRef(new Animated.Value(0)).current;
   const groupX = useRef(new Animated.Value(0)).current;
   const groupY = useRef(new Animated.Value(0)).current;
+  const [restingPoseIndex, setRestingPoseIndex] = useState(0);
   const gestureX = useRef(new Animated.Value(0)).current;
   const gestureY = useRef(new Animated.Value(0)).current;
   const activeAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -139,6 +168,12 @@ export default function DiceCupStage({
   onCupTapRef.current = onCupTap;
   onCupSwipeUpRef.current = onCupSwipeUp;
   onCupSwipeSideRef.current = onCupSwipeSide;
+
+  useEffect(() => {
+    if (phase === 'rolling') {
+      setRestingPoseIndex(nextCupDicePoseIndex);
+    }
+  }, [phase]);
 
   const finishPhase = useCallback(
     (completedPhase: DiceCupPhase) => {
@@ -421,6 +456,7 @@ export default function DiceCupStage({
   const shownValues: [number | null, number | null] = valuesVisible
     ? diceValues
     : [5, 2];
+  const restingPose = CUP_DICE_RESTING_POSES[restingPoseIndex];
 
   const leftDieStyle = {
     transform: [
@@ -437,6 +473,8 @@ export default function DiceCupStage({
           outputRange: [0, 5, -4, 0],
         }),
       },
+      { translateX: restingPose.left.x },
+      { translateY: restingPose.left.y },
       {
         rotateX: diceRoll.interpolate({
           inputRange: [0, 1],
@@ -449,7 +487,7 @@ export default function DiceCupStage({
           outputRange: ['-12deg', '708deg'],
         }),
       },
-      { rotateZ: '-8deg' },
+      { rotateZ: `${restingPose.left.rotation}deg` },
     ],
   };
 
@@ -468,6 +506,8 @@ export default function DiceCupStage({
           outputRange: [0, -5, 4, 0],
         }),
       },
+      { translateX: restingPose.right.x },
+      { translateY: restingPose.right.y },
       {
         rotateX: diceRoll.interpolate({
           inputRange: [0, 1],
@@ -480,7 +520,7 @@ export default function DiceCupStage({
           outputRange: ['14deg', '1094deg'],
         }),
       },
-      { rotateZ: '9deg' },
+      { rotateZ: `${restingPose.right.rotation}deg` },
     ],
   };
 
@@ -576,17 +616,17 @@ const styles = StyleSheet.create({
   diceRow: {
     position: 'absolute',
     top: DICE_ROW_TOP,
-    left: 81,
+    left: DICE_ROW_LEFT,
     zIndex: 2,
     flexDirection: 'row',
-    gap: 6,
+    gap: DICE_GAP,
   },
   diceConcealed: {
     opacity: 0,
   },
   dieShell: {
-    width: DIE_SIZE + 5,
-    height: DIE_SIZE + 5,
+    width: DIE_SIZE + DIE_DEPTH_FAR_OFFSET,
+    height: DIE_SIZE + DIE_DEPTH_FAR_OFFSET,
   },
   dieDepth: {
     position: 'absolute',
@@ -598,13 +638,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dieDepthFar: {
-    left: 5,
-    top: 5,
+    left: DIE_DEPTH_FAR_OFFSET,
+    top: DIE_DEPTH_FAR_OFFSET,
     opacity: 0.82,
   },
   dieDepthNear: {
-    left: 3,
-    top: 3,
+    left: DIE_DEPTH_NEAR_OFFSET,
+    top: DIE_DEPTH_NEAR_OFFSET,
     backgroundColor: '#8B0A10',
   },
   cup: {
