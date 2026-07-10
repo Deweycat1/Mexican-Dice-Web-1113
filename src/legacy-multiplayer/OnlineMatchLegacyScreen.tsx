@@ -711,7 +711,7 @@ export default function OnlineMatchScreen() {
                   <Text style={styles.playerScoreLabel}>
                     You: {myScore}
                   </Text>
-                  <ScoreDie points={myScore} style={styles.scoreDie} />
+                  <ScoreDie points={myScore} style={styles.scoreDie} colorway="blue" />
                 </View>
 
                 {/* Title Column */}

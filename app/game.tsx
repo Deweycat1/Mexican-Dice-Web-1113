@@ -1407,6 +1407,7 @@ export default function Game() {
                       style={styles.scoreDie}
                       size={SCORE_DIE_BASE_SIZE}
                       animationKey={Platform.OS === 'android' ? undefined : scoreDiceAnimKey}
+                      colorway="blue"
                     />
                   </Animated.View>
                 </View>
@@ -1945,7 +1946,7 @@ const styles = StyleSheet.create({
       android: 15,
       default: 0,
     }),
-    paddingTop: 28,
+    paddingTop: 38,
     marginBottom: 8,
   },
   claimHeaderLabel: {

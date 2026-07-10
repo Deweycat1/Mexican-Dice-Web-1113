@@ -35,10 +35,10 @@ export default function DialogBanner({ speaker, text }: DialogBannerProps) {
       <View style={styles.dialogTextWrapper}>
         <InlineFlameText
           text={text}
-          numberOfLines={3}
+          numberOfLines={2}
           ellipsizeMode="tail"
           style={styles.dialogText}
-          iconSize={16}
+          iconSize={13}
         />
       </View>
     </View>
@@ -48,13 +48,13 @@ export default function DialogBanner({ speaker, text }: DialogBannerProps) {
 const styles = StyleSheet.create({
   dialogContainer: {
     position: 'absolute',
-    top: -5,
-    left: 75,
-    right: 75,
+    top: -3,
+    left: 82,
+    right: 82,
     flexDirection: 'row',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(224, 181, 12, 0.4)',
     alignItems: 'center',
@@ -69,21 +69,22 @@ const styles = StyleSheet.create({
   dialogSpeaker: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 7,
   },
   dialogSpeakerEmoji: {
     fontSize: 22,
   },
   dialogSpeakerImage: {
-    width: 45,
-    height: 45,
+    width: 34,
+    height: 34,
   },
   dialogTextWrapper: {
     flex: 1,
   },
   dialogText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
+    lineHeight: 15,
   },
 });

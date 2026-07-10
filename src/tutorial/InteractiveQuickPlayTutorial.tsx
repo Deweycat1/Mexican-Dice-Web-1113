@@ -256,7 +256,7 @@ export default function InteractiveQuickPlayTutorial({ visible, onComplete, onEx
               <View style={styles.playerBlock}>
                 <Image source={ICEMAN} style={styles.playerAvatar} resizeMode="contain" />
                 <Text style={styles.playerName}>You</Text>
-                <ScoreDie points={state.playerScore} size={scoreDieSize} />
+                <ScoreDie points={state.playerScore} size={scoreDieSize} colorway="blue" />
               </View>
 
               <View style={styles.claimBlock}>

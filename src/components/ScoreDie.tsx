@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, ViewStyle } from 'react-native';
 import Dice from './Dice';
-import { SMALL_SCORE_DIE_BASE_SIZE } from '../theme/dice';
+import { SMALL_SCORE_DIE_BASE_SIZE, type DiceColorway } from '../theme/dice';
 
 type ScoreDieProps = {
   points: number; // 0–5
@@ -9,6 +9,7 @@ type ScoreDieProps = {
   size?: number;
   animationKey?: number;
   animated?: boolean; // optional, defaults to true
+  colorway?: DiceColorway;
 };
 
 /**
@@ -31,6 +32,7 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({
   size = SMALL_SCORE_DIE_BASE_SIZE,
   animationKey,
   animated = true,
+  colorway,
 }) => {
   const targetFace = useMemo(() => clampFace(points), [points]);
 
@@ -109,7 +111,7 @@ export const ScoreDie: React.FC<ScoreDieProps> = ({
         style,
       ]}
     >
-      <Dice value={face} size={size} rolling={false} displayMode="values" />
+      <Dice value={face} size={size} rolling={false} displayMode="values" colorway={colorway} />
     </Animated.View>
   );
 };

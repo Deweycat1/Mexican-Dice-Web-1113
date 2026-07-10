@@ -10,7 +10,7 @@ import Animated, {
     withSequence,
     withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { DIE_SIZE, type DiceColorway } from '../theme/dice';
 import { FlameEmojiIcon } from './FlameEmojiIcon';
@@ -28,35 +28,82 @@ type DiceProps = {
 
 const DICE_PALETTES: Record<
   DiceColorway,
-  { base: string; start: string; middle: string; edge: string; rim: string; pip: string }
+  {
+    base: string;
+    start: string;
+    middle: string;
+    core: string;
+    edge: string;
+    rim: string;
+    glow: string;
+    spark: string;
+    pip: string;
+    pipRim: string;
+    pipShadow: string;
+  }
 > = {
   red: {
-    base: '#C81D25',
-    start: '#E21D25',
-    middle: '#B80F15',
-    edge: '#70090C',
-    rim: '#5C060A',
-    pip: '#FCFAFA',
+    base: '#D21A13',
+    start: '#FFEEE2',
+    middle: '#FF4D05',
+    core: '#FFB000',
+    edge: '#9A0904',
+    rim: '#FFE14A',
+    glow: '#FFEF38',
+    spark: '#FFF8B5',
+    pip: '#F8F7EF',
+    pipRim: '#9F9E96',
+    pipShadow: '#3E332D',
   },
   blue: {
-    base: '#078AD1',
-    start: '#35D4FF',
-    middle: '#078ED8',
-    edge: '#034A8C',
-    rim: '#032F62',
-    pip: '#FFF1C7',
+    base: '#043DFF',
+    start: '#9EF7FF',
+    middle: '#064BFF',
+    core: '#00B8FF',
+    edge: '#06106E',
+    rim: '#54FBFF',
+    glow: '#00D8FF',
+    spark: '#B8F7FF',
+    pip: '#F7F6EA',
+    pipRim: '#9F9E96',
+    pipShadow: '#1A2136',
   },
   orange: {
-    base: '#F26A16',
-    start: '#FFB62E',
-    middle: '#F46A12',
-    edge: '#A52E06',
-    rim: '#702006',
-    pip: '#FFF1C7',
+    base: '#F43B00',
+    start: '#FFF08A',
+    middle: '#FF6A00',
+    core: '#FFC600',
+    edge: '#A91402',
+    rim: '#FFE23A',
+    glow: '#FFDC1E',
+    spark: '#FFF5A6',
+    pip: '#F8F7EF',
+    pipRim: '#9F9E96',
+    pipShadow: '#3E2B19',
   },
 };
 const THINKING_RIVAL = require('../../assets/images/ThinkingRival.png');
 const ANGRY_RIVAL = require('../../assets/images/angryrival..png');
+
+const RESIN_FLECKS = [
+  { x: 0.17, y: 0.19, r: 0.012, opacity: 0.28 },
+  { x: 0.33, y: 0.15, r: 0.007, opacity: 0.18 },
+  { x: 0.61, y: 0.18, r: 0.01, opacity: 0.2 },
+  { x: 0.78, y: 0.28, r: 0.008, opacity: 0.18 },
+  { x: 0.2, y: 0.46, r: 0.009, opacity: 0.16 },
+  { x: 0.41, y: 0.42, r: 0.014, opacity: 0.25 },
+  { x: 0.67, y: 0.51, r: 0.007, opacity: 0.17 },
+  { x: 0.31, y: 0.69, r: 0.008, opacity: 0.18 },
+  { x: 0.56, y: 0.78, r: 0.011, opacity: 0.19 },
+  { x: 0.82, y: 0.72, r: 0.006, opacity: 0.16 },
+];
+
+const RESIN_STREAKS = [
+  { x: 0.12, y: 0.32, width: 0.28, height: 0.012, opacity: 0.13 },
+  { x: 0.49, y: 0.27, width: 0.31, height: 0.009, opacity: 0.11 },
+  { x: 0.17, y: 0.59, width: 0.21, height: 0.008, opacity: 0.1 },
+  { x: 0.57, y: 0.64, width: 0.24, height: 0.01, opacity: 0.12 },
+];
 
 const pipsFor: Record<number, { x: number; y: number }[]> = {
   1: [{ x: 0.5, y: 0.5 }],
@@ -159,19 +206,21 @@ export default function Dice({
     opacity: displayMode === 'values' ? 0 : 1,
   }));
 
-  const pipRadius = size * 0.07;
+  const pipRadius = size * 0.083;
   const overlayLabel = displayMode === 'question' ? '?' : overlayText ?? '';
   const showOverlay = thinkingOverlay != null || displayMode !== 'values';
   const palette = DICE_PALETTES[colorway];
   const thinkingImageSource = angryThinking ? ANGRY_RIVAL : THINKING_RIVAL;
-  const faceGradientId = useMemo(
-    () => `dice-face-${Math.random().toString(36).slice(2, 9)}`,
-    []
-  );
-  const highlightGradientId = useMemo(
-    () => `dice-highlight-${Math.random().toString(36).slice(2, 9)}`,
-    []
-  );
+  const gradientIds = useMemo(() => {
+    const suffix = Math.random().toString(36).slice(2, 9);
+    return {
+      edge: `dice-edge-${suffix}`,
+      face: `dice-face-${suffix}`,
+      glow: `dice-glow-${suffix}`,
+      highlight: `dice-highlight-${suffix}`,
+      pip: `dice-pip-${suffix}`,
+    };
+  }, []);
 
   const borderRadius = size * 0.2;
   const svgRx = size * 0.18;
@@ -183,20 +232,45 @@ export default function Dice({
     <Animated.View
       style={[
         styles.wrap,
-        { width: size, height: size, borderRadius, backgroundColor: palette.base },
+        {
+          width: size,
+          height: size,
+          borderRadius,
+          backgroundColor: palette.base,
+          shadowColor: palette.glow,
+          shadowRadius: size * 0.11,
+        },
         animatedStyle,
       ]}
     >
       <Svg width={size} height={size}>
         <Defs>
-          <LinearGradient id={faceGradientId} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0%" stopColor={palette.start} stopOpacity={0.94} />
-            <Stop offset="58%" stopColor={palette.middle} stopOpacity={0.9} />
+          <LinearGradient id={gradientIds.face} x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0%" stopColor={palette.start} stopOpacity={0.9} />
+            <Stop offset="18%" stopColor={palette.middle} stopOpacity={0.96} />
+            <Stop offset="55%" stopColor={palette.core} stopOpacity={0.78} />
             <Stop offset="100%" stopColor={palette.edge} />
           </LinearGradient>
-          <LinearGradient id={highlightGradientId} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#ffffff" stopOpacity={0.35} />
+          <RadialGradient id={gradientIds.glow} cx="48%" cy="43%" r="62%">
+            <Stop offset="0%" stopColor={palette.glow} stopOpacity={0.78} />
+            <Stop offset="42%" stopColor={palette.middle} stopOpacity={0.28} />
+            <Stop offset="100%" stopColor={palette.edge} stopOpacity={0} />
+          </RadialGradient>
+          <LinearGradient id={gradientIds.edge} x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.75} />
+            <Stop offset="24%" stopColor={palette.rim} stopOpacity={0.96} />
+            <Stop offset="58%" stopColor={palette.middle} stopOpacity={0.34} />
+            <Stop offset="100%" stopColor={palette.edge} stopOpacity={0.92} />
+          </LinearGradient>
+          <LinearGradient id={gradientIds.highlight} x1="0" y1="0" x2="0.8" y2="1">
+            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.72} />
+            <Stop offset="44%" stopColor="#FFFFFF" stopOpacity={0.16} />
             <Stop offset="100%" stopColor="#ffffff" stopOpacity={0} />
+          </LinearGradient>
+          <LinearGradient id={gradientIds.pip} x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0%" stopColor="#FFFFFF" />
+            <Stop offset="46%" stopColor={palette.pip} />
+            <Stop offset="100%" stopColor="#9B9B93" />
           </LinearGradient>
         </Defs>
 
@@ -206,27 +280,103 @@ export default function Dice({
           width={size - faceInset * 2}
           height={size - faceInset * 2}
           rx={svgRx}
-          fill={`url(#${faceGradientId})`}
-          stroke={palette.rim}
-          strokeWidth={size * 0.025}
+          fill={`url(#${gradientIds.face})`}
+          stroke={palette.edge}
+          strokeWidth={size * 0.02}
         />
         <Rect
-          x={size * 0.08}
-          y={size * 0.08}
-          width={size * 0.42}
-          height={size * 0.25}
+          x={size * 0.035}
+          y={size * 0.035}
+          width={size * 0.93}
+          height={size * 0.93}
+          rx={size * 0.18}
+          fill="none"
+          stroke={`url(#${gradientIds.edge})`}
+          strokeWidth={size * 0.045}
+        />
+        <Circle
+          cx={size * 0.5}
+          cy={size * 0.46}
+          r={size * 0.36}
+          fill={`url(#${gradientIds.glow})`}
+        />
+        <Rect
+          x={size * 0.11}
+          y={size * 0.09}
+          width={size * 0.62}
+          height={size * 0.27}
           rx={highlightRx}
-          fill={`url(#${highlightGradientId})`}
+          fill={`url(#${gradientIds.highlight})`}
+          opacity={0.86}
+        />
+        <Rect
+          x={size * 0.1}
+          y={size * 0.1}
+          width={size * 0.8}
+          height={size * 0.8}
+          rx={size * 0.16}
+          fill="none"
+          stroke="#FFFFFF"
+          strokeOpacity={0.18}
+          strokeWidth={size * 0.012}
         />
 
-        {pipLayout?.map(({ x, y }, index) => (
+        {RESIN_STREAKS.map(({ x, y, width, height, opacity }, index) => (
+          <Rect
+            key={`streak-${index}`}
+            x={x * size}
+            y={y * size}
+            width={width * size}
+            height={height * size}
+            rx={height * size}
+            fill={palette.spark}
+            opacity={opacity}
+          />
+        ))}
+
+        {RESIN_FLECKS.map(({ x, y, r, opacity }, index) => (
           <Circle
-            key={index}
+            key={`fleck-${index}`}
             cx={x * size}
             cy={y * size}
-            r={pipRadius}
-            fill={palette.pip}
+            r={r * size}
+            fill={palette.spark}
+            opacity={opacity}
           />
+        ))}
+
+        {pipLayout?.map(({ x, y }, index) => (
+          <React.Fragment key={index}>
+            <Circle
+              cx={x * size + pipRadius * 0.32}
+              cy={y * size + pipRadius * 0.4}
+              r={pipRadius * 1.18}
+              fill="#000000"
+              opacity={0.28}
+            />
+            <Circle
+              cx={x * size}
+              cy={y * size}
+              r={pipRadius * 1.18}
+              fill={palette.pipRim}
+            />
+            <Circle
+              cx={x * size}
+              cy={y * size}
+              r={pipRadius}
+              fill={`url(#${gradientIds.pip})`}
+              stroke={palette.pipShadow}
+              strokeOpacity={0.32}
+              strokeWidth={size * 0.008}
+            />
+            <Circle
+              cx={x * size - pipRadius * 0.3}
+              cy={y * size - pipRadius * 0.36}
+              r={pipRadius * 0.35}
+              fill="#FFFFFF"
+              opacity={0.78}
+            />
+          </React.Fragment>
         ))}
       </Svg>
       {showOverlay &&
@@ -268,6 +418,9 @@ export default function Dice({
 const styles = StyleSheet.create({
   wrap: {
     position: 'relative',
+    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.38,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

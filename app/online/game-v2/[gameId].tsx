@@ -2185,7 +2185,13 @@ export default function OnlineGameV2Screen() {
                       style={styles.userAvatarImage}
                     />
                   </View>
-                  <ScoreDie points={myScore} style={styles.scoreDie} size={38} animated={false} />
+                  <ScoreDie
+                    points={myScore}
+                    style={styles.scoreDie}
+                    size={38}
+                    animated={false}
+                    colorway="blue"
+                  />
                   <Text style={styles.playerLabel}>You</Text>
                 </View>
 
