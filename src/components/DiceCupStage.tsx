@@ -3,18 +3,12 @@ import {
   AccessibilityInfo,
   Animated,
   Easing,
+  Image,
   PanResponder,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import Svg, {
-  Defs,
-  Ellipse,
-  LinearGradient,
-  Path,
-  Stop,
-} from 'react-native-svg';
 
 import Dice from './Dice';
 import { resolveCupGesture } from '../lib/cupGestures';
@@ -50,6 +44,20 @@ type DiceCupStageProps = {
 };
 
 const DIE_SIZE = 46;
+const DICE_ROW_TOP = 70;
+const STAGE_WIDTH = 270;
+const CUP_IMAGE = require('../../assets/images/cup.png');
+const CUP_SCALE = 1.8;
+const CUP_WIDTH = 178 * CUP_SCALE;
+const CUP_HEIGHT = 146 * CUP_SCALE;
+const CUP_TOP = 13 - (CUP_HEIGHT - 146) / 2;
+const CUP_LEFT = (STAGE_WIDTH - CUP_WIDTH) / 2;
+const DICE_PEEK_VISIBLE_HEIGHT = 14;
+const CUP_REVEAL_Y =
+  DICE_ROW_TOP + DIE_SIZE - DICE_PEEK_VISIBLE_HEIGHT - (CUP_TOP + CUP_HEIGHT);
+const PLAY_GROUP_OFFSET_Y = 65;
+const TABLE_SHADOW_TOP = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT - 23;
+const STAGE_HEIGHT = TABLE_SHADOW_TOP + 47;
 
 function useReducedMotion() {
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -73,71 +81,7 @@ function useReducedMotion() {
 }
 
 function LeatherCup() {
-  return (
-    <Svg width={178} height={146} viewBox="0 0 178 146">
-      <Defs>
-        <LinearGradient id="cupLeather" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#3C3D3A" />
-          <Stop offset="0.34" stopColor="#20211F" />
-          <Stop offset="0.72" stopColor="#101110" />
-          <Stop offset="1" stopColor="#272522" />
-        </LinearGradient>
-        <LinearGradient id="cupShine" x1="0" y1="0" x2="1" y2="0">
-          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.02} />
-          <Stop offset="0.48" stopColor="#D8D4CB" stopOpacity={0.22} />
-          <Stop offset="1" stopColor="#FFFFFF" stopOpacity={0.01} />
-        </LinearGradient>
-        <LinearGradient id="cupRim" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#343431" />
-          <Stop offset="1" stopColor="#090A09" />
-        </LinearGradient>
-      </Defs>
-
-      <Path
-        d="M38 20 C38 10 61 5 89 5 C117 5 140 10 140 20 L147 122 Q148 131 139 132 H39 Q30 131 31 122 Z"
-        fill="url(#cupLeather)"
-        stroke="#070807"
-        strokeWidth="3"
-      />
-      <Ellipse
-        cx="89"
-        cy="20"
-        rx="51"
-        ry="15"
-        fill="#292A27"
-        stroke="#090A09"
-        strokeWidth="2"
-      />
-      <Ellipse cx="82" cy="16" rx="29" ry="7" fill="#FFFFFF" opacity={0.09} />
-      <Path
-        d="M43 29 C66 36 112 36 135 29"
-        fill="none"
-        stroke="#918B82"
-        strokeOpacity={0.48}
-        strokeWidth="1.5"
-        strokeDasharray="3 4"
-      />
-      <Path
-        d="M53 28 L48 116 H80 L82 29 C70 30 61 30 53 28 Z"
-        fill="url(#cupShine)"
-      />
-      <Path
-        d="M42 109 H136"
-        fill="none"
-        stroke="#918B82"
-        strokeOpacity={0.54}
-        strokeWidth="2"
-        strokeDasharray="3 5"
-      />
-      <Path
-        d="M31 116 H147 L148 126 Q148 132 141 132 H37 Q30 132 30 126 Z"
-        fill="url(#cupRim)"
-        stroke="#070807"
-        strokeWidth="3"
-      />
-      <Path d="M38 123 H140" stroke="#89837B" strokeOpacity={0.38} strokeWidth="2" />
-    </Svg>
-  );
+  return <Image source={CUP_IMAGE} style={styles.cupImage} resizeMode="contain" />;
 }
 
 const DIE_DEPTH_COLORS: Record<DiceColorway, readonly [string, string]> = {
@@ -230,7 +174,7 @@ export default function DiceCupStage({
     (targetPhase: DiceCupPhase) => {
       if (targetPhase === 'revealing' || targetPhase === 'revealed') {
         cupX.setValue(48);
-        cupY.setValue(-112);
+        cupY.setValue(CUP_REVEAL_Y);
         cupRotation.setValue(-7);
         cupOpacity.setValue(0.82);
       } else if (targetPhase === 'discarding') {
@@ -348,7 +292,7 @@ export default function DiceCupStage({
       const duration = theatrical ? 1150 : 760;
       const animation = Animated.parallel([
         Animated.timing(cupY, {
-          toValue: -112,
+          toValue: CUP_REVEAL_Y,
           duration,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
@@ -587,6 +531,7 @@ export default function DiceCupStage({
           styles.movingGroup,
           {
             transform: [
+              { translateY: PLAY_GROUP_OFFSET_Y },
               { translateX: groupX },
               { translateY: groupY },
               { translateX: gestureX },
@@ -619,8 +564,8 @@ export default function DiceCupStage({
 
 const styles = StyleSheet.create({
   stage: {
-    width: 270,
-    height: 186,
+    width: STAGE_WIDTH,
+    height: STAGE_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -630,7 +575,7 @@ const styles = StyleSheet.create({
   },
   diceRow: {
     position: 'absolute',
-    top: 70,
+    top: DICE_ROW_TOP,
     left: 81,
     zIndex: 2,
     flexDirection: 'row',
@@ -664,13 +609,17 @@ const styles = StyleSheet.create({
   },
   cup: {
     position: 'absolute',
-    top: 13,
-    left: 46,
+    top: CUP_TOP,
+    left: CUP_LEFT,
     zIndex: 4,
+  },
+  cupImage: {
+    width: CUP_WIDTH,
+    height: CUP_HEIGHT,
   },
   tableShadow: {
     position: 'absolute',
-    top: 133,
+    top: TABLE_SHADOW_TOP,
     width: 176,
     height: 28,
     borderRadius: 90,
