@@ -43,6 +43,11 @@ import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
 import { playDiceRollSound } from '../../../src/lib/diceRollSound';
 import {
+  playBadBluffCallSound,
+  playGameResultSound,
+  playInfernoSound,
+} from '../../../src/lib/gameSounds';
+import {
   claimMatchesRoll,
   compareClaims,
   isAlwaysClaimable,
@@ -634,6 +639,21 @@ export default function OnlineGameV2Screen() {
   const myScore = myRole === 'host' ? game?.host_score ?? 0 : game?.guest_score ?? 0;
   const opponentScore = myRole === 'host' ? game?.guest_score ?? 0 : game?.host_score ?? 0;
   const claimToCheck = resolveActiveChallenge(roundState.baselineClaim, lastClaim);
+  const heardRemoteInfernoClaimRef = useRef(false);
+  useEffect(() => {
+    if (lastClaim !== 21) {
+      heardRemoteInfernoClaimRef.current = false;
+      return;
+    }
+    if (
+      roundState.lastClaimer &&
+      roundState.lastClaimer !== myRole &&
+      !heardRemoteInfernoClaimRef.current
+    ) {
+      heardRemoteInfernoClaimRef.current = true;
+      void playInfernoSound(sfxEnabled);
+    }
+  }, [lastClaim, myRole, roundState.lastClaimer, sfxEnabled]);
   const [dieHi, dieLo] = facesFromRoll(myRoll);
   const canClaimTruthfully =
     !!myRoll &&
@@ -673,6 +693,9 @@ export default function OnlineGameV2Screen() {
     if (!game || !myRole) return;
     const prev = prevStatusRef.current;
     if (prev !== 'finished' && game.status === 'finished') {
+      const playerScore = myRole === 'host' ? game.host_score : game.guest_score;
+      const rivalScore = myRole === 'host' ? game.guest_score : game.host_score;
+      void playGameResultSound(playerScore > rivalScore ? 'win' : 'lose', sfxEnabled);
       if (normalizedGameId && matchEndLoggedRef.current !== normalizedGameId) {
         matchEndLoggedRef.current = normalizedGameId;
         logEvent({
@@ -738,7 +761,7 @@ export default function OnlineGameV2Screen() {
       }
     }
     prevStatusRef.current = game.status;
-  }, [game?.status, myRole]);
+  }, [game?.guest_score, game?.host_score, game?.status, myRole, sfxEnabled]);
   useEffect(() => {
     if (!game || !myRole) return;
     const prev = prevScoresRef.current;
@@ -1365,6 +1388,7 @@ export default function OnlineGameV2Screen() {
     void playDiceRollSound(sfxEnabled);
     try {
       const { values, normalized } = rollDice();
+      if (normalized === 21) void playInfernoSound(sfxEnabled);
       lastLocalRollRef.current = normalized;
       if (cupPrototypeEnabled) {
         setHasPeeked(false);
@@ -1511,6 +1535,7 @@ export default function OnlineGameV2Screen() {
         Alert.alert('41 must be shown', 'You can only show 41 if you actually rolled it.');
         return;
       }
+      if (claim === 21) void playInfernoSound(sfxEnabled);
 
       const timestamp = new Date().toISOString();
       const effectiveSelfie =
@@ -1689,6 +1714,7 @@ export default function OnlineGameV2Screen() {
       selfieUsesRemaining,
       userId,
       hapticsEnabled,
+      sfxEnabled,
     ]
   );
 
@@ -1752,6 +1778,7 @@ export default function OnlineGameV2Screen() {
       void playBluffCallSuccessHaptic(hapticsEnabled);
     } else {
       void playBluffCallFailHaptic(hapticsEnabled);
+      void playBadBluffCallSound(sfxEnabled);
     }
     if (loserRole === myRole) {
       void playLosePointHaptic(hapticsEnabled);
@@ -1844,6 +1871,7 @@ export default function OnlineGameV2Screen() {
     normalizedGameId,
     userId,
     hapticsEnabled,
+    sfxEnabled,
     cupPrototypeEnabled,
     isOpponentClaimPhase,
   ]);

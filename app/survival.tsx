@@ -41,6 +41,7 @@ import { getSurvivalClaimOptions } from '../src/lib/claimOptionSources';
 import { getClaimActionLabel } from '../src/lib/claimActionLabel';
 import { getRestingCupPhase } from '../src/lib/cupState';
 import { playDiceRollSound } from '../src/lib/diceRollSound';
+import { playGameResultSound } from '../src/lib/gameSounds';
 import { playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
 import { MEXICAN_ICON } from '../src/lib/constants';
@@ -513,6 +514,14 @@ export default function Survival() {
     isSurvivalOver,
     cpuTurn,
   } = useGameStore();
+
+  const previousSurvivalOverRef = useRef(false);
+  useEffect(() => {
+    if (!previousSurvivalOverRef.current && isSurvivalOver) {
+      void playGameResultSound('lose', sfxEnabled);
+    }
+    previousSurvivalOverRef.current = isSurvivalOver;
+  }, [isSurvivalOver, sfxEnabled]);
 
   // pulsing animation for the caption/title to add adrenaline
   const pulseAnim = useRef(new Animated.Value(1)).current;

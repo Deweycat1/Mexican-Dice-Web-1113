@@ -43,6 +43,7 @@ import { getClaimActionLabel } from '../src/lib/claimActionLabel';
 import { getRestingCupPhase } from '../src/lib/cupState';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { playDiceRollSound } from '../src/lib/diceRollSound';
+import { playGameResultSound } from '../src/lib/gameSounds';
 import { playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
 import { loadBadges } from '../src/stats/badges';
 import { type BadgeMeta, getBadgeMeta } from '../src/stats/badgeMetadata';
@@ -879,10 +880,12 @@ export default function Game() {
     if (gameOver === 'player') {
       // Player wins (Rival hit 0 points)
       showEndBanner('win');
+      void playGameResultSound('win', useSettingsStore.getState().sfxEnabled);
       void requestReviewIfEligible('first_win_game');
     } else if (gameOver === 'cpu') {
       // Player loses (Player hit 0 points)
       showEndBanner('lose');
+      void playGameResultSound('lose', useSettingsStore.getState().sfxEnabled);
     }
 
     if (gameOver) {

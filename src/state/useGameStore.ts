@@ -17,6 +17,7 @@ import {
   playWinRoundHaptic,
 } from '../lib/haptics';
 import { playDiceRollSound } from '../lib/diceRollSound';
+import { playBadBluffCallSound, playInfernoSound } from '../lib/gameSounds';
 import { useSettingsStore } from './useSettingsStore';
 
 import {
@@ -1274,6 +1275,7 @@ export const useGameStore = create<Store>((set, get) => {
         void playBluffCallSuccessHaptic(hapticsEnabled);
       } else {
         void playBluffCallFailHaptic(hapticsEnabled);
+        void playBadBluffCallSound(isSfxEnabled());
       }
     }
 
@@ -1596,6 +1598,7 @@ export const useGameStore = create<Store>((set, get) => {
       })();
 
       // record CPU claim in survival mode (truth vs bluff)
+      if (claim === 21) void playInfernoSound(isSfxEnabled());
       pushSurvivalClaim('cpu', claim, actual);
       // record CPU claim in normal mode too
       pushClaim('cpu', claim, actual);
@@ -1784,6 +1787,7 @@ export const useGameStore = create<Store>((set, get) => {
 
       const prevCarry = state.carryPrevRoll;
       const { values: dicePair, normalized: actual } = rollDice();
+      if (actual === 21) void playInfernoSound(isSfxEnabled());
       const activeChallenge = resolveActiveChallenge(state.baselineClaim, state.lastClaim);
       const legalTruth = computeLegalTruth(activeChallenge, actual);
 
@@ -1896,6 +1900,8 @@ export const useGameStore = create<Store>((set, get) => {
         endTurnLock();
         return;
       }
+
+      if (claim === 21) void playInfernoSound(isSfxEnabled());
 
       if (claim === 41) {
         if (state.lastPlayerRoll !== 41) {
