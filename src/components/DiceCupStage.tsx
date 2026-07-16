@@ -53,16 +53,17 @@ type DiceCupStageProps = {
 };
 
 const ANDROID_CONTENT_SCALE = Platform.OS === 'android' ? 0.6 : 1;
-const DIE_SIZE = 46 * 0.8 * ANDROID_CONTENT_SCALE;
-const DIE_DEPTH_FAR_OFFSET = 5 * 0.8 * ANDROID_CONTENT_SCALE;
-const DIE_DEPTH_NEAR_OFFSET = 3 * 0.8 * ANDROID_CONTENT_SCALE;
-const DICE_GAP = 6 * 0.8 * ANDROID_CONTENT_SCALE;
+const IOS_CONTENT_SCALE = Platform.OS === 'ios' ? 0.8 : 1;
+const DIE_SIZE = 46 * 0.8 * ANDROID_CONTENT_SCALE * IOS_CONTENT_SCALE;
+const DIE_DEPTH_FAR_OFFSET = 5 * 0.8 * ANDROID_CONTENT_SCALE * IOS_CONTENT_SCALE;
+const DIE_DEPTH_NEAR_OFFSET = 3 * 0.8 * ANDROID_CONTENT_SCALE * IOS_CONTENT_SCALE;
+const DICE_GAP = 6 * 0.8 * ANDROID_CONTENT_SCALE * IOS_CONTENT_SCALE;
 const DICE_ROW_TOP = 70;
 const STAGE_WIDTH = 270;
 const DICE_ROW_WIDTH = (DIE_SIZE + DIE_DEPTH_FAR_OFFSET) * 2 + DICE_GAP;
 const DICE_ROW_LEFT = (STAGE_WIDTH - DICE_ROW_WIDTH) / 2;
 const CUP_IMAGE = require('../../assets/images/cup.png');
-const CUP_SCALE = 1.8 * ANDROID_CONTENT_SCALE;
+const CUP_SCALE = 1.8 * ANDROID_CONTENT_SCALE * IOS_CONTENT_SCALE;
 const alignAndroidPixel = (value: number) =>
   Platform.OS === 'android' ? PixelRatio.roundToNearestPixel(value) : value;
 const CUP_WIDTH = alignAndroidPixel(178 * CUP_SCALE);
@@ -73,8 +74,7 @@ const DICE_PEEK_VISIBLE_HEIGHT = DIE_SIZE * 0.3;
 const CUP_REVEAL_Y =
   DICE_ROW_TOP + DIE_SIZE - DICE_PEEK_VISIBLE_HEIGHT - (CUP_TOP + CUP_HEIGHT);
 const PLAY_GROUP_OFFSET_Y = 65 - (Platform.OS === 'android' ? STAGE_WIDTH * 0.1 : 0);
-const TABLE_SHADOW_TOP = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT - 23;
-const STAGE_HEIGHT = TABLE_SHADOW_TOP + 47;
+const STAGE_HEIGHT = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT + 24;
 
 const CUP_DICE_RESTING_POSES = [
   {
@@ -227,7 +227,7 @@ export default function DiceCupStage({
         cupX.setValue(48);
         cupY.setValue(CUP_REVEAL_Y);
         cupRotation.setValue(-7);
-        cupOpacity.setValue(0.82);
+        cupOpacity.setValue(1);
       } else if (targetPhase === 'discarding') {
         groupX.setValue(discardDirection === 'left' ? -310 : 310);
         groupY.setValue(0);
@@ -364,7 +364,7 @@ export default function DiceCupStage({
           useNativeDriver: true,
         }),
         Animated.timing(cupOpacity, {
-          toValue: 0.82,
+          toValue: 1,
           duration,
           useNativeDriver: true,
         }),
@@ -585,12 +585,13 @@ export default function DiceCupStage({
 
   return (
     <View
-      style={styles.stage}
+      style={[
+        styles.stage,
+        (phase === 'revealing' || phase === 'revealed') && styles.stageCupLifted,
+      ]}
       accessibilityLabel={`${status.toLowerCase()}. Leather dice cup with two dice.`}
       {...panResponder.panHandlers}
     >
-      <View pointerEvents="none" style={styles.tableShadow} />
-
       <Animated.View
         renderToHardwareTextureAndroid={Platform.OS === 'android'}
         style={[
@@ -639,6 +640,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  stageCupLifted: {
+    overflow: 'visible',
+  },
   movingGroup: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -685,15 +689,6 @@ const styles = StyleSheet.create({
   cupImage: {
     width: CUP_WIDTH,
     height: CUP_HEIGHT,
-  },
-  tableShadow: {
-    position: 'absolute',
-    top: TABLE_SHADOW_TOP,
-    width: 176,
-    height: 28,
-    borderRadius: 90,
-    backgroundColor: 'rgba(0, 0, 0, 0.44)',
-    transform: [{ scaleY: 0.55 }],
   },
   statusPill: {
     position: 'absolute',

@@ -2814,6 +2814,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   diceArea: {
+    position: 'relative',
+    zIndex: 3,
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
