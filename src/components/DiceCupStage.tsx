@@ -1,10 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   AccessibilityInfo,
   Animated,
   Easing,
   Image,
   PanResponder,
+  PixelRatio,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -43,24 +52,27 @@ type DiceCupStageProps = {
   onAnimationComplete?: (phase: DiceCupPhase) => void;
 };
 
-const DIE_SIZE = 46 * 0.8;
-const DIE_DEPTH_FAR_OFFSET = 5 * 0.8;
-const DIE_DEPTH_NEAR_OFFSET = 3 * 0.8;
-const DICE_GAP = 6 * 0.8;
+const ANDROID_CONTENT_SCALE = Platform.OS === 'android' ? 0.6 : 1;
+const DIE_SIZE = 46 * 0.8 * ANDROID_CONTENT_SCALE;
+const DIE_DEPTH_FAR_OFFSET = 5 * 0.8 * ANDROID_CONTENT_SCALE;
+const DIE_DEPTH_NEAR_OFFSET = 3 * 0.8 * ANDROID_CONTENT_SCALE;
+const DICE_GAP = 6 * 0.8 * ANDROID_CONTENT_SCALE;
 const DICE_ROW_TOP = 70;
 const STAGE_WIDTH = 270;
 const DICE_ROW_WIDTH = (DIE_SIZE + DIE_DEPTH_FAR_OFFSET) * 2 + DICE_GAP;
 const DICE_ROW_LEFT = (STAGE_WIDTH - DICE_ROW_WIDTH) / 2;
 const CUP_IMAGE = require('../../assets/images/cup.png');
-const CUP_SCALE = 1.8;
-const CUP_WIDTH = 178 * CUP_SCALE;
-const CUP_HEIGHT = 146 * CUP_SCALE;
+const CUP_SCALE = 1.8 * ANDROID_CONTENT_SCALE;
+const alignAndroidPixel = (value: number) =>
+  Platform.OS === 'android' ? PixelRatio.roundToNearestPixel(value) : value;
+const CUP_WIDTH = alignAndroidPixel(178 * CUP_SCALE);
+const CUP_HEIGHT = alignAndroidPixel(146 * CUP_SCALE);
 const CUP_TOP = 13 - (CUP_HEIGHT - 146) / 2;
 const CUP_LEFT = (STAGE_WIDTH - CUP_WIDTH) / 2;
 const DICE_PEEK_VISIBLE_HEIGHT = DIE_SIZE * 0.3;
 const CUP_REVEAL_Y =
   DICE_ROW_TOP + DIE_SIZE - DICE_PEEK_VISIBLE_HEIGHT - (CUP_TOP + CUP_HEIGHT);
-const PLAY_GROUP_OFFSET_Y = 65;
+const PLAY_GROUP_OFFSET_Y = 65 - (Platform.OS === 'android' ? STAGE_WIDTH * 0.1 : 0);
 const TABLE_SHADOW_TOP = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT - 23;
 const STAGE_HEIGHT = TABLE_SHADOW_TOP + 47;
 
@@ -86,6 +98,10 @@ const CUP_DICE_RESTING_POSES = [
 const nextCupDicePoseIndex = (current: number) =>
   (current + 1 + Math.floor(Math.random() * (CUP_DICE_RESTING_POSES.length - 1))) %
   CUP_DICE_RESTING_POSES.length;
+
+// Android can paint the first rolling frame before a normal effect selects the next dice pose.
+// A layout effect prevents that one-frame snap; iOS retains its existing effect timing.
+const useCupPoseEffect = Platform.OS === 'android' ? useLayoutEffect : useEffect;
 
 function useReducedMotion() {
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -169,7 +185,7 @@ export default function DiceCupStage({
   onCupSwipeUpRef.current = onCupSwipeUp;
   onCupSwipeSideRef.current = onCupSwipeSide;
 
-  useEffect(() => {
+  useCupPoseEffect(() => {
     if (phase === 'rolling') {
       setRestingPoseIndex(nextCupDicePoseIndex);
     }
@@ -319,7 +335,10 @@ export default function DiceCupStage({
       activeAnimationRef.current = animation;
       scheduleCompletionFallback('rolling', theatrical ? 4000 : 2800);
       animation.start(({ finished }) => {
-        if (finished) finishPhase('rolling');
+        if (finished) {
+          activeAnimationRef.current = null;
+          finishPhase('rolling');
+        }
       });
     }
 
@@ -353,7 +372,10 @@ export default function DiceCupStage({
       activeAnimationRef.current = animation;
       scheduleCompletionFallback('revealing', duration + 800);
       animation.start(({ finished }) => {
-        if (finished) finishPhase('revealing');
+        if (finished) {
+          activeAnimationRef.current = null;
+          finishPhase('revealing');
+        }
       });
     }
 
@@ -375,7 +397,10 @@ export default function DiceCupStage({
       activeAnimationRef.current = animation;
       scheduleCompletionFallback('discarding', 1600);
       animation.start(({ finished }) => {
-        if (finished) finishPhase('discarding');
+        if (finished) {
+          activeAnimationRef.current = null;
+          finishPhase('discarding');
+        }
       });
     }
 
@@ -567,6 +592,7 @@ export default function DiceCupStage({
       <View pointerEvents="none" style={styles.tableShadow} />
 
       <Animated.View
+        renderToHardwareTextureAndroid={Platform.OS === 'android'}
         style={[
           styles.movingGroup,
           {
@@ -589,7 +615,10 @@ export default function DiceCupStage({
           </Animated.View>
         </View>
 
-        <Animated.View style={[styles.cup, cupStyle]}>
+        <Animated.View
+          renderToHardwareTextureAndroid={Platform.OS === 'android'}
+          style={[styles.cup, cupStyle]}
+        >
           <LeatherCup />
         </Animated.View>
       </Animated.View>

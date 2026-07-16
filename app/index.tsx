@@ -1,6 +1,6 @@
 import { Link } from 'expo-router';
 import React, { useCallback, useEffect } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { AppText as Text } from '../src/components/AppText';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,7 +57,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        scrollEnabled={Platform.OS !== 'android'}
+      >
         <View style={styles.container}>
           <View style={styles.menuSection}>
             <Image source={MexicanDiceLogo} style={styles.logo} />
@@ -208,7 +211,7 @@ const styles = StyleSheet.create({
   },
   simplePrefs: {
     width: '100%',
-    marginTop: 24,
+    marginTop: Platform.OS === 'android' ? 8 : 24,
     paddingBottom: 24,
     alignItems: 'center',
   },
@@ -216,10 +219,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: 260,
+    width: Platform.OS === 'android' ? 190 : 260,
     maxWidth: '90%',
-    paddingVertical: 6,
-    marginVertical: 4,
+    paddingVertical: Platform.OS === 'android' ? 0 : 6,
+    marginVertical: Platform.OS === 'android' ? -3 : 4,
   },
   prefLabel: {
     color: '#fff',
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   privacyButton: {
-    marginTop: 12,
+    marginTop: Platform.OS === 'android' ? 6 : 12,
     paddingVertical: 8,
     paddingHorizontal: 18,
     borderRadius: 10,
