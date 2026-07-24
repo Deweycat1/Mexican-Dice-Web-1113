@@ -49,15 +49,9 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    const onSurvivalScreen = pathname?.includes('survival');
-    const onInfernoScreen = pathname?.includes('inferno');
+    const shouldPlayMenuMusic = pathname === '/' || pathname === '/game';
 
-    if (!musicEnabled) {
-      void stopRollingMusic();
-      return;
-    }
-
-    if (onSurvivalScreen || onInfernoScreen) {
+    if (!musicEnabled || !shouldPlayMenuMusic) {
       void stopRollingMusic();
       return;
     }

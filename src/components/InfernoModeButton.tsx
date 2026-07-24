@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   image: {
-    width: 182,
-    height: 49,
+    width: 188.37,
+    height: 50.715,
   },
 });

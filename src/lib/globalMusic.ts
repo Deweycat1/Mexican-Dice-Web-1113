@@ -10,7 +10,7 @@ let infernoPlaying = false;
 async function loadRollingMusic() {
   if (rollingLoaded) return;
   const { sound } = await Audio.Sound.createAsync(
-    require('../../assets/audio/RollingDice.mp3'),
+    require('../../assets/audio/infernodice.wav'),
     { isLooping: true, shouldPlay: false }
   );
   rollingMusic = sound;
@@ -20,7 +20,7 @@ async function loadRollingMusic() {
 async function loadInfernoMusic() {
   if (infernoLoaded) return;
   const { sound } = await Audio.Sound.createAsync(
-    require('../../assets/audio/InfernoDice.mp3'),
+    require('../../assets/audio/infernomania.wav'),
     { isLooping: true, shouldPlay: false }
   );
   infernoMusic = sound;
