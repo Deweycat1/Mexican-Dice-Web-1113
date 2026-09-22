@@ -80,8 +80,9 @@ const runBluffCallTest = async () => {
           continue;
         }
 
-        // Make a claim (could be truth or bluff)
-        const rollValue = parseInt(`${roll[0]}${roll[1]}`, 10);
+        // Make a claim (could be truth or bluff). lastPlayerRoll is already the
+        // numeric dice code (e.g. 54).
+        const rollValue = roll;
         const prevClaim = currentState.lastClaim || 0;
         
         // Decide to claim truthfully or bluff
@@ -114,7 +115,7 @@ const runBluffCallTest = async () => {
         const playerRoll = currentState.lastPlayerRoll;
 
         if (playerClaim && playerRoll) {
-          const playerRollValue = parseInt(`${playerRoll[0]}${playerRoll[1]}`, 10);
+          const playerRollValue = playerRoll;
           const isPlayerBluffing = playerClaim !== playerRollValue;
 
           // Track this bluff scenario
@@ -127,14 +128,17 @@ const runBluffCallTest = async () => {
           }
 
           // Let CPU make decision
+          const bluffNonceBefore = currentState.bluffResultNonce;
           await currentState.cpuTurn();
           await new Promise(resolve => setTimeout(resolve, 10));
 
-          // Check if CPU called the bluff
+          // Check if CPU called the bluff: a bluff resolution bumps
+          // bluffResultNonce and records the caller.
           const newState = useGameStore.getState();
-          const lastAction = newState.lastAction;
-          
-          if (stats && isPlayerBluffing && lastAction === 'bluffCall') {
+          const cpuCalledBluff =
+            newState.bluffResultNonce !== bluffNonceBefore && newState.lastBluffCaller === 'cpu';
+
+          if (stats && isPlayerBluffing && cpuCalledBluff) {
             stats.called++;
           }
         } else {

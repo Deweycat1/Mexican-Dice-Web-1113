@@ -164,9 +164,29 @@ export async function getTopSurvivalPlayers(
   }
 }
 
-export async function getGlobalSurvivalBest(minBest = 1): Promise<number> {
-  const top = await getTopSurvivalPlayers(1, minBest);
-  return top[0]?.survivalBest ?? 0;
+/**
+ * Global best survival streak. Resolves to `null` when the leaderboard could not be fetched so
+ * callers do not mistake "unknown" for 0 (which used to trigger false "new record" celebrations).
+ */
+export async function getGlobalSurvivalBest(minBest = 1): Promise<number | null> {
+  try {
+    const { data, error } = await supabase.rpc('get_top_survival_players', {
+      p_limit: 1,
+      p_min_best: minBest,
+    });
+    if (error) {
+      console.error('get_top_survival_players error', error);
+      return null;
+    }
+    if (!data || !Array.isArray(data)) {
+      return 0;
+    }
+    const rows = (data as PlayerRankRow[]).map(mapRowToPlayerRank);
+    return rows[0]?.survivalBest ?? 0;
+  } catch (err) {
+    console.error('Failed to get global survival best', err);
+    return null;
+  }
 }
 
 export async function getTopQuickplayWins(

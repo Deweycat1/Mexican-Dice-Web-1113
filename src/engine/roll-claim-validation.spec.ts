@@ -64,7 +64,7 @@ describe('Roll and Claim Validation', () => {
       expect(options).toContain(66); // Truth
       expect(options).toContain(21); // Mexican beats 66
       expect(options).toContain(31); // Always available
-      expect(options).not.toContain(65); // Can't claim lower (unless bluffing)
+      expect(options).toContain(65); // Picker allows bluffing lower with no previous claim
     });
 
     test('rolling any value opens all higher claims', () => {
@@ -89,7 +89,7 @@ describe('Roll and Claim Validation', () => {
       expect(options).toContain(66); // Highest double
       expect(options).toContain(21); // Mexican
       expect(options).toContain(31); // Always available
-      expect(options).not.toContain(54); // Can't match previous
+      expect(options).toContain(54); // Matching the previous claim is allowed (meets-or-beats)
       expect(options).not.toContain(53); // Lower than previous
     });
 
@@ -205,7 +205,7 @@ describe('Roll and Claim Validation', () => {
 
     test('nextHigherClaim finds correct progression', () => {
       expect(nextHigherClaim(32)).toBe(42);
-      expect(nextHigherClaim(65)).toBe(66);
+      expect(nextHigherClaim(65)).toBe(11); // doubles outrank every normal pair, 11 is the lowest double
       expect(nextHigherClaim(66)).toBe(21); // Mexican is highest
       expect(nextHigherClaim(21)).toBeNull(); // Mexican has no higher
     });
@@ -239,7 +239,8 @@ describe('Roll and Claim Validation', () => {
       expect(options).toContain(31); // Reverse
       expect(options).not.toContain(41); // Social not in UI
       expect(options).not.toContain(32); // Truth doesn't work
-      expect(options.length).toBe(2); // Only 21 and 31
+      expect(options).toContain(66); // Matching the previous claim is allowed
+      expect(options.length).toBe(3); // 21, 31 and a matching 66
     });
   });
 
@@ -254,7 +255,7 @@ describe('Roll and Claim Validation', () => {
       expect(options).toContain(61); // Higher normal pair
       expect(options).toContain(66); // Double
       expect(options).not.toContain(43); // Can't claim truth (too low)
-      expect(options).not.toContain(54); // Can't match previous
+      expect(options).toContain(54); // Matching the previous claim is allowed (meets-or-beats)
     });
 
     test('multiple rounds of escalation', () => {

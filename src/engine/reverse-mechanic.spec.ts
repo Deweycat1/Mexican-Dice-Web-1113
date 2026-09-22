@@ -578,7 +578,7 @@ describe('31 Reverse Mechanic', () => {
       expect(state.lastClaim).toBeNull();
       expect(state.baselineClaim).toBeNull();
       expect(state.playerScore).toBe(beforeScore - 2);
-      expect(state.message).toContain('Mexican');
+      expect(state.message).toContain('You failed to answer Inferno');
     });
 
     test('Multiple reverses preserve penalty structure on bluff calls', () => {

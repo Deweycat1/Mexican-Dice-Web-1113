@@ -13,7 +13,7 @@ export function formatCallBluffMessage(opts: {
     useEmDash = false,
   } = opts;
 
-  const separator = '...';
+  const separator = useEmDash ? ' — ' : '...';
   const pointText = penalty === 1 ? 'point' : 'points';
   const possessive = defenderName === 'You' ? 'your' : `${defenderName}'s`;
   const prefix = `${callerName} called ${possessive} bluff! `;

@@ -1,4 +1,5 @@
 import { Audio, type AVPlaybackSource } from 'expo-av';
+import { ensureAudioMode } from './globalMusic';
 
 const INFERNO_SOURCES: AVPlaybackSource[] = [
   require('../../assets/audio/gamesound/inferno.wav'),
@@ -18,11 +19,16 @@ async function getSound(source: AVPlaybackSource) {
   if (loaded) return loaded;
   let promise = loading.get(source);
   if (!promise) {
-    promise = Audio.Sound.createAsync(source, { shouldPlay: false }).then(({ sound }) => {
-      sounds.set(source, sound);
-      loading.delete(source);
-      return sound;
-    });
+    promise = ensureAudioMode()
+      .then(() => Audio.Sound.createAsync(source, { shouldPlay: false }))
+      .then(({ sound }) => {
+        sounds.set(source, sound);
+        return sound;
+      })
+      .finally(() => {
+        // Drop the cached promise on success and failure so a failed load can be retried.
+        loading.delete(source);
+      });
     loading.set(source, promise);
   }
   return promise;

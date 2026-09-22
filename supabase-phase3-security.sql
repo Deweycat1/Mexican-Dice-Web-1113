@@ -3,6 +3,12 @@
 -- Mexican Dice - Online Multiplayer
 -- ============================================================================
 -- Run this in Supabase SQL Editor after Phase 1 & 2 migrations
+--
+-- NOTE: steps 6 (games UPDATE policy), 8 (resolve_bluff) and 10 (participant
+-- guard trigger) are superseded by
+-- supabase/migrations/20260922000000_security_hardening.sql, which is
+-- idempotent and should be applied to the live project. This file is kept in
+-- sync with that migration for reference.
 
 -- ============================================================================
 -- STEP 1: Add Auth User IDs to Games Table
@@ -76,15 +82,17 @@ DROP POLICY IF EXISTS "Enable update access for all users" ON public.games;
 -- ============================================================================
 
 -- SELECT: Only participants can read their game
+DROP POLICY IF EXISTS "games_select_participants_only" ON public.games;
 CREATE POLICY "games_select_participants_only"
 ON public.games
 FOR SELECT
 USING (
-  auth.uid() = player1_id 
+  auth.uid() = player1_id
   OR auth.uid() = player2_id
 );
 
 -- INSERT: Any authenticated user can create a game
+DROP POLICY IF EXISTS "games_insert_authenticated" ON public.games;
 CREATE POLICY "games_insert_authenticated"
 ON public.games
 FOR INSERT
@@ -93,20 +101,33 @@ WITH CHECK (
   AND auth.uid() = player1_id  -- Creator must be player1
 );
 
--- UPDATE: Only participants can update their game
+-- UPDATE: Only participants can update their game, and they cannot reassign
+-- player1_id / player2_id. WITH CHECK compares the new ids against the
+-- committed row (the sub-select sees the pre-update snapshot). The only
+-- permitted change is player2_id NULL -> the joining user.
+DROP POLICY IF EXISTS "games_update_participants_only" ON public.games;
 CREATE POLICY "games_update_participants_only"
 ON public.games
 FOR UPDATE
+TO authenticated
 USING (
-  auth.uid() = player1_id 
+  auth.uid() = player1_id
   OR auth.uid() = player2_id
 )
 WITH CHECK (
-  auth.uid() = player1_id 
-  OR auth.uid() = player2_id
+  (auth.uid() = player1_id OR auth.uid() = player2_id)
+  AND player1_id IS NOT DISTINCT FROM (SELECT g.player1_id FROM public.games g WHERE g.id = games.id)
+  AND (
+    player2_id IS NOT DISTINCT FROM (SELECT g.player2_id FROM public.games g WHERE g.id = games.id)
+    OR (
+      (SELECT g.player2_id FROM public.games g WHERE g.id = games.id) IS NULL
+      AND player2_id = auth.uid()
+    )
+  )
 );
 
 -- DELETE: Prevent deletion (optional - can be removed if needed)
+DROP POLICY IF EXISTS "games_delete_restrict" ON public.games;
 CREATE POLICY "games_delete_restrict"
 ON public.games
 FOR DELETE
@@ -118,6 +139,7 @@ USING (false);  -- No one can delete games (maintain history)
 
 -- SELECT: Only the roller can see their own roll
 -- (In future, can add logic to reveal after bluff is called)
+DROP POLICY IF EXISTS "hidden_rolls_select_own_only" ON public.game_rolls_hidden;
 CREATE POLICY "hidden_rolls_select_own_only"
 ON public.game_rolls_hidden
 FOR SELECT
@@ -126,6 +148,7 @@ USING (
 );
 
 -- INSERT: Only authenticated users can insert their own rolls
+DROP POLICY IF EXISTS "hidden_rolls_insert_own_only" ON public.game_rolls_hidden;
 CREATE POLICY "hidden_rolls_insert_own_only"
 ON public.game_rolls_hidden
 FOR INSERT
@@ -135,12 +158,14 @@ WITH CHECK (
 );
 
 -- UPDATE: Rolls are immutable (no updates allowed)
+DROP POLICY IF EXISTS "hidden_rolls_no_updates" ON public.game_rolls_hidden;
 CREATE POLICY "hidden_rolls_no_updates"
 ON public.game_rolls_hidden
 FOR UPDATE
 USING (false);
 
 -- DELETE: Only the roller can delete their own rolls (optional cleanup)
+DROP POLICY IF EXISTS "hidden_rolls_delete_own_only" ON public.game_rolls_hidden;
 CREATE POLICY "hidden_rolls_delete_own_only"
 ON public.game_rolls_hidden
 FOR DELETE
@@ -152,8 +177,14 @@ USING (
 -- STEP 8: Create RPC Function for Secure Bluff Resolution
 -- ============================================================================
 
--- This function encapsulates bluff resolution logic server-side
--- Prevents client tampering with roll values
+-- This function encapsulates bluff resolution logic server-side and prevents
+-- client tampering with roll values.
+--
+--   * p_claim is IGNORED. The claim under dispute is games.current_claim.
+--   * Requires: caller is a participant, status = 'active', current_claim IS
+--     NOT NULL, and current_player is the caller's role.
+--   * Locks the game row (SELECT ... FOR UPDATE).
+--   * After resolution the caller rolls next (matches src/engine/coreGame.ts).
 CREATE OR REPLACE FUNCTION public.resolve_bluff(
   p_game_id UUID,
   p_claim INTEGER
@@ -166,7 +197,9 @@ AS $$
 DECLARE
   v_game RECORD;
   v_actual_roll TEXT;
+  v_claim INTEGER;
   v_caller_id UUID;
+  v_caller_role TEXT;
   v_defender_id UUID;
   v_caller_is_player1 BOOLEAN;
   v_outcome INTEGER;  -- +1 if defender lied, -1 if defender told truth
@@ -174,32 +207,57 @@ DECLARE
   v_new_player1_score INTEGER;
   v_new_player2_score INTEGER;
   v_winner TEXT;
-  v_result JSON;
 BEGIN
-  -- Get current user (the caller)
+  -- p_claim is intentionally unused (kept only for signature compatibility);
+  -- games.current_claim is the claim being called.
+
   v_caller_id := auth.uid();
-  
   IF v_caller_id IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
+    RAISE EXCEPTION 'Not authenticated' USING ERRCODE = '28000';
   END IF;
 
-  -- Get game data
-  SELECT * INTO v_game FROM public.games WHERE id = p_game_id;
-  
+  -- Lock the row for the duration of the transaction.
+  SELECT * INTO v_game
+  FROM public.games
+  WHERE id = p_game_id
+  FOR UPDATE;
+
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Game not found';
+    RAISE EXCEPTION 'Game not found' USING ERRCODE = 'P0002';
   END IF;
 
-  -- Verify caller is a participant
-  IF v_caller_id != v_game.player1_id AND v_caller_id != v_game.player2_id THEN
-    RAISE EXCEPTION 'Not a participant in this game';
+  IF v_game.player1_id IS NULL OR v_game.player2_id IS NULL THEN
+    RAISE EXCEPTION 'Game has no opponent yet' USING ERRCODE = '22023';
   END IF;
 
-  -- Determine who is calling bluff
+  IF v_caller_id <> v_game.player1_id AND v_caller_id <> v_game.player2_id THEN
+    RAISE EXCEPTION 'Not a participant in this game' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_game.status IS DISTINCT FROM 'active' THEN
+    RAISE EXCEPTION 'Game is not active' USING ERRCODE = '22023';
+  END IF;
+
   v_caller_is_player1 := (v_caller_id = v_game.player1_id);
+  v_caller_role := CASE WHEN v_caller_is_player1 THEN 'player1' ELSE 'player2' END;
   v_defender_id := CASE WHEN v_caller_is_player1 THEN v_game.player2_id ELSE v_game.player1_id END;
 
-  -- Get the actual roll from hidden_rolls table (most recent roll by defender)
+  IF v_game.current_player IS DISTINCT FROM v_caller_role THEN
+    RAISE EXCEPTION 'Not your turn' USING ERRCODE = '42501';
+  END IF;
+
+  IF v_game.current_claim IS NULL THEN
+    RAISE EXCEPTION 'No claim to call' USING ERRCODE = '22023';
+  END IF;
+
+  -- current_claim is stored as text in the legacy table; tolerate integer too.
+  BEGIN
+    v_claim := (v_game.current_claim)::TEXT::INTEGER;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'Invalid current_claim on game' USING ERRCODE = '22023';
+  END;
+
+  -- Actual roll: most recent hidden roll by the defender for this game.
   SELECT roll_value INTO v_actual_roll
   FROM public.game_rolls_hidden
   WHERE game_id = p_game_id AND roller_id = v_defender_id
@@ -207,25 +265,21 @@ BEGIN
   LIMIT 1;
 
   IF v_actual_roll IS NULL THEN
-    RAISE EXCEPTION 'No roll found to verify';
+    RAISE EXCEPTION 'No roll found to verify' USING ERRCODE = 'P0002';
   END IF;
 
-  -- Simple bluff resolution logic (can be enhanced)
-  -- Compare claim vs actual roll
-  IF v_actual_roll::INTEGER = p_claim THEN
+  IF v_actual_roll::INTEGER = v_claim THEN
     v_outcome := -1;  -- Defender told truth, caller loses
   ELSE
     v_outcome := 1;   -- Defender lied, defender loses
   END IF;
 
-  -- Determine penalty (2 for Mexican-related, 1 otherwise)
-  IF p_claim = 21 OR v_actual_roll = '21' THEN
+  IF v_claim = 21 OR v_actual_roll = '21' OR v_game.last_action = 'reverseVsMexican' THEN
     v_penalty := 2;
   ELSE
     v_penalty := 1;
   END IF;
 
-  -- Apply score changes
   IF v_outcome = 1 THEN
     -- Defender loses points
     IF v_caller_is_player1 THEN
@@ -246,7 +300,6 @@ BEGIN
     END IF;
   END IF;
 
-  -- Determine winner if someone hit 0
   IF v_new_player1_score = 0 THEN
     v_winner := 'player2';
   ELSIF v_new_player2_score = 0 THEN
@@ -255,12 +308,12 @@ BEGIN
     v_winner := NULL;
   END IF;
 
-  -- Update game
   UPDATE public.games
   SET
     player1_score = v_new_player1_score,
     player2_score = v_new_player2_score,
-    current_player = CASE WHEN v_winner IS NULL THEN v_game.current_player ELSE v_game.current_player END,
+    -- The caller rolls next; nobody's turn once the game is over.
+    current_player = CASE WHEN v_winner IS NULL THEN v_caller_role ELSE v_game.current_player END,
     current_claim = NULL,
     current_roll = v_actual_roll,  -- Reveal the actual roll after bluff
     baseline_claim = NULL,
@@ -271,24 +324,25 @@ BEGIN
     updated_at = NOW()
   WHERE id = p_game_id;
 
-  -- Build result JSON
-  v_result := json_build_object(
+  RETURN json_build_object(
     'outcome', v_outcome,
     'penalty', v_penalty,
+    'claim', v_claim,
     'actual_roll', v_actual_roll,
     'new_player1_score', v_new_player1_score,
     'new_player2_score', v_new_player2_score,
+    'next_player', CASE WHEN v_winner IS NULL THEN v_caller_role ELSE NULL END,
     'winner', v_winner
   );
-
-  RETURN v_result;
 END;
 $$;
 
--- Grant execute permission to authenticated users
+-- Grant execute permission to authenticated users only
+REVOKE ALL ON FUNCTION public.resolve_bluff(UUID, INTEGER) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_bluff(UUID, INTEGER) TO authenticated;
 
-COMMENT ON FUNCTION public.resolve_bluff IS 'Securely resolves a bluff call by verifying hidden roll and updating scores';
+COMMENT ON FUNCTION public.resolve_bluff(UUID, INTEGER) IS
+  'Resolves the current claim on a legacy game. p_claim is ignored; games.current_claim is authoritative.';
 
 -- ============================================================================
 -- STEP 9: Create RPC Function for Rate-Limited Actions
@@ -328,6 +382,53 @@ $$;
 GRANT EXECUTE ON FUNCTION public.check_rate_limit(UUID, INTEGER) TO authenticated;
 
 COMMENT ON FUNCTION public.check_rate_limit IS 'Check if enough time has passed since last action (spam prevention)';
+
+-- ============================================================================
+-- STEP 10: Participant Guard Trigger for games
+-- ============================================================================
+
+-- Raises if player1_id / player2_id change (except player2_id NULL -> the
+-- joining user), if a signed-in updater is not a participant, or if a
+-- finished game is reopened. Service-role sessions (auth.uid() IS NULL) are
+-- exempt from the participant rule but still cannot swap ids.
+CREATE OR REPLACE FUNCTION public.games_guard_participant_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+BEGIN
+  IF NEW.player1_id IS DISTINCT FROM OLD.player1_id THEN
+    RAISE EXCEPTION 'player1_id cannot be changed' USING ERRCODE = '42501';
+  END IF;
+
+  IF NEW.player2_id IS DISTINCT FROM OLD.player2_id THEN
+    IF NOT (OLD.player2_id IS NULL AND v_uid IS NOT NULL AND NEW.player2_id = v_uid) THEN
+      RAISE EXCEPTION 'player2_id cannot be changed' USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  IF v_uid IS NOT NULL
+     AND v_uid IS DISTINCT FROM NEW.player1_id
+     AND v_uid IS DISTINCT FROM NEW.player2_id THEN
+    RAISE EXCEPTION 'Only participants may update a game' USING ERRCODE = '42501';
+  END IF;
+
+  IF OLD.status = 'finished' AND NEW.status IS DISTINCT FROM 'finished' THEN
+    RAISE EXCEPTION 'A finished game cannot be reopened' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS games_guard_participant_update ON public.games;
+CREATE TRIGGER games_guard_participant_update
+  BEFORE UPDATE ON public.games
+  FOR EACH ROW
+  EXECUTE FUNCTION public.games_guard_participant_update();
 
 -- ============================================================================
 -- VERIFICATION QUERIES (Run these to test)

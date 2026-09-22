@@ -122,9 +122,31 @@ export async function getPersonalStats(): Promise<PersonalStats> {
   };
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Local-calendar day key, "YYYY-MM-DD" (same format as the legacy UTC key). */
+function toLocalDayKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** Parse a "YYYY-MM-DD" key as local midnight; null if malformed. */
+function parseLocalDayKey(key: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key);
+  if (!match) return null;
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function localMidnight(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 export async function updatePersonalStatsOnGamePlayed(): Promise<PersonalStats> {
   const today = new Date();
-  const todayStr = today.toISOString().slice(0, 10);
+  const todayStr = toLocalDayKey(today);
 
   const current = await getPersonalStats();
   let {
@@ -138,10 +160,12 @@ export async function updatePersonalStatsOnGamePlayed(): Promise<PersonalStats> 
   totalGamesPlayed += 1;
 
   if (lastActiveDate !== todayStr) {
-    const lastDate = lastActiveDate ? new Date(lastActiveDate) : null;
+    const lastDate = lastActiveDate ? parseLocalDayKey(lastActiveDate) : null;
     if (lastDate) {
-      const diffMs = today.getTime() - lastDate.getTime();
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      // Both endpoints are local midnights; round (not floor) so a DST shift of
+      // +/- 1h between them still counts as exactly one day.
+      const diffMs = localMidnight(today).getTime() - lastDate.getTime();
+      const diffDays = Math.round(diffMs / MS_PER_DAY);
       if (diffDays === 1) {
         currentDailyStreak += 1;
       } else {

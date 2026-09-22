@@ -1,6 +1,5 @@
 import {
 	isLegalRaise,
-	isReverseOf,
 	resolveActiveChallenge,
 	resolveBluff as resolveBluffCore,
 	isChallengeClaim,

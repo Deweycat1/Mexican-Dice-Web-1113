@@ -146,7 +146,7 @@ describe('turn flow and scoring', () => {
       const state = useGameStore.getState();
       
       // This triggers the automatic Mexican penalty
-      expect(state.message).toContain('You failed to answer Mexican');
+      expect(state.message).toContain('You failed to answer Inferno');
       expect(state.playerScore).toBe(3); // Lost 2 points
       expect(state.cpuScore).toBe(5);
       expect(state.lastClaim).toBeNull();

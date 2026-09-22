@@ -136,17 +136,17 @@ export default function RootLayout() {
         }
       }
 
+      // Only *read* the current permission on startup. Prompting the user is
+      // deferred to initPushNotifications / entering the online lobby so a cold
+      // start never opens the system dialog unprompted.
       try {
-        await Notifications.requestPermissionsAsync({
-          ios: {
-            allowAlert: true,
-            allowSound: true,
-            allowBadge: true,
-          },
-        });
+        const { status } = await Notifications.getPermissionsAsync();
+        if (__DEV__) {
+          console.log('[RootLayout] Notification permission status', status);
+        }
       } catch (err) {
         if (__DEV__) {
-          console.warn('[RootLayout] Failed to request notification permissions', err);
+          console.warn('[RootLayout] Failed to read notification permissions', err);
         }
       }
 

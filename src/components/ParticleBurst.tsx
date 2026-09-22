@@ -83,6 +83,13 @@ export default function ParticleBurst({
   const animValues = animValuesRef.current;
   const opacityValues = opacityValuesRef.current;
 
+  // Read the callback through a ref so an inline `onComplete` prop (new identity
+  // every parent render) cannot restart the burst mid-flight.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
   useEffect(() => {
     if (visible) {
       setEmojiPair(pickRandomEmojiPair());
@@ -91,6 +98,9 @@ export default function ParticleBurst({
 
   useEffect(() => {
     if (!visible) {
+      // Hidden while a burst was in flight: the cleanup below already stopped it,
+      // so make sure we do not keep rendering frozen particles.
+      setAnimating(false);
       return;
     }
 
@@ -114,13 +124,20 @@ export default function ParticleBurst({
       })
     );
 
-    Animated.parallel([...moveAnimations, ...fadeAnimations]).start(({ finished }) => {
+    const burst = Animated.parallel([...moveAnimations, ...fadeAnimations]);
+    burst.start(({ finished }) => {
       if (finished) {
         setAnimating(false);
-        onComplete?.();
+        onCompleteRef.current?.();
       }
     });
-  }, [visible, animValues, opacityValues, duration, onComplete]);
+
+    return () => {
+      // Stop on unmount or when `visible` flips; the callback then fires with
+      // finished=false and is ignored.
+      burst.stop();
+    };
+  }, [visible, animValues, opacityValues, duration]);
 
   if (!visible && !animating) {
     return null;

@@ -44,6 +44,12 @@ export default function FireworksOverlay({
     progressRefs.current = particles.map(() => new Animated.Value(0));
   }, [particles]);
 
+  // Read `onDone` through a ref so an inline callback prop cannot restart the show.
+  const onDoneRef = useRef(onDone);
+  useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
+
   useEffect(() => {
     if (!visible) {
       return;
@@ -64,7 +70,7 @@ export default function FireworksOverlay({
     const sequence = Animated.stagger(60, animations);
     sequence.start(({ finished }) => {
       if (finished) {
-        onDone?.();
+        onDoneRef.current?.();
       }
       setAnimating(false);
     });
@@ -72,7 +78,7 @@ export default function FireworksOverlay({
     return () => {
       sequence.stop();
     };
-  }, [visible, duration, onDone]);
+  }, [visible, duration]);
 
   if (!visible && !animating) {
     return null;

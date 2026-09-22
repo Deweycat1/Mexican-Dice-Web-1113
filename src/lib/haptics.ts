@@ -73,3 +73,12 @@ export async function playSpecialClaimHaptic(claim: number, enabled: boolean) {
     await playSpecial41Haptic(enabled);
   }
 }
+
+/** The dice touching down after the cup lifts: a firm tap, then a lighter one for the second die. */
+export async function playDiceSettleHaptic(enabled: boolean) {
+  if (!enabled) return;
+  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  setTimeout(() => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, 90);
+}

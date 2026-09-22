@@ -67,7 +67,7 @@ describe('engine helpers', () => {
   });
 
   test('nextHigherClaim finds the next legal value', () => {
-    expect(nextHigherClaim(32)).toBe(41);
+    expect(nextHigherClaim(32)).toBe(42);
     expect(nextHigherClaim(65)).toBe(11);
     expect(nextHigherClaim(66)).toBe(21);
     expect(nextHigherClaim(21)).toBeNull();

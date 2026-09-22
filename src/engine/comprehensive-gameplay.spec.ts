@@ -44,16 +44,17 @@ describe('Comprehensive Gameplay Scenarios', () => {
 
     // CPU takes its turn
     await flushCpuTurn();
+    // After a bluff call the caller (CPU) opens the next round, which is another timed CPU turn.
+    for (let i = 0; i < 3 && useGameStore.getState().turn === 'cpu'; i += 1) {
+      await flushCpuTurn();
+    }
     state = useGameStore.getState();
-    
-    // Either CPU made a claim, or called bluff
-    if (state.turn === 'player' && state.lastClaim === null) {
-      // CPU called bluff and won
-      expect(state.gameOver === null).toBe(true); // Game still going
-    } else {
-      // CPU made a new claim
-      expect(state.lastClaim).not.toBeNull();
-      expect(state.turn).toBe('player');
+
+    expect(state.gameOver).toBeNull(); // Game still going
+    expect(state.turn).toBe('player');
+    if (state.lastClaim === null) {
+      // Round reset without a standing claim only happens when the CPU showed a Social (41)
+      expect(state.lastSocialEvent).not.toBeNull();
     }
   });
 
@@ -168,7 +169,8 @@ describe('Comprehensive Gameplay Scenarios', () => {
     // Automatic 2-point penalty for not answering Mexican
     expect(state.playerScore).toBe(3);
     expect(state.cpuScore).toBe(5);
-    expect(state.message).toContain('Mexican');
+    expect(state.message).toContain('You failed to answer Inferno');
+    expect(state.message).toContain('You lose 2');
   });
 
   test('Game ends when player hits 0 points', async () => {

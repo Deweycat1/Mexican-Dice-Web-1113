@@ -1,4 +1,5 @@
 import { Audio, type AVPlaybackSource } from 'expo-av';
+import { ensureAudioMode } from './globalMusic';
 
 const ROLL_SOURCES: AVPlaybackSource[] = [
   require('../../assets/audio/gamesound/roll1.wav'),
@@ -14,11 +15,20 @@ let lastRollIndex = -1;
 async function loadDiceRollSounds() {
   if (diceRollSounds) return;
   if (!loadingPromise) {
-    loadingPromise = Promise.all(
-      ROLL_SOURCES.map((source) => Audio.Sound.createAsync(source, { shouldPlay: false }))
-    ).then((results) => {
-      diceRollSounds = results.map(({ sound }) => sound);
-    });
+    loadingPromise = ensureAudioMode()
+      .then(() =>
+        Promise.all(
+          ROLL_SOURCES.map((source) => Audio.Sound.createAsync(source, { shouldPlay: false }))
+        )
+      )
+      .then((results) => {
+        diceRollSounds = results.map(({ sound }) => sound);
+      })
+      .catch((error) => {
+        // Clear the cached rejection so the next play attempt can retry the load.
+        loadingPromise = null;
+        throw error;
+      });
   }
   await loadingPromise;
 }

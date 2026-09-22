@@ -8,7 +8,12 @@ type MilestoneMode = '5' | '10' | '15' | 'newLeader' | '20' | '25' | '30' | '35'
 
 type Props = {
   visible: boolean;
-  title: string;
+  /**
+   * A plain string is rendered inside the styled <Text>. Any other ReactNode
+   * (e.g. an icon + text row) is rendered directly in a View, because nesting a
+   * <View> inside <Text> renders blank/clipped on Android.
+   */
+  title: React.ReactNode;
   mode: MilestoneMode;
   onHide: () => void;
 };
@@ -142,7 +147,11 @@ export default function StreakCelebrationOverlay({ visible, title, mode, onHide 
             },
           ]}
         >
-          <Text style={[styles.title, { color: config.color }]}>{title}</Text>
+          {typeof title === 'string' ? (
+            <Text style={[styles.title, { color: config.color }]}>{title}</Text>
+          ) : (
+            <View style={styles.titleNode}>{title}</View>
+          )}
         </Animated.View>
       </View>
       {config.showConfetti && (
@@ -181,5 +190,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     letterSpacing: 0.5,
+  },
+  titleNode: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

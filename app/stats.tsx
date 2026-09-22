@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -49,6 +49,18 @@ interface ClaimStat {
 
 type StatView = 'menu' | 'rolls' | 'claims' | 'randomStats';
 
+const getRollLabel = (roll: string): string => {
+  switch (roll) {
+    case '21':
+      return '21 (Inferno)';
+    case '31':
+      return '31 (Reverse)';
+    case '41':
+      return '41 (Social)';
+    default:
+      return roll;
+  }
+};
 
 export default function StatsScreen() {
   const router = useRouter();
@@ -67,14 +79,17 @@ export default function StatsScreen() {
   const [survivalAverage, setSurvivalAverage] = useState<SurvivalAverageData | null>(null);
   
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);  useEffect(() => {
-    const fetchStats = async () => {
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetches every dataset (rolls, claims, random stats, survival average).
+  // Shared by the initial load and the Retry button so both hit the same APIs.
+  const fetchStats = useCallback(async () => {
       setIsLoading(true);
       setError(null);
 
       try {
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        
+
         // Fetch all APIs in parallel
         const [rollsRes, claimsRes, randomStatsRes, survivalAverageRes] = await Promise.all([
           fetch(`${baseUrl}/api/roll-stats`, {
@@ -146,23 +161,11 @@ export default function StatsScreen() {
       } finally {
         setIsLoading(false);
       }
-    };
-
-    fetchStats();
   }, []);
 
-  const getRollLabel = (roll: string): string => {
-    switch (roll) {
-      case '21':
-        return '21 (Inferno)';
-      case '31':
-        return '31 (Reverse)';
-      case '41':
-        return '41 (Social)';
-      default:
-        return roll;
-    }
-  };
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   if (error) {
     return (
@@ -175,51 +178,7 @@ export default function StatsScreen() {
           </Text>
           <Pressable
             onPress={() => {
-              setError(null);
-              setIsLoading(true);
-              // Re-trigger the effect by updating a key
-              const fetchStats = async () => {
-                setIsLoading(true);
-                setError(null);
-
-                try {
-                  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-                  
-                  const [rollsResponse] = await Promise.all([
-                    fetch(`${baseUrl}/api/roll-stats`, {
-                      method: 'GET',
-                      headers: { 'Content-Type': 'application/json' },
-                    }),
-                  ]);
-                  
-                  if (!rollsResponse.ok) {
-                    throw new Error(`Roll stats API: ${rollsResponse.status}`);
-                  }
-
-                  const rollsData: RollStatsData = await rollsResponse.json();
-
-                  const rolls = rollsData.rolls || {};
-                  const total = Object.values(rolls).reduce((sum, count) => sum + count, 0);
-                  setTotalRolls(total);
-
-                  const statsArray: RollStat[] = Object.entries(rolls)
-                    .map(([roll, count]) => ({
-                      roll,
-                      label: getRollLabel(roll),
-                      count,
-                      percentage: total > 0 ? (count / total) * 100 : 0,
-                    }))
-                    .sort((a, b) => parseInt(a.roll, 10) - parseInt(b.roll, 10));
-
-                  setRollStats(statsArray);
-                } catch (err) {
-                  console.error('Error fetching stats:', err);
-                  setError(err instanceof Error ? err.message : 'Failed to load statistics');
-                } finally {
-                  setIsLoading(false);
-                }
-              };
-              fetchStats();
+              void fetchStats();
             }}
             style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
           >
@@ -401,7 +360,7 @@ export default function StatsScreen() {
                   <Text style={styles.cardTitle}>Most Common Roll</Text>
                   <Text style={styles.bigNumber}>{formatRoll(randomStats.mostCommonRoll)}</Text>
                   <Text style={styles.tendencyDescription}>
-                    Users' most frequently rolled combo
+                    Users&apos; most frequently rolled combo
                   </Text>
                 </View>
 

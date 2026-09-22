@@ -233,30 +233,51 @@ export default function OnlineLobbyScreen() {
 
     console.log('[ONLINE LOBBY] setting up realtime subscription', { userId });
 
+    let isMounted = true;
+    let hasSubscribedOnce = false;
+
+    const handleChange = (payload: { eventType: string; new: unknown; old: unknown }) => {
+      if (!isMounted) return;
+      console.log('[ONLINE LOBBY] realtime update', {
+        type: payload.eventType,
+        gameId: (payload.new as any)?.id ?? (payload.old as any)?.id ?? null,
+      });
+      void loadGames();
+    };
+
+    // postgres_changes filters only support a single column; subscribe once per role.
     const channel = supabase
-      .channel(`lobby-games-v2-${userId}`)
+      .channel(`lobby-games-v2-${userId}-${Math.random().toString(36).slice(2, 8)}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'games_v2',
-          filter: `or(host_id.eq.${userId},guest_id.eq.${userId})`,
-        },
-        (payload) => {
-          console.log('[ONLINE LOBBY] realtime update', {
-            type: payload.eventType,
-            gameId: (payload.new as any)?.id ?? (payload.old as any)?.id ?? null,
-          });
-
+        { event: '*', schema: 'public', table: 'games_v2', filter: `host_id=eq.${userId}` },
+        handleChange
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'games_v2', filter: `guest_id=eq.${userId}` },
+        handleChange
+      )
+      .subscribe((status) => {
+        if (!isMounted) return;
+        if (status === 'SUBSCRIBED') {
+          if (hasSubscribedOnce) {
+            console.log('[ONLINE LOBBY] realtime resubscribed, refetching', { userId });
+            void loadGames();
+          }
+          hasSubscribedOnce = true;
+          return;
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[ONLINE LOBBY] realtime channel issue, refetching', { userId, status });
           void loadGames();
         }
-      )
-      .subscribe();
+      });
 
     return () => {
+      isMounted = false;
       console.log('[ONLINE LOBBY] tearing down realtime subscription', { userId });
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(channel);
     };
   }, [userId, loadGames]);
 
@@ -380,6 +401,16 @@ export default function OnlineLobbyScreen() {
         return;
       }
 
+      const isHost = game.host_id === userId;
+      const isGuest = game.guest_id === userId;
+      if (!isHost && !isGuest) {
+        console.warn('[OnlineLobby] Delete requested without ownership match, aborting.', {
+          gameId: game.id,
+          userId,
+        });
+        return;
+      }
+
       console.log('[OnlineLobby] Delete requested', {
         gameId: game.id,
         userId,
@@ -388,53 +419,116 @@ export default function OnlineLobbyScreen() {
         status: game.status,
       });
 
-      const runDelete = async () => {
+      const roleLabel = isHost ? 'Host' : 'Guest';
+      const appendHistoryEvent = (text: string) => {
+        const existing = (game.round_state ?? INITIAL_ROUND_STATE) as Record<string, unknown>;
+        const history = Array.isArray(existing.history) ? existing.history : [];
+        return {
+          ...existing,
+          history: [
+            ...history,
+            {
+              id: Math.random().toString(36).slice(2, 10),
+              type: 'event',
+              text,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        };
+      };
+
+      const withOwnership = <T extends { eq: (column: string, value: string) => T }>(query: T) =>
+        isHost ? query.eq('host_id', userId) : query.eq('guest_id', userId);
+
+      // Games that never started are simply cancelled.
+      const runCancel = async () => {
         try {
-          console.log('[OnlineLobby] Running delete', {
-            gameId: game.id,
-            userId,
-          });
+          console.log('[OnlineLobby] Cancelling unstarted match', { gameId: game.id, userId });
 
           // Optimistic UI removal so the tile disappears instantly
           setGames((prev) => prev.filter((g) => g.id !== game.id));
 
-          let query = supabase
-            .from('games_v2')
-            .update({ status: 'cancelled' })
-            .eq('id', game.id);
+          const { error } = await withOwnership(
+            supabase
+              .from('games_v2')
+              .update({
+                status: 'cancelled',
+                round_state: appendHistoryEvent(`${roleLabel} cancelled the match.`),
+              })
+              .eq('id', game.id)
+              .eq('status', 'waiting')
+          );
 
-          if (game.host_id === userId) {
-            query = query.eq('host_id', userId);
-          } else if (game.guest_id === userId) {
-            query = query.eq('guest_id', userId);
-          } else {
-            console.warn('[OnlineLobby] Delete requested without ownership match, aborting.', {
-              gameId: game.id,
-              userId,
-            });
+          if (error) {
+            console.error('[OnlineLobby] Cancel Supabase error', error);
+            Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
             await loadGames();
             return;
           }
 
-          const { error } = await query;
-
-          if (error) {
-            console.error('[OnlineLobby] Delete Supabase error', error);
-            Alert.alert('Unable to delete match', error.message ?? 'Please try again.');
-            return;
-          }
-
-          console.log('[OnlineLobby] Delete success', { id: game.id });
-
-          // Refresh matches so any other stale rows are cleaned up
+          console.log('[OnlineLobby] Cancel success', { id: game.id });
           await loadGames();
         } catch (err: any) {
-          console.error('[OnlineLobby] Delete match failed', err);
+          console.error('[OnlineLobby] Cancel match failed', err);
           Alert.alert('Unable to delete match', err?.message ?? 'Please try again.');
+          await loadGames();
         }
       };
 
-      runDelete();
+      // Games already in progress are forfeited: the match is finished with the
+      // canceller's score at 0 so the opponent wins and normal finished handling runs.
+      const runForfeit = async () => {
+        try {
+          console.log('[OnlineLobby] Forfeiting match', { gameId: game.id, userId });
+
+          const { error } = await withOwnership(
+            supabase
+              .from('games_v2')
+              .update({
+                status: 'finished',
+                host_score: isHost ? 0 : game.host_score ?? STARTING_SCORE,
+                guest_score: isGuest ? 0 : game.guest_score ?? STARTING_SCORE,
+                round_state: appendHistoryEvent(`${roleLabel} resigned the match.`),
+              })
+              .eq('id', game.id)
+              .eq('status', 'in_progress')
+          );
+
+          if (error) {
+            console.error('[OnlineLobby] Forfeit Supabase error', error);
+            Alert.alert('Unable to forfeit match', error.message ?? 'Please try again.');
+            return;
+          }
+
+          console.log('[OnlineLobby] Forfeit success', { id: game.id });
+          await loadGames();
+        } catch (err: any) {
+          console.error('[OnlineLobby] Forfeit match failed', err);
+          Alert.alert('Unable to forfeit match', err?.message ?? 'Please try again.');
+        }
+      };
+
+      if (game.status === 'in_progress') {
+        Alert.alert(
+          'Forfeit this match?',
+          'This match is already in progress. Leaving it counts as a forfeit: your score will be set to 0 and your opponent will be awarded the win.',
+          [
+            { text: 'Keep playing', style: 'cancel' },
+            { text: 'Forfeit', style: 'destructive', onPress: () => void runForfeit() },
+          ]
+        );
+        return;
+      }
+
+      if (game.status === 'waiting') {
+        void runCancel();
+        return;
+      }
+
+      console.warn('[OnlineLobby] Delete requested for a game that cannot be cancelled', {
+        gameId: game.id,
+        status: game.status,
+      });
     },
     [loadGames, userId]
   );
@@ -545,8 +639,6 @@ export default function OnlineLobbyScreen() {
 
     const isCompleted = game.status === 'finished';
 
-    const roundState = (game.round_state ?? null) as { lastClaimRoll?: number | null } | null;
-
     const rawLastClaim = game.last_claim;
     const lastClaimValue: number | null =
       rawLastClaim == null
@@ -631,8 +723,7 @@ export default function OnlineLobbyScreen() {
 
     const canDelete =
       (game.status === 'waiting' && !game.guest_id && game.host_id === userId) ||
-      (game.status === 'in_progress' && (game.host_id === userId || game.guest_id === userId)) ||
-      (game.status === 'finished' && (game.host_id === userId || game.guest_id === userId));
+      (game.status === 'in_progress' && (game.host_id === userId || game.guest_id === userId));
 
     const cardContent = (
           <View style={styles.gameCard}>

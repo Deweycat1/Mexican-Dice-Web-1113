@@ -10,23 +10,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { androidTextTight } from '../styles/text';
-
-// Try to use your theme colors, but fall back if the file/path changes.
-let ThemeColors: any = {
-  vegasRed: '#C21807',
-  vegasGreen: '#0FA958',
-  white: '#FFFFFF',
-  black: '#000000',
-  feltDark: '#092E1E',
-  gray300: '#CCCCCC',
-};
-try {
-  // If your theme file exists, this will override the fallback above.
-   
-  ThemeColors = require('../theme/colors').Colors;
-} catch {
-  // keep fallbacks
-}
+import { Colors as ThemeColors } from '../theme/colors';
 
 type Variant = 'primary' | 'success' | 'outline' | 'ghost';
 

@@ -42,7 +42,7 @@ import { getClaimActionLabel } from '../src/lib/claimActionLabel';
 import { getRestingCupPhase } from '../src/lib/cupState';
 import { playDiceRollSound } from '../src/lib/diceRollSound';
 import { playGameResultSound } from '../src/lib/gameSounds';
-import { playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
+import { playDiceSettleHaptic, playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
 import { startInfernoMusic, stopInfernoMusic } from '../src/lib/globalMusic';
 import { MEXICAN_ICON } from '../src/lib/constants';
 import { awardBadge } from '../src/stats/badges';
@@ -129,7 +129,8 @@ function rgbToHex(r: number, g: number, b: number) {
 
 type StreakMeterProps = {
   currentStreak: number;
-  globalBest: number;
+  /** null = global best unknown (not fetched yet / fetch failed). */
+  globalBest: number | null;
   isSurvivalOver: boolean;
   compact?: boolean;
 };
@@ -145,11 +146,15 @@ const StreakMeter: React.FC<StreakMeterProps> = ({
   isSurvivalOver,
   compact = false,
 }) => {
-  const safeGlobalBest = typeof globalBest === 'number' ? globalBest : 0;
-  const recordTarget = Math.max(safeGlobalBest, 1);
-  const targetToBeat = Math.max(safeGlobalBest + 1, 1);
+  const hasKnownGlobalBest = typeof globalBest === 'number' && Number.isFinite(globalBest);
+  // When the global best is unknown, chase a moving target so the bar never fills
+  // (and never goes rainbow) on a possibly-failed fetch.
+  const targetToBeat = hasKnownGlobalBest
+    ? Math.max(globalBest + 1, 1)
+    : Math.max(currentStreak + 1, 1);
   const clampedProgress = Math.max(0, Math.min(currentStreak / targetToBeat, 1));
-  const hasBrokenRecord = currentStreak > safeGlobalBest && currentStreak > 0 && !isSurvivalOver;
+  const hasBrokenRecord =
+    hasKnownGlobalBest && currentStreak > globalBest && currentStreak > 0 && !isSurvivalOver;
   const rainbowAnim = useRef(new Animated.Value(0)).current;
   const rainbowLoopRef = useRef<Animated.CompositeAnimation | null>(null);
   const rainbowActiveRef = useRef(false);
@@ -194,12 +199,12 @@ const StreakMeter: React.FC<StreakMeterProps> = ({
   });
 
   const progress = clampedProgress;
-  const gradientColors =
+  const gradientColors: readonly [string, string, ...string[]] =
     progress <= 0.2
-      ? [COLOR_LIGHT_BLUE, COLOR_BLUE]
+      ? ([COLOR_LIGHT_BLUE, COLOR_BLUE] as const)
       : progress <= 0.4
-        ? [COLOR_LIGHT_BLUE, COLOR_BLUE, COLOR_MAGENTA]
-        : [COLOR_LIGHT_BLUE, COLOR_BLUE, COLOR_MAGENTA, COLOR_RED];
+        ? ([COLOR_LIGHT_BLUE, COLOR_BLUE, COLOR_MAGENTA] as const)
+        : ([COLOR_LIGHT_BLUE, COLOR_BLUE, COLOR_MAGENTA, COLOR_RED] as const);
 
   return (
     <View
@@ -242,7 +247,7 @@ const StreakMeter: React.FC<StreakMeterProps> = ({
             )}
           </View>
         </View>
-        <Text style={styles.recordLabel}>Record: {safeGlobalBest}</Text>
+        <Text style={styles.recordLabel}>Record: {hasKnownGlobalBest ? globalBest : '—'}</Text>
       </View>
     </View>
   );
@@ -254,7 +259,8 @@ export default function Survival() {
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
-  const cupPrototypeEnabled = Platform.OS !== 'web';
+  // The leather-cup stage is the one dice experience on every platform, web included.
+  const cupPrototypeEnabled = true;
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const musicEnabled = useSettingsStore((state) => state.musicEnabled);
   const sfxEnabled = useSettingsStore((state) => state.sfxEnabled);
@@ -346,6 +352,11 @@ export default function Survival() {
   const watchdogLastKickKeyRef = useRef<string | null>(null);
   const letterAttemptUsedRef = useRef(false);
   const lastProcessedRollRef = useRef<number | null>(null);
+  // Inferno letters persistence: guard against awarding (and overwriting storage)
+  // before the stored set has been read.
+  const lettersLoadedRef = useRef(false);
+  const latestCollectedSlotsRef = useRef<Set<InfernoSlotId>>(new Set());
+  const pendingLetterAwardRef = useRef(false);
 
   useEffect(() => {
     if (!isFocused) return;
@@ -365,6 +376,8 @@ export default function Survival() {
         hasSeenInfernoLettersIntro(),
       ]);
       if (!isMounted) return;
+      latestCollectedSlotsRef.current = letters;
+      lettersLoadedRef.current = true;
       setCollectedSlots(letters);
       setInfernoIntroSeen(introSeen);
       if (isComplete(letters)) {
@@ -401,8 +414,12 @@ export default function Survival() {
     }, PLUS_ONE_FLASH_INTERVAL);
   }, []);
 
+  // Chance of earning a letter on a 21 roll, scaled by how many letters are already
+  // collected. Never returns 0 for an incomplete set: if the intro flag persisted but
+  // the letter set did not (progress 0), letters must still be earnable.
   const getScaledInfernoLetterChance = (progress: number) => {
     switch (progress) {
+      case 0:
       case 1:
         return 0.8;
       case 2:
@@ -421,10 +438,20 @@ export default function Survival() {
   };
 
   const attemptInfernoLetterAward = useCallback(async () => {
-    const missingSlots = getMissingInfernoSlots(collectedSlots);
+    if (!lettersLoadedRef.current) {
+      // Stored letters haven't been read yet; defer so we don't clobber them.
+      pendingLetterAwardRef.current = true;
+      return;
+    }
+    // Merge the rendered state with the latest loaded/saved set so a stale closure
+    // can never drop letters that were persisted after this callback was created.
+    const current = new Set<InfernoSlotId>([...latestCollectedSlotsRef.current, ...collectedSlots]);
+    const missingSlots = getMissingInfernoSlots(current);
 
     if (!infernoIntroSeen) {
-      let eligible = missingSlots.filter((slotId) => slotId !== 'I' && slotId !== 'O');
+      let eligible: InfernoSlotId[] = missingSlots.filter(
+        (slotId) => slotId !== 'I' && slotId !== 'O'
+      );
       if (eligible.length === 0) {
         eligible = missingSlots;
       }
@@ -437,8 +464,9 @@ export default function Survival() {
         setInfernoIntroSeen(true);
         return;
       }
-      const next = new Set(collectedSlots);
+      const next = new Set(current);
       next.add(picked);
+      latestCollectedSlotsRef.current = next;
       await saveCollectedLetters(next);
       await setSeenInfernoLettersIntro();
       setCollectedSlots(next);
@@ -453,17 +481,18 @@ export default function Survival() {
       return;
     }
 
-    const progress = collectedSlots.size;
+    const progress = current.size;
     const baseChance = getScaledInfernoLetterChance(progress);
     if (Math.random() >= baseChance) return;
     if (missingSlots.length === 0) return;
     if (missingSlots.length === 1 && Math.random() >= 0.05) return;
 
-    const picked = pickMissingSlot(collectedSlots);
+    const picked = pickMissingSlot(current);
     if (!picked) return;
 
-    const next = new Set(collectedSlots);
+    const next = new Set(current);
     next.add(picked);
+    latestCollectedSlotsRef.current = next;
     await saveCollectedLetters(next);
     setCollectedSlots(next);
     setInfernoLetterModalSlot(picked);
@@ -657,7 +686,7 @@ export default function Survival() {
     }
 
     // Clear any existing timer if conditions are not suitable
-    if (turn !== 'cpu' || gameOver !== null || turnLock || isBusy) {
+    if (turn !== 'cpu' || gameOver !== null || turnLock || isBusy || isSurvivalOver) {
       if (watchdogTimerRef.current) {
         clearTimeout(watchdogTimerRef.current);
         watchdogTimerRef.current = null;
@@ -714,6 +743,7 @@ export default function Survival() {
     isSurvivalOver,
     lastClaim,
     lastCpuRoll,
+    lastPlayerRoll,
     logSurvivalSnapshot,
     mode,
     turn,
@@ -1108,7 +1138,14 @@ export default function Survival() {
 
   // New Global Leader milestone
   useEffect(() => {
-    if (currentStreak > globalBest && currentStreak > 0 && !hasShownNewLeader) {
+    // Only celebrate against a *known* global best; null means the fetch hasn't
+    // completed (or failed), and we must not treat that as 0.
+    if (
+      typeof globalBest === 'number' &&
+      currentStreak > globalBest &&
+      currentStreak > 0 &&
+      !hasShownNewLeader
+    ) {
       setHasShownNewLeader(true);
       
       // Screen dim then pop
@@ -1260,16 +1297,19 @@ export default function Survival() {
         ? 'Infernoman believes you. Your hidden dice leave the table.'
         : "You believe Infernoman. The hidden dice leave the table.";
     }
-    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'cpu-bluff') {
+    // Hold the "lifting" narration until the reveal has actually resolved.
+    const cupLiftInProgress =
+      cupPhase === 'revealing' || (cupPhase === 'revealed' && isRevealAnimating);
+    if (cupLiftInProgress && pendingCupActionRef.current === 'cpu-bluff') {
       return 'Infernoman calls your bluff and lifts the cup...';
     }
-    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'cpu-social') {
+    if (cupLiftInProgress && pendingCupActionRef.current === 'cpu-social') {
       return 'Infernoman lifts the cup and reveals Social...';
     }
-    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'bluff') {
+    if (cupLiftInProgress && pendingCupActionRef.current === 'bluff') {
       return "Calling the bluff...lift Infernoman's cup.";
     }
-    if (cupPhase === 'revealing') return 'Lifting the cup to reveal your roll...';
+    if (cupLiftInProgress) return 'Lifting the cup to reveal your roll...';
     if (turn === 'cpu' && cupPhase === 'covered') {
       return 'Infernoman is deciding whether to believe you...';
     }
@@ -1280,6 +1320,7 @@ export default function Survival() {
     cupTheatrical,
     hasPeeked,
     hasRolled,
+    isRevealAnimating,
     narration,
     turn,
   ]);
@@ -1367,6 +1408,15 @@ export default function Survival() {
     letterAttemptUsedRef.current = true;
     void attemptInfernoLetterAward();
   }, [isFocused, mode, lastPlayerRoll, attemptInfernoLetterAward]);
+
+  // If a letter award was requested before the stored letters finished loading,
+  // run it now that they are available (attemptInfernoLetterAward is recreated
+  // when collectedSlots/infernoIntroSeen update after the load).
+  useEffect(() => {
+    if (!lettersLoadedRef.current || !pendingLetterAwardRef.current) return;
+    pendingLetterAwardRef.current = false;
+    void attemptInfernoLetterAward();
+  }, [attemptInfernoLetterAward]);
 
   useEffect(() => {
     if (turn === 'player') {
@@ -1526,7 +1576,7 @@ export default function Survival() {
     setIsRevealAnimating(true);
   }, [playerRoll]);
 
-  function handleRollOrClaim() {
+  const handleRollOrClaim = useCallback(() => {
     if (__DEV__) {
       console.log('[SURVIVAL][ACTION] handleRollOrClaim:start', {
         turn,
@@ -1542,7 +1592,7 @@ export default function Survival() {
       logSurvivalSnapshot('handleRollOrClaim:start');
     }
     if (controlsDisabled || isRevealAnimating) {
-      console.log('SURVIVAL: handleRollOrClaim blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
+      if (__DEV__) console.log('SURVIVAL: handleRollOrClaim blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
       return;
     }
 
@@ -1573,7 +1623,7 @@ export default function Survival() {
     }
 
     if (hasRolled && !mustBluff && lastPlayerRoll != null) {
-      console.log('SURVIVAL: claiming current roll', { claim: lastPlayerRoll, lastClaimValue });
+      if (__DEV__) console.log('SURVIVAL: claiming current roll', { claim: lastPlayerRoll, lastClaimValue });
       playerClaim(lastPlayerRoll);
       if (__DEV__) {
         console.log('[SURVIVAL][ACTION] handleRollOrClaim:end (claimed roll)', {
@@ -1585,7 +1635,7 @@ export default function Survival() {
     }
 
     if (hasRolled && mustBluff) {
-      console.log('SURVIVAL: must bluff, cannot auto-claim', { lastClaimValue });
+      if (__DEV__) console.log('SURVIVAL: must bluff, cannot auto-claim', { lastClaimValue });
       if (__DEV__) {
         console.log('[SURVIVAL][ACTION] handleRollOrClaim:end (must bluff)', {
           lastClaimValue,
@@ -1595,17 +1645,38 @@ export default function Survival() {
       return;
     }
 
-    console.log('SURVIVAL: rolling dice', { turn, lastClaimValue, hasRolled });
+    if (__DEV__) console.log('SURVIVAL: rolling dice', { turn, lastClaimValue, hasRolled });
     setRollingAnim(true);
     playerRoll();
-    setTimeout(() => setRollingAnim(false), 400);
+    // One full 600 ms spin cycle plus the unwind, instead of a 400 ms twitch.
+    setTimeout(() => setRollingAnim(false), 700);
     if (__DEV__) {
       console.log('[SURVIVAL][ACTION] handleRollOrClaim:end (rolled)', {
         turn,
       });
       logSurvivalSnapshot('handleRollOrClaim:end-roll');
     }
-  }
+  }, [
+    beginPlayerCupRoll,
+    controlsDisabled,
+    cupPrototypeEnabled,
+    gameOver,
+    hapticsEnabled,
+    hasPeeked,
+    hasRolled,
+    isBusy,
+    isRevealAnimating,
+    isRivalClaimPhase,
+    isSurvivalOver,
+    lastClaimValue,
+    lastPlayerRoll,
+    logSurvivalSnapshot,
+    mustBluff,
+    playerClaim,
+    playerRoll,
+    turn,
+    turnLock,
+  ]);
 
   const handlePrimaryAction = useCallback(() => {
     if (streakEnded) {
@@ -1626,7 +1697,7 @@ export default function Survival() {
 
   const handleSummaryMainMenu = useCallback(() => {
     exitSurvivalToNormal();
-    router.push('/');
+    router.dismissTo('/');
   }, [exitSurvivalToNormal, router]);
 
   const handlePressMenu = useCallback(() => {
@@ -1637,14 +1708,14 @@ export default function Survival() {
     if (Platform.OS === 'web') {
       const ok = window.confirm(`${title}\n\n${message}`);
       if (ok) {
-        router.push(MENU_ROUTE);
+        router.dismissTo(MENU_ROUTE);
       }
       return;
     }
 
     Alert.alert(title, message, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Go to Menu', style: 'destructive', onPress: () => router.push(MENU_ROUTE) },
+      { text: 'Go to Menu', style: 'destructive', onPress: () => router.dismissTo(MENU_ROUTE) },
     ]);
   }, [router]);
 
@@ -1664,6 +1735,10 @@ export default function Survival() {
                 ? getClaimActionLabel(lastPlayerRoll)
                 : 'Roll';
 
+  const handleDiceSettle = useCallback(() => {
+    void playDiceSettleHaptic(hapticsEnabled);
+  }, [hapticsEnabled]);
+
   function handleCallBluff() {
     if (__DEV__) {
       console.log('[SURVIVAL][ACTION] handleCallBluff:start', {
@@ -1678,26 +1753,26 @@ export default function Survival() {
       logSurvivalSnapshot('handleCallBluff:start');
     }
     if (controlsDisabled) {
-      console.log('SURVIVAL: call bluff blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
+      if (__DEV__) console.log('SURVIVAL: call bluff blocked', { turn, gameOver, isBusy, turnLock, isSurvivalOver });
       return;
     }
-    console.log("BLUFF: Player called Rival's bluff (Survival)", { lastClaim, lastCpuRoll, lastAction });
+    if (__DEV__) console.log("BLUFF: Player called Rival's bluff (Survival)", { lastClaim, lastCpuRoll, lastAction });
 
     let rivalToldTruth: boolean | null = null;
     if (lastClaim != null && lastCpuRoll != null) {
       const { outcome } = resolveBluff(lastClaim, lastCpuRoll, lastAction === 'reverseVsMexican');
       rivalToldTruth = outcome === -1;
-      console.log('BLUFF: showdown snapshot (Survival)', {
+      if (__DEV__) console.log('BLUFF: showdown snapshot (Survival)', {
         claim: lastClaim,
         actual: lastCpuRoll,
         prevWasReverseVsMexican: lastAction === 'reverseVsMexican',
         rivalToldTruth,
       });
     } else {
-      console.log('BLUFF: missing data to precompute truth; using default reveal path (Survival)');
+      if (__DEV__) console.log('BLUFF: missing data to precompute truth; using default reveal path (Survival)');
     }
 
-    console.log('BLUFF: Revealing Rival dice regardless of truth state (Survival)');
+    if (__DEV__) console.log('BLUFF: Revealing Rival dice regardless of truth state (Survival)');
     if (cupPrototypeEnabled) {
       void playToggleHaptic(hapticsEnabled);
       pendingCupActionRef.current = 'bluff';
@@ -2042,7 +2117,7 @@ export default function Survival() {
     const nonce = cpuSocialRevealNonce;
     const dice = cpuSocialDice;
 
-    console.log('[CPU SOCIAL REVEAL] effect', {
+    if (__DEV__) console.log('[CPU SOCIAL REVEAL] effect', {
       source: 'survival.tsx',
       nonce,
       refNonce: socialRevealNonceRef.current,
@@ -2062,7 +2137,7 @@ export default function Survival() {
     if (nonce != null && nonce > socialRevealNonceRef.current) {
       socialRevealNonceRef.current = nonce;
       if (!isFocused || mode !== 'survival' || !dice) return;
-      console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
+      if (__DEV__) console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
       setSocialDiceValues(dice);
       setShowSocialReveal(true);
       if (__DEV__) {
@@ -2125,7 +2200,7 @@ export default function Survival() {
 
   useEffect(() => {
     if (initialStateLoggedRef.current) return;
-    console.log('SURVIVAL: initial store snapshot', {
+    if (__DEV__) console.log('SURVIVAL: initial store snapshot', {
       turn,
       gameOver,
       isBusy,
@@ -2172,7 +2247,7 @@ export default function Survival() {
                   </Text>
                 ))}
               </Animated.View>
-              <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest}</Animated.Text>
+              <Animated.Text style={[styles.scoreLine, { transform: [{ scale: pulseAnim }, { scale: streakScaleAnim }], color: dynamicScoreColor, opacity: streakFlashAnim }]}>Your Best: {bestStreak} | Global Best: {globalBest ?? '—'}</Animated.Text>
               <View style={styles.claimVisualHeader}>
                 <Text style={styles.claimVisualLabel}>Claim</Text>
                 {claimHi !== null && claimLo !== null ? (
@@ -2319,6 +2394,7 @@ export default function Survival() {
                     }
                     onCupSwipeSide={canGestureRivalCup ? handleCupSwipeSide : undefined}
                     onAnimationComplete={handleCupAnimationComplete}
+                    onDiceSettle={handleDiceSettle}
                   />
                 ) : (
                   <>
@@ -2327,6 +2403,7 @@ export default function Survival() {
                       rolling={rolling}
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                      colorway={getRollDiceColorways(turn === 'player' ? 'player' : 'cpu')[0]}
                       randomRestingPose={diceDisplayMode === 'values'}
                     />
                     <View style={{ width: DICE_SPACING }} />
@@ -2335,6 +2412,7 @@ export default function Survival() {
                       rolling={rolling}
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                      colorway={getRollDiceColorways(turn === 'player' ? 'player' : 'cpu')[1]}
                       randomRestingPose={diceDisplayMode === 'values'}
                     />
                   </>
@@ -2815,7 +2893,9 @@ const styles = StyleSheet.create({
   },
   diceArea: {
     position: 'relative',
-    zIndex: 3,
+    // Above the events/history panels so a lifted cup never disappears behind them.
+    zIndex: 6,
+    elevation: 6,
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',

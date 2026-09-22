@@ -9,6 +9,22 @@ import {
 
 import { ensureUserProfile } from '../src/lib/auth';
 
+/**
+ * Only honour `redirect` when it is a relative in-app path: a single leading
+ * slash, not protocol-relative (`//host`), and no scheme (`https:`, `javascript:`).
+ * Anything else falls back to the main menu so the param cannot be used to
+ * bounce users to an external site.
+ */
+function safeRedirectPath(value: unknown): string {
+  if (typeof value !== 'string') return '/';
+  if (!value.startsWith('/')) return '/';
+  if (value.startsWith('//')) return '/';
+  if (value.startsWith('/\\')) return '/';
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(value)) return '/';
+  if (/[\r\n\0]/.test(value)) return '/';
+  return value;
+}
+
 export default function UsernameScreen() {
   const router = useRouter();
   const { redirect } = useLocalSearchParams<{ redirect?: string }>();
@@ -19,11 +35,11 @@ export default function UsernameScreen() {
     async function autoAssignUsername() {
       setIsLoading(true);
       try {
-        const profile = await ensureUserProfile();
+        await ensureUserProfile();
         // Navigate to redirect destination or main menu
-        const target = typeof redirect === 'string' && redirect.length > 0 ? redirect : '/';
+        const target = safeRedirectPath(redirect);
         router.replace(target as any);
-      } catch (err) {
+      } catch {
         setErrorMessage('Failed to auto-assign username.');
       } finally {
         setIsLoading(false);

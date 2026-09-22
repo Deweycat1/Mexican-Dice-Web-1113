@@ -111,9 +111,14 @@ const ALL_CLAIMS_ASC: number[] = (() => {
 
 export const enumerateClaims = () => [...ALL_CLAIMS_ASC];
 
+/**
+ * Next claim strictly above `prev` in the ranking ladder. 41 (Social) is skipped because it must be
+ * shown, never claimed, so it is never a valid raise/bluff target.
+ */
 export const nextHigherClaim = (prev: number): number | null => {
   let candidate: number | null = null;
   for (const claim of ALL_CLAIMS_ASC) {
+    if (isSocial(claim)) continue;
     if (compareClaims(claim, prev) > 0) {
       if (candidate == null || compareClaims(claim, candidate) < 0) {
         candidate = claim;

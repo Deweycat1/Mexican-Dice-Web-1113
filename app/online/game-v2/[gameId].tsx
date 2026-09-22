@@ -8,15 +8,17 @@ import {
   playSpecialClaimHaptic,
   playToggleHaptic,
   playWinRoundHaptic,
+  playDiceSettleHaptic,
 } from '../../../src/lib/haptics';
 import { useSettingsStore } from '../../../src/state/useSettingsStore';
 import { useIsFocused } from '@react-navigation/native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
   Image,
   Modal,
   Platform,
@@ -28,6 +30,7 @@ import {
   View,
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -38,7 +41,7 @@ import Dice from '../../../src/components/Dice';
 import DiceCupStage, { type DiceCupPhase } from '../../../src/components/DiceCupStage';
 import FeltBackground from '../../../src/components/FeltBackground';
 import OnlineMatchSummaryOverlay from '../../../src/components/OnlineMatchSummaryOverlay';
-import RulesContent from '../../../src/components/RulesContent';
+import { RulesContent } from '../../../src/components/RulesContent';
 import { ScoreDie } from '../../../src/components/ScoreDie';
 import StyledButton from '../../../src/components/StyledButton';
 import { playDiceRollSound } from '../../../src/lib/diceRollSound';
@@ -249,6 +252,16 @@ const defaultRoundState: RoundState = {
 const clampScore = (value: number) => Math.max(0, value);
 const uuid = () => Math.random().toString(36).slice(2, 10);
 const OUT_OF_TURN_ERROR = 'OUT_OF_TURN_ERROR';
+const RESULT_RECORDED_KEY_PREFIX = 'online-result-recorded:';
+let realtimeChannelCounter = 0;
+
+const isNewerOrSameRow = (prev: OnlineGameV2 | null, next: OnlineGameV2) => {
+  if (!prev || prev.id !== next.id) return true;
+  const prevTs = Date.parse(prev.updated_at ?? '');
+  const nextTs = Date.parse(next.updated_at ?? '');
+  if (!Number.isFinite(prevTs) || !Number.isFinite(nextTs)) return true;
+  return nextTs >= prevTs;
+};
 
 export type OnlineGameRematchInfo = {
   parentGameId: string;
@@ -352,7 +365,8 @@ export default function OnlineGameV2Screen() {
   const params = useLocalSearchParams<{ gameId?: string | string[] }>();
   const router = useRouter();
   const isFocused = useIsFocused();
-  const cupPrototypeEnabled = Platform.OS !== 'web';
+  // The leather-cup stage is the one dice experience on every platform, web included.
+  const cupPrototypeEnabled = true;
   const normalizedGameId = useMemo(() => {
     const raw = params.gameId;
     if (Array.isArray(raw)) return raw[0];
@@ -360,6 +374,15 @@ export default function OnlineGameV2Screen() {
   }, [params.gameId]);
 
   const [game, setGame] = useState<OnlineGameV2 | null>(null);
+  // Always points at the latest game row so effects/callbacks that intentionally
+  // should not re-run on every row change can still read current state.
+  const gameRef = useRef<OnlineGameV2 | null>(null);
+  useEffect(() => {
+    gameRef.current = game;
+  }, [game]);
+  const hostId = game?.host_id ?? null;
+  const guestId = game?.guest_id ?? null;
+  const gameStatus = game?.status ?? null;
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -406,7 +429,14 @@ export default function OnlineGameV2Screen() {
   const [isRequestingRematch, setIsRequestingRematch] = useState(false);
   const [onlineOpponentRecord, setOnlineOpponentRecord] = useState<OnlineOpponentRecord | null>(null);
   const [onlineOpponentRecordLoading, setOnlineOpponentRecordLoading] = useState(false);
+  // null until the first row for the current game id has been seen, so a game that
+  // loads already finished is not treated as a transition into 'finished'.
   const prevStatusRef = useRef<GameStatus | null>(null);
+  const rankUpdatedRef = useRef(false);
+  const bluffResultNonceRef = useRef(0);
+  // Rematch bookkeeping for this mount only (server flags are reset when the rematch is linked).
+  const rematchRequestedLocallyRef = useRef<string | null>(null);
+  const rematchCreatedLocallyRef = useRef<string | null>(null);
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const sfxEnabled = useSettingsStore((state) => state.sfxEnabled);
   const prevScoresRef = useRef<{ host: number; guest: number } | null>(null);
@@ -447,6 +477,13 @@ export default function OnlineGameV2Screen() {
   }, [userId, router]);
 
   useEffect(() => {
+    setGame(null);
+    prevStatusRef.current = null;
+    prevScoresRef.current = null;
+    rankUpdatedRef.current = false;
+    bluffResultNonceRef.current = 0;
+    rematchRequestedLocallyRef.current = null;
+    rematchCreatedLocallyRef.current = null;
     onlineMatchFinalizedRef.current = null;
     setOnlineOpponentRecord(null);
     setOnlineOpponentRecordLoading(false);
@@ -459,14 +496,36 @@ export default function OnlineGameV2Screen() {
     summarySeenMarkedRef.current = null;
   }, [normalizedGameId]);
 
+  // Applies a row that came from the server (realtime, refetch, or a confirmed update),
+  // ignoring rows that are older than what we already have.
+  const applyServerRow = useCallback((row: OnlineGameV2) => {
+    setGame((prev) => (isNewerOrSameRow(prev, row) ? row : prev));
+  }, []);
+
+  const refetchGame = useCallback(async () => {
+    if (!normalizedGameId) return;
+    const { data, error: fetchError } = await supabase
+      .from('games_v2')
+      .select('*')
+      .eq('id', normalizedGameId)
+      .single();
+    if (fetchError || !data) {
+      console.warn('[ONLINE GAME] refetch failed', { gameId: normalizedGameId, error: fetchError });
+      return;
+    }
+    const row = data as OnlineGameV2;
+    if (row.id !== normalizedGameId) return;
+    applyServerRow(row);
+  }, [applyServerRow, normalizedGameId]);
+
   useEffect(() => {
     if (!normalizedGameId) {
       setError('No game specified');
       setLoading(false);
       return;
     }
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     let isMounted = true;
+    let hasSubscribedOnce = false;
 
     const loadGame = async () => {
       setLoading(true);
@@ -483,57 +542,101 @@ export default function OnlineGameV2Screen() {
         return;
       }
       console.log('[ONLINE GAME] initial load', { gameId: normalizedGameId, payload: data });
-      setGame(data as OnlineGameV2);
+      applyServerRow(data as OnlineGameV2);
       setLoading(false);
     };
 
-    loadGame();
+    void loadGame();
 
-    channel = supabase
-      .channel(`game-v2-${normalizedGameId}`)
+    // Unique per mount so a duplicate mount of the same game (e.g. a push tap while the
+    // screen is already open) never shares or tears down another mount's channel.
+    realtimeChannelCounter += 1;
+    const channelName = `game-v2-${normalizedGameId}-${realtimeChannelCounter}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    const channel = supabase
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'games_v2', filter: `id=eq.${normalizedGameId}` },
         (payload) => {
-          if (payload.new) {
+          if (!isMounted) return;
+          const row = payload.new as Partial<OnlineGameV2> | undefined;
+          if (row && row.id === normalizedGameId) {
             console.log('[ONLINE GAME] realtime update', {
               gameId: normalizedGameId,
               payload: payload.new,
             });
-            setGame(payload.new as OnlineGameV2);
+            applyServerRow(row as OnlineGameV2);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (!isMounted) return;
+        if (status === 'SUBSCRIBED') {
+          if (hasSubscribedOnce) {
+            // Reconnected: we may have missed rows while the socket was down.
+            console.log('[ONLINE GAME] realtime resubscribed, refetching', { gameId: normalizedGameId });
+            void refetchGame();
+          }
+          hasSubscribedOnce = true;
+          return;
+        }
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[ONLINE GAME] realtime channel issue, refetching', {
+            gameId: normalizedGameId,
+            status,
+          });
+          void refetchGame();
+        }
+      });
+
+    const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+      if (!isMounted) return;
+      if (nextState === 'active') {
+        void refetchGame();
+      }
+    });
 
     return () => {
       isMounted = false;
-      if (channel) supabase.removeChannel(channel);
+      appStateSubscription.remove();
+      void supabase.removeChannel(channel);
     };
-  }, [normalizedGameId]);
+  }, [normalizedGameId, applyServerRow, refetchGame]);
+
+  // Refetch whenever the screen regains focus (e.g. returning from the lobby).
+  useFocusEffect(
+    useCallback(() => {
+      if (!normalizedGameId) return;
+      if (gameRef.current && gameRef.current.id === normalizedGameId) {
+        void refetchGame();
+      }
+    }, [normalizedGameId, refetchGame])
+  );
 
   useEffect(() => {
-    if (!game) return;
+    if (!hostId && !guestId) return;
     const loadNames = async () => {
-      if (game.host_id) {
+      if (hostId) {
         const { data } = await supabase
           .from('users')
           .select('username')
-          .eq('id', game.host_id)
+          .eq('id', hostId)
           .single();
         if (data?.username) setHostName(data.username);
       }
-      if (game.guest_id) {
+      if (guestId) {
         const { data } = await supabase
           .from('users')
           .select('username')
-          .eq('id', game.guest_id)
+          .eq('id', guestId)
           .single();
         if (data?.username) setGuestName(data.username);
       }
     };
     loadNames();
-  }, [game?.host_id, game?.guest_id]);
+  }, [hostId, guestId]);
 
   useEffect(() => {
     if (!banner) return;
@@ -543,15 +646,6 @@ export default function OnlineGameV2Screen() {
       if (bannerTimer.current) clearTimeout(bannerTimer.current);
     };
   }, [banner]);
-
-  useEffect(() => {
-    if (!game || game.status !== 'finished') return;
-    if (!game.rematch_game_id) return;
-    if (game.rematch_game_id === game.id) return;
-
-    console.log('[rematch] navigating to rematch game', game.rematch_game_id, 'from', game.id);
-    router.replace(`/online/game-v2/${game.rematch_game_id}`);
-  }, [game?.rematch_game_id, game?.status, router]);
 
   useEffect(() => {
     return () => {
@@ -613,9 +707,8 @@ export default function OnlineGameV2Screen() {
       };
     }
     return defaultRoundState;
-  }, [game?.round_state, game?.id]);
+  }, [game?.round_state]);
   const socialRevealNonceRef = useRef<number | null>(null);
-  const rankUpdatedRef = useRef(false);
 
   const lastClaim = useMemo(() => {
     if (game?.last_claim == null) return null;
@@ -625,11 +718,11 @@ export default function OnlineGameV2Screen() {
   }, [game?.last_claim]);
 
   const myRole: PlayerRole | null = useMemo(() => {
-    if (!game || !userId) return null;
-    if (userId === game.host_id) return 'host';
-    if (userId === game.guest_id) return 'guest';
+    if (!userId || (!hostId && !guestId)) return null;
+    if (userId === hostId) return 'host';
+    if (userId === guestId) return 'guest';
     return null;
-  }, [game?.host_id, game?.guest_id, userId]);
+  }, [hostId, guestId, userId]);
 
   const isMyTurn = !!game && !!userId && game.current_player_id === userId;
   const opponentRole: PlayerRole | null = myRole === 'host' ? 'guest' : myRole === 'guest' ? 'host' : null;
@@ -690,13 +783,25 @@ export default function OnlineGameV2Screen() {
   }, [normalizedGameId, game, myRole]);
 
   useEffect(() => {
-    if (!game || !myRole) return;
+    const current = gameRef.current;
+    if (!current || !myRole || !normalizedGameId || current.id !== normalizedGameId) return;
     const prev = prevStatusRef.current;
-    if (prev !== 'finished' && game.status === 'finished') {
-      const playerScore = myRole === 'host' ? game.host_score : game.guest_score;
-      const rivalScore = myRole === 'host' ? game.guest_score : game.host_score;
-      void playGameResultSound(playerScore > rivalScore ? 'win' : 'lose', sfxEnabled);
-      if (normalizedGameId && matchEndLoggedRef.current !== normalizedGameId) {
+    const isFirstRow = prev === null;
+    prevStatusRef.current = current.status;
+    // Only server rows carry status (optimistic updates never apply status locally),
+    // so a 'finished' status here is always server-confirmed.
+    if (current.status !== 'finished') return;
+    if (!isFirstRow && prev === 'finished') return;
+
+    const playerScore = myRole === 'host' ? current.host_score : current.guest_score;
+    const rivalScore = myRole === 'host' ? current.guest_score : current.host_score;
+    const didCurrentUserWin: boolean | null =
+      playerScore === rivalScore ? null : playerScore > rivalScore;
+
+    // A game that loads already finished is not a transition: no sound / analytics.
+    if (!isFirstRow) {
+      void playGameResultSound(didCurrentUserWin ? 'win' : 'lose', sfxEnabled);
+      if (matchEndLoggedRef.current !== normalizedGameId) {
         matchEndLoggedRef.current = normalizedGameId;
         logEvent({
           eventType: 'match_ended',
@@ -705,67 +810,60 @@ export default function OnlineGameV2Screen() {
           metadata: { reason: 'game_over' },
         });
       }
+    }
+
+    // Record the result at most once per device per game. This also covers the player who
+    // was not on the screen when the match ended: they record it when they next open it.
+    if (rankUpdatedRef.current) return;
+    rankUpdatedRef.current = true;
+    const markerKey = `${RESULT_RECORDED_KEY_PREFIX}${normalizedGameId}`;
+    void (async () => {
+      try {
+        const alreadyRecorded = await AsyncStorage.getItem(markerKey);
+        if (alreadyRecorded) return;
+        await AsyncStorage.setItem(markerKey, new Date().toISOString());
+      } catch (err) {
+        console.warn('[ONLINE GAME] result marker storage failed', err);
+        // Fall through: recording once more is better than never recording.
+      }
+
       // Online games also count toward personal stats and day-based badges
-      void (async () => {
-        try {
-          const stats = await updatePersonalStatsOnGamePlayed();
-          if (stats.totalDaysPlayed >= 7) {
-            void awardBadge('welcome_back_7_days');
-          }
-          if (stats.currentDailyStreak >= 7) {
-            void awardBadge('inferno_week_7_day_streak');
-          }
-        } catch (err) {
-          console.error('Failed to update personal stats after online game end', err);
+      try {
+        const stats = await updatePersonalStatsOnGamePlayed();
+        if (stats.totalDaysPlayed >= 7) {
+          void awardBadge('welcome_back_7_days');
         }
-      })();
+        if (stats.currentDailyStreak >= 7) {
+          void awardBadge('inferno_week_7_day_streak');
+        }
+      } catch (err) {
+        console.error('Failed to update personal stats after online game end', err);
+      }
 
       // Update global rank based on online match outcome (non-blocking).
-      if (!rankUpdatedRef.current) {
-        rankUpdatedRef.current = true;
-        void (async () => {
-          try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser || !game) {
-              return;
-            }
-
-            let didCurrentUserWin: boolean | null = null;
-            const isHost = currentUser.id === game.host_id;
-            const isGuest = currentUser.id === game.guest_id;
-
-            if (isHost) {
-              if (game.host_score !== game.guest_score) {
-                didCurrentUserWin = game.host_score > game.guest_score;
-              }
-            } else if (isGuest) {
-              if (game.host_score !== game.guest_score) {
-                didCurrentUserWin = game.guest_score > game.host_score;
-              }
-            }
-
-            if (didCurrentUserWin !== null) {
-              void recordPlayerMatchResult({
-                mode: 'online',
-                won: didCurrentUserWin,
-              });
-              void updateRankFromGameResult({
-                mode: 'online',
-                won: didCurrentUserWin,
-              });
-            }
-          } catch (err) {
-            console.error('Failed to update rank after online game end', err);
-          }
-        })();
+      if (didCurrentUserWin !== null) {
+        try {
+          void recordPlayerMatchResult({ mode: 'online', won: didCurrentUserWin });
+          void updateRankFromGameResult({ mode: 'online', won: didCurrentUserWin });
+        } catch (err) {
+          console.error('Failed to update rank after online game end', err);
+        }
       }
-    }
-    prevStatusRef.current = game.status;
-  }, [game?.guest_score, game?.host_score, game?.status, myRole, sfxEnabled]);
+    })();
+  }, [
+    game?.guest_score,
+    game?.host_score,
+    game?.status,
+    myRole,
+    normalizedGameId,
+    sfxEnabled,
+  ]);
+  const hostScore = game?.host_score ?? null;
+  const guestScore = game?.guest_score ?? null;
   useEffect(() => {
-    if (!game || !myRole) return;
+    if (hostScore === null || guestScore === null || !myRole) return;
     const prev = prevScoresRef.current;
-    const current = { host: game.host_score, guest: game.guest_score };
+    const current = { host: hostScore, guest: guestScore };
     if (!prev) {
       prevScoresRef.current = current;
       return;
@@ -785,7 +883,7 @@ export default function OnlineGameV2Screen() {
       }
     }
     prevScoresRef.current = current;
-  }, [game?.host_score, game?.guest_score, myRole, hapticsEnabled]);
+  }, [hostScore, guestScore, myRole, hapticsEnabled]);
   const isOpponentClaimPhase = useMemo(() => {
     if (!game) return false;
     if (!isMyTurn) return false;
@@ -1071,13 +1169,28 @@ export default function OnlineGameV2Screen() {
   const allSummarySelfiesLoaded = summarySelfieMetadata.every(
     (selfie) => typeof selfieImagesById[selfie.id] === 'string'
   );
-  const showMatchSummary =
+  const finishedViewActive =
     isGameFinished &&
     !!myRole &&
-    !game?.rematch_game_id &&
     !isRevealAnimating &&
     !isRevealingBluff &&
     !revealDiceValues;
+  const rematchAvailableId =
+    isGameFinished && game?.rematch_game_id && game.rematch_game_id !== game.id
+      ? game.rematch_game_id
+      : null;
+  const showMatchSummary = finishedViewActive && !rematchAvailableId;
+  // Auto-follow into the rematch only for the player who requested it from this screen and
+  // was still looking at the finished overlay when the opponent accepted. Anyone else opening
+  // the finished parent game sees a "Rematch available" button instead of being redirected.
+  useEffect(() => {
+    if (!rematchAvailableId || !finishedViewActive || !normalizedGameId) return;
+    if (rematchCreatedLocallyRef.current === rematchAvailableId) return;
+    if (rematchRequestedLocallyRef.current !== normalizedGameId) return;
+    rematchRequestedLocallyRef.current = null;
+    console.log('[rematch] following opponent into rematch game', rematchAvailableId, 'from', normalizedGameId);
+    router.replace(`/online/game-v2/${rematchAvailableId}`);
+  }, [finishedViewActive, normalizedGameId, rematchAvailableId, router]);
   const finalBlowText = useMemo(() => {
     const caller = roundState.lastBluffCaller ?? null;
     const defenderTruth =
@@ -1222,7 +1335,7 @@ export default function OnlineGameV2Screen() {
   useEffect(() => {
     const selfieNonce = roundState.lastSelfieNonce ?? 0;
     const selfieBy = roundState.lastSelfieBy ?? null;
-    if (!game || !myRole) return;
+    if (!gameStatus || !myRole) return;
     if (selfieNonce < lastSelfieNonceRef.current) {
       lastSelfieNonceRef.current = selfieNonce;
       return;
@@ -1231,14 +1344,14 @@ export default function OnlineGameV2Screen() {
     if (selfieNonce <= lastSelfieNonceRef.current) return;
     lastSelfieNonceRef.current = selfieNonce;
     if (selfieBy === myRole) return;
-    if (game.status !== 'in_progress') return;
+    if (gameStatus !== 'in_progress') return;
     setBanner({ text: 'Live selfie received' });
     selfieGlowAnim.setValue(0);
     Animated.sequence([
       Animated.timing(selfieGlowAnim, { toValue: 1, duration: 250, useNativeDriver: false }),
       Animated.timing(selfieGlowAnim, { toValue: 0, duration: 250, useNativeDriver: false }),
     ]).start();
-  }, [roundState.lastSelfieNonce, roundState.lastSelfieBy, game?.status, myRole, selfieGlowAnim]);
+  }, [roundState.lastSelfieNonce, roundState.lastSelfieBy, gameStatus, myRole, selfieGlowAnim]);
   const selfieGlowStyle = {
     borderWidth: 2,
     borderColor: selfieGlowAnim.interpolate({ inputRange: [0, 1], outputRange: ['#30363D', '#FE9902'] }),
@@ -1246,7 +1359,6 @@ export default function OnlineGameV2Screen() {
     shadowOpacity: selfieGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.9] }),
     shadowRadius: selfieGlowAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 12] }),
   };
-  const bluffResultNonceRef = useRef(roundState.bluffResultNonce ?? 0);
   useEffect(() => {
     const bluffNonce = roundState.bluffResultNonce ?? 0;
     const caller = roundState.lastBluffCaller ?? null;
@@ -1312,6 +1424,7 @@ export default function OnlineGameV2Screen() {
   const myTurnText = (() => {
     if (!game) return '';
     if (game.status === 'finished') return 'Match finished';
+    if (game.status === 'cancelled') return 'Match cancelled';
     if (!myRole) return 'You are not part of this match.';
     if (!game.guest_id) return 'Waiting for an opponent to join.';
     if (isMyTurn) {
@@ -1345,30 +1458,60 @@ export default function OnlineGameV2Screen() {
         hasRoundState: !!nextRound,
       });
 
+      // Snapshot so we can roll back if the server rejects the move.
+      const snapshot = gameRef.current && gameRef.current.id === normalizedGameId ? gameRef.current : null;
+
       if (nextRound) {
+        // Optimistic apply for responsiveness. `status` is deliberately NOT applied locally:
+        // finished/cancelled transitions must only ever come from server-confirmed rows.
+        const { status: _optimisticStatus, ...optimisticPayload } = updatePayload;
         setGame((prev) =>
           prev && prev.id === normalizedGameId
-            ? ({ ...(prev as OnlineGameV2), ...updatePayload, round_state: nextRound } as OnlineGameV2)
+            ? ({ ...(prev as OnlineGameV2), ...optimisticPayload, round_state: nextRound } as OnlineGameV2)
             : prev
         );
       }
+
+      const rollback = () => {
+        if (snapshot) {
+          setGame((prev) => (prev && prev.id === normalizedGameId ? snapshot : prev));
+        }
+        void refetchGame();
+      };
 
       let query = supabase.from('games_v2').update(updatePayload).eq('id', normalizedGameId);
       if (options?.requireCurrentPlayerId) {
         query = query.eq('current_player_id', options.requireCurrentPlayerId);
       }
-      const { data, error: updateError } = await query.select('id');
-      if (updateError) throw new Error(updateError.message);
+      let data: OnlineGameV2[] | null = null;
+      let updateError: { message: string } | null = null;
+      try {
+        const result = await query.select('*');
+        data = (result.data as OnlineGameV2[] | null) ?? null;
+        updateError = result.error;
+      } catch (err) {
+        rollback();
+        throw err;
+      }
+      if (updateError) {
+        rollback();
+        throw new Error(updateError.message);
+      }
       if (!data || data.length === 0) {
+        // The current_player_id guard did not match: someone else moved first.
+        rollback();
         throw new Error(OUT_OF_TURN_ERROR);
       }
+
+      // Server-confirmed row (this is where a real `finished` status arrives).
+      applyServerRow(data[0]);
 
       console.log('[ONLINE GAME] move persisted', {
         gameId: normalizedGameId,
         rows: data.length,
       });
     },
-    [normalizedGameId]
+    [applyServerRow, normalizedGameId, refetchGame]
   );
 
   const handleRoll = useCallback(async (ignoreRevealLock?: boolean) => {
@@ -1427,7 +1570,7 @@ export default function OnlineGameV2Screen() {
         Alert.alert('Roll failed', err.message ?? 'Could not save roll.');
       }
     } finally {
-      if (!cupPrototypeEnabled) setTimeout(() => setRollingAnim(false), 400);
+      if (!cupPrototypeEnabled) setTimeout(() => setRollingAnim(false), 700);
     }
   }, [
     game,
@@ -1875,6 +2018,15 @@ export default function OnlineGameV2Screen() {
     cupPrototypeEnabled,
     isOpponentClaimPhase,
   ]);
+  // Always points at the latest handleCallBluff so delayed cup callbacks never use a stale closure.
+  const handleDiceSettle = useCallback(() => {
+    void playDiceSettleHaptic(hapticsEnabled);
+  }, [hapticsEnabled]);
+
+  const handleCallBluffRef = useRef(handleCallBluff);
+  useEffect(() => {
+    handleCallBluffRef.current = handleCallBluff;
+  }, [handleCallBluff]);
 
   const handleCupAnimationComplete = useCallback(
     (completedPhase: DiceCupPhase) => {
@@ -1918,7 +2070,7 @@ export default function OnlineGameV2Screen() {
           cupTimerRef.current = null;
           pendingCupActionRef.current = null;
           onlineBluffRevealReadyRef.current = true;
-          void handleCallBluff(true);
+          void handleCallBluffRef.current(true);
         }, cupTheatrical ? 1500 : 900);
         return;
       }
@@ -1939,7 +2091,6 @@ export default function OnlineGameV2Screen() {
     },
     [
       cupTheatrical,
-      handleCallBluff,
       handleRoll,
       handleSocialRevealComplete,
       hapticsEnabled,
@@ -2048,8 +2199,13 @@ export default function OnlineGameV2Screen() {
     try {
       const newGameId = await requestRematchForGame(game, userId);
       if (newGameId) {
+        // We completed the pairing, so we are the rematch creator: navigate directly.
+        rematchCreatedLocallyRef.current = newGameId;
         await clearFinishedMatchSelfies(true);
         router.replace(`/online/game-v2/${newGameId}`);
+      } else {
+        // Waiting on the opponent; auto-follow once they accept.
+        rematchRequestedLocallyRef.current = game.id;
       }
     } catch (err) {
       console.error('[OnlineGameV2] Rematch request failed', err);
@@ -2104,6 +2260,43 @@ export default function OnlineGameV2Screen() {
           <SafeAreaView style={styles.safe}>
             <View style={styles.centered}>
               <Text style={styles.errorText}>You are not part of this game.</Text>
+              <StyledButton
+                label="Back to Lobby"
+                variant="primary"
+                onPress={() => router.replace('/online')}
+                style={{ marginTop: 20, minWidth: 200 }}
+              />
+            </View>
+          </SafeAreaView>
+        </FeltBackground>
+      </View>
+    );
+  }
+
+  if (game.status === 'cancelled') {
+    const lastEvent = [...roundState.history].reverse().find((entry) => entry.type === 'event');
+    const lastText = lastEvent?.type === 'event' ? lastEvent.text : '';
+    const cancelledBy: PlayerRole | null = lastText.startsWith('Host cancelled')
+      ? 'host'
+      : lastText.startsWith('Guest cancelled')
+        ? 'guest'
+        : !game.guest_id
+          ? 'host'
+          : null;
+    const cancellerName = cancelledBy === 'host' ? hostName : cancelledBy === 'guest' ? guestName : null;
+    const cancelledText =
+      cancelledBy && cancelledBy === myRole
+        ? 'You cancelled this match.'
+        : cancellerName
+          ? `Match was cancelled by ${cancellerName}.`
+          : 'This match was cancelled.';
+    return (
+      <View style={styles.root}>
+        <FeltBackground>
+          <SafeAreaView style={styles.safe}>
+            <View style={styles.centered}>
+              <Text style={styles.finishedText}>Match cancelled</Text>
+              <Text style={[styles.errorText, { marginTop: 8 }]}>{cancelledText}</Text>
               <StyledButton
                 label="Back to Lobby"
                 variant="primary"
@@ -2366,6 +2559,7 @@ export default function OnlineGameV2Screen() {
                 }
                 onCupSwipeSide={canGestureRivalCup ? handleCupSwipeSide : undefined}
                 onAnimationComplete={handleCupAnimationComplete}
+                onDiceSettle={handleDiceSettle}
               />
             ) : isMyTurn ? (
               <>
@@ -2375,6 +2569,7 @@ export default function OnlineGameV2Screen() {
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
                   size={100}
+                  colorway={getRollDiceColorways('player')[0]}
                   randomRestingPose={diceDisplayMode === 'values'}
                 />
                 <View style={{ width: 24 }} />
@@ -2384,6 +2579,7 @@ export default function OnlineGameV2Screen() {
                   displayMode={diceDisplayMode}
                   overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
                   size={100}
+                  colorway={getRollDiceColorways('player')[1]}
                   randomRestingPose={diceDisplayMode === 'values'}
                 />
               </>
@@ -2502,7 +2698,22 @@ export default function OnlineGameV2Screen() {
                   style={[styles.btn, styles.bottomRowButton, styles.goldOutlineButton]}
                 />
 
-                {showRematchButton ? (
+                {rematchAvailableId ? (
+                  <View style={styles.rematchWrapper}>
+                    <StyledButton
+                      label="Rematch available"
+                      variant="ghost"
+                      onPress={() => router.replace(`/online/game-v2/${rematchAvailableId}`)}
+                      style={[
+                        styles.btn,
+                        styles.bottomRowButton,
+                        styles.compactActionButton,
+                        styles.compactActionButtonActive,
+                      ]}
+                      textStyle={styles.rematchLabel}
+                    />
+                  </View>
+                ) : showRematchButton ? (
                   <View style={styles.rematchWrapper}>
                     <StyledButton
                       label={
@@ -3021,6 +3232,9 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   diceArea: {
+    // Above the surrounding panels so a lifted cup never disappears behind them.
+    zIndex: 6,
+    elevation: 6,
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',

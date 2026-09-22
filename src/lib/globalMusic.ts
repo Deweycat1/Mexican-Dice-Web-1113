@@ -1,82 +1,145 @@
-import { Audio } from 'expo-av';
+import { Audio, type AVPlaybackSource } from 'expo-av';
 
-let rollingMusic: Audio.Sound | null = null;
-let infernoMusic: Audio.Sound | null = null;
-let rollingLoaded = false;
-let rollingPlaying = false;
-let infernoLoaded = false;
-let infernoPlaying = false;
+let audioModePromise: Promise<void> | null = null;
 
-async function loadRollingMusic() {
-  if (rollingLoaded) return;
-  const { sound } = await Audio.Sound.createAsync(
-    require('../../assets/audio/infernodice.wav'),
-    { isLooping: true, shouldPlay: false }
-  );
-  rollingMusic = sound;
-  rollingLoaded = true;
-}
-
-async function loadInfernoMusic() {
-  if (infernoLoaded) return;
-  const { sound } = await Audio.Sound.createAsync(
-    require('../../assets/audio/infernomania.wav'),
-    { isLooping: true, shouldPlay: false }
-  );
-  infernoMusic = sound;
-  infernoLoaded = true;
-}
-
-export async function startRollingMusic() {
-  await loadRollingMusic();
-  if (!rollingMusic) return;
-  if (!rollingPlaying) {
-    await rollingMusic.playAsync();
-    rollingPlaying = true;
+/**
+ * Configure the shared audio session once, lazily, before the first Sound is
+ * created anywhere in the app. Safe to call repeatedly; concurrent callers share
+ * the same promise. Never rejects (a failure is logged and treated as done so
+ * playback can still be attempted).
+ */
+export function ensureAudioMode(): Promise<void> {
+  if (!audioModePromise) {
+    audioModePromise = Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+    })
+      .then(() => undefined)
+      .catch((error) => {
+        console.warn('Failed to configure audio mode', error);
+      });
   }
+  return audioModePromise;
 }
 
-export async function stopRollingMusic() {
-  if (!rollingMusic) return;
+type LoopTrack = {
+  label: string;
+  source: AVPlaybackSource;
+  sound: Audio.Sound | null;
+  /** In-flight createAsync; shared so concurrent starts never create two Sounds. */
+  loading: Promise<Audio.Sound> | null;
+  /** Whether the most recent start/stop call asked for playback. */
+  wanted: boolean;
+  playing: boolean;
+};
+
+const rolling: LoopTrack = {
+  label: 'rolling',
+  source: require('../../assets/audio/infernodice.wav'),
+  sound: null,
+  loading: null,
+  wanted: false,
+  playing: false,
+};
+
+const inferno: LoopTrack = {
+  label: 'inferno',
+  source: require('../../assets/audio/infernomania.wav'),
+  sound: null,
+  loading: null,
+  wanted: false,
+  playing: false,
+};
+
+/** Resolve the track's Sound, awaiting any in-flight load. Returns null on failure. */
+async function loadTrack(track: LoopTrack): Promise<Audio.Sound | null> {
+  if (track.sound) return track.sound;
+  if (!track.loading) {
+    track.loading = (async () => {
+      await ensureAudioMode();
+      const { sound } = await Audio.Sound.createAsync(track.source, {
+        isLooping: true,
+        shouldPlay: false,
+      });
+      track.sound = sound;
+      return sound;
+    })().finally(() => {
+      track.loading = null;
+    });
+  }
   try {
-    await rollingMusic.stopAsync();
+    return await track.loading;
   } catch (error) {
-    console.warn('Failed to stop rolling music', error);
-  }
-  rollingPlaying = false;
-}
-
-export async function unloadRollingMusic() {
-  if (!rollingMusic) return;
-  await rollingMusic.unloadAsync();
-  rollingMusic = null;
-  rollingLoaded = false;
-  rollingPlaying = false;
-}
-
-export async function startInfernoMusic() {
-  await loadInfernoMusic();
-  if (!infernoMusic) return;
-  if (!infernoPlaying) {
-    await infernoMusic.playAsync();
-    infernoPlaying = true;
+    console.warn(`Failed to load ${track.label} music`, error);
+    return null;
   }
 }
 
-export async function stopInfernoMusic() {
-  if (!infernoMusic) return;
+async function startTrack(track: LoopTrack) {
+  track.wanted = true;
+  const sound = await loadTrack(track);
+  // A stop/unload may have arrived while we were loading; honour the latest request.
+  if (!sound || !track.wanted || track.playing || track.sound !== sound) return;
   try {
-    await infernoMusic.stopAsync();
+    await sound.playAsync();
+    track.playing = true;
   } catch (error) {
-    console.warn('Failed to stop inferno music', error);
+    // Web autoplay policies reject play() until the user interacts; not fatal.
+    console.warn(`Failed to play ${track.label} music`, error);
   }
-  infernoPlaying = false;
 }
 
-export async function unloadInfernoMusic() {
-  if (!infernoMusic) return;
-  await infernoMusic.unloadAsync();
-  infernoMusic = null;
-  infernoLoaded = false;
-  infernoPlaying = false;
+async function stopTrack(track: LoopTrack) {
+  track.wanted = false;
+  if (track.loading) {
+    await loadTrack(track);
+  }
+  const sound = track.sound;
+  if (!sound) return;
+  try {
+    await sound.stopAsync();
+  } catch (error) {
+    console.warn(`Failed to stop ${track.label} music`, error);
+  }
+  track.playing = false;
+}
+
+async function unloadTrack(track: LoopTrack) {
+  track.wanted = false;
+  if (track.loading) {
+    await loadTrack(track);
+  }
+  const sound = track.sound;
+  track.sound = null;
+  track.playing = false;
+  if (!sound) return;
+  try {
+    await sound.unloadAsync();
+  } catch (error) {
+    console.warn(`Failed to unload ${track.label} music`, error);
+  }
+}
+
+export function startRollingMusic() {
+  return startTrack(rolling);
+}
+
+export function stopRollingMusic() {
+  return stopTrack(rolling);
+}
+
+export function unloadRollingMusic() {
+  return unloadTrack(rolling);
+}
+
+export function startInfernoMusic() {
+  return startTrack(inferno);
+}
+
+export function stopInfernoMusic() {
+  return stopTrack(inferno);
+}
+
+export function unloadInfernoMusic() {
+  return unloadTrack(inferno);
 }

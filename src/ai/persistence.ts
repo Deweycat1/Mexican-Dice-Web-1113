@@ -1,27 +1,13 @@
-const getFileSystem = () => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
-    return require('expo-file-system');
-  } catch {
-    return null;
-  }
-};
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const FileSystem: any = getFileSystem();
-const AI_STATE_FILENAME = 'ai_state.json';
-
-const getStatePath = (): string | null => {
-  if (!FileSystem || !FileSystem.documentDirectory) return null;
-  return `${FileSystem.documentDirectory}${AI_STATE_FILENAME}`;
-};
+// AsyncStorage is available on iOS, Android and web, so the AI's learned state is
+// persisted everywhere (the previous expo-file-system path silently skipped web).
+const AI_STATE_KEY = 'md_ai_state_v1';
 
 export const loadAiState = async <T>(): Promise<T | null> => {
   try {
-    const path = getStatePath();
-    if (!path) return null;
-    const info = await FileSystem.getInfoAsync(path);
-    if (!info?.exists) return null;
-    const data = await FileSystem.readAsStringAsync(path);
+    const data = await AsyncStorage.getItem(AI_STATE_KEY);
+    if (!data) return null;
     return JSON.parse(data) as T;
   } catch {
     return null;
@@ -30,10 +16,8 @@ export const loadAiState = async <T>(): Promise<T | null> => {
 
 export const saveAiState = async (state: unknown) => {
   try {
-    const path = getStatePath();
-    if (!path) return;
     const payload = JSON.stringify(state);
-    await FileSystem.writeAsStringAsync(path, payload);
+    await AsyncStorage.setItem(AI_STATE_KEY, payload);
   } catch {
     // swallow persistence errors; AI can continue learning in-memory
   }

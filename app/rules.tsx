@@ -3,7 +3,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText as Text } from '../src/components/AppText';
-import RulesContent from '../src/components/RulesContent';
+import { RulesContent } from '../src/components/RulesContent';
 
 export default function RulesScreen() {
   const router = useRouter();

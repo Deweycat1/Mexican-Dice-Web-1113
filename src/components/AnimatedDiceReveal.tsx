@@ -11,6 +11,8 @@ type AnimatedDiceRevealProps = {
   onRevealComplete?: () => void;
 };
 
+const MAX_REVEAL_MS = Platform.OS === 'android' ? 2600 : 2400;
+
 /**
  * Flip-animates a pair of dice from hidden ("?") faces to their actual values.
  * When `hidden` switches from true -> false, both dice flip horizontally (rotateY)
@@ -34,7 +36,13 @@ export default function AnimatedDiceReveal({
   const revealInProgressRef = useRef(false);
   const revealCompletedRef = useRef(false);
   const revealStartedRef = useRef(false);
-  const MAX_REVEAL_MS = Platform.OS === 'android' ? 2600 : 2400;
+
+  // Keep the latest callback in a ref so the flip effect does not depend on it:
+  // a parent re-render with a fresh inline callback must not restart the reveal.
+  const onRevealCompleteRef = useRef(onRevealComplete);
+  useEffect(() => {
+    onRevealCompleteRef.current = onRevealComplete;
+  }, [onRevealComplete]);
 
   const completeOnce = useCallback(
     (reason: 'finished' | 'fallback' | 'hidden' | 'unmount' | 'interrupted') => {
@@ -43,12 +51,12 @@ export default function AnimatedDiceReveal({
       if (__DEV__) {
         console.log('[AnimatedDiceReveal] complete', { reason });
       }
-      if (onRevealComplete) onRevealComplete();
+      onRevealCompleteRef.current?.();
     },
-    [onRevealComplete]
+    []
   );
 
-  const clearRevealTimers = () => {
+  const clearRevealTimers = useCallback(() => {
     if (revealDelayRef.current) {
       clearTimeout(revealDelayRef.current);
       revealDelayRef.current = null;
@@ -57,7 +65,7 @@ export default function AnimatedDiceReveal({
       clearTimeout(revealFallbackRef.current);
       revealFallbackRef.current = null;
     }
-  };
+  }, []);
 
   useEffect(() => {
     clearRevealTimers();
@@ -109,7 +117,7 @@ export default function AnimatedDiceReveal({
       revealInProgressRef.current = false;
       clearRevealTimers();
     };
-  }, [hidden, completeOnce, rotation, MAX_REVEAL_MS]);
+  }, [hidden, completeOnce, clearRevealTimers, rotation]);
 
   // Interpolate rotateY for 3D flip effect
   const rotateY = rotation.interpolate({

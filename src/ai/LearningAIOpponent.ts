@@ -215,11 +215,64 @@ class LinUCB {
     };
   }
 
-  load(state: { A: number[][]; b: number[] }) {
-    this.A = cloneMatrix(state.A);
-    this.b = [...state.b];
+  /**
+   * Restore a persisted snapshot. Returns false (and leaves the current weights
+   * untouched) when the shape is wrong, any number is non-finite, or the matrix
+   * is singular; a corrupt snapshot must never poison future decisions.
+   */
+  load(state: unknown): boolean {
+    if (!isPlainObject(state)) return false;
+    const { A, b } = state as { A?: unknown; b?: unknown };
+    if (!isFiniteMatrix(A, this.d) || !isFiniteVector(b, this.d)) return false;
+    try {
+      invertMatrix(A);
+    } catch {
+      return false;
+    }
+    this.A = cloneMatrix(A);
+    this.b = [...b];
+    return true;
   }
 }
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const isFiniteVector = (value: unknown, length: number): value is number[] =>
+  Array.isArray(value) && value.length === length && value.every(isFiniteNumber);
+
+const isFiniteMatrix = (value: unknown, size: number): value is number[][] =>
+  Array.isArray(value) &&
+  value.length === size &&
+  value.every((row) => isFiniteVector(row, size));
+
+/** A persisted Beta tracker: [alpha, beta], both finite and strictly positive. */
+const isBetaTuple = (value: unknown): value is [number, number] =>
+  Array.isArray(value) &&
+  value.length === 2 &&
+  isFiniteNumber(value[0]) &&
+  isFiniteNumber(value[1]) &&
+  value[0] > 0 &&
+  value[1] > 0;
+
+const CLAIM_CATEGORIES: readonly ClaimCategory[] = ['mexican', 'double', 'normal', 'special'];
+
+/**
+ * Fallback claim ladder (weakest -> strongest) matching engine/mexican.ts ranking:
+ * non-doubles by numeric value, then doubles 11..66, then Mexican (21).
+ * 41 is deliberately excluded: it must be shown, never claimed as a bluff.
+ */
+const FALLBACK_CLAIM_LADDER: readonly number[] = [
+  31, 32, 42, 43, 51, 52, 53, 54, 61, 62, 63, 64, 65,
+  11, 22, 33, 44, 55, 66,
+  21,
+];
+
+/** Claims at or above this rank are treated as "high" (62, 63, 64, 65, doubles, 21). */
+const HIGH_CLAIM_FLOOR = 62;
 
 type LastContext = {
   opponentId: string;
@@ -248,6 +301,9 @@ export class LearningAIDiceOpponent {
 
   private claimMatchesRollFn: ((claim: number | null, roll: number | DicePair | null) => boolean) | null = null;
 
+  /** Ordered claim ladder (weakest -> strongest), built lazily from the injected rules. */
+  private claimLadder: number[] | null = null;
+
   constructor(playerId = 'CPU') {
     this.playerId = playerId;
     this.bandit = new LinUCB(12, 0.35);
@@ -263,6 +319,75 @@ export class LearningAIDiceOpponent {
     this.nextHigherClaimFn = nextHigherFn;
     this.categorizeClaimFn = categorizeFn;
     this.claimMatchesRollFn = claimMatchesFn;
+    this.claimLadder = null;
+  }
+
+  /**
+   * Walks the injected `nextHigherClaim` from 31 upward to build the ordered ladder.
+   * 41 is skipped (it must be shown, not claimed). Falls back to the static ladder
+   * if the injected walk looks broken (too short or not ending at Mexican).
+   */
+  private getClaimLadder(): number[] {
+    if (this.claimLadder) return this.claimLadder;
+    const ladder: number[] = [];
+    let cursor: number | null = 31;
+    const seen = new Set<number>();
+    while (cursor != null && !seen.has(cursor) && ladder.length < 64) {
+      seen.add(cursor);
+      if (cursor !== 41) ladder.push(cursor);
+      cursor = this.nextHigherClaimFn ? this.nextHigherClaimFn(cursor) : null;
+    }
+    const looksValid = ladder.length >= 10 && ladder[ladder.length - 1] === 21;
+    this.claimLadder = looksValid ? ladder : [...FALLBACK_CLAIM_LADDER];
+    return this.claimLadder;
+  }
+
+  /**
+   * Position of a claim in the ranked ladder, scaled to 0..1 (31 -> 0, Mexican -> 1).
+   * Claims not on the ladder (e.g. 41) are placed by rank via `compareClaims`.
+   */
+  private claimStrength(claim: number): number {
+    const ladder = this.getClaimLadder();
+    if (ladder.length < 2) return 0;
+    const compare = this.compareClaimsFn;
+    const index = ladder.indexOf(claim);
+    if (index >= 0) return index / (ladder.length - 1);
+    if (!compare) return 0;
+    let below = 0;
+    for (const entry of ladder) {
+      if (compare(entry, claim) < 0) below += 1;
+    }
+    return Math.min(1, below / (ladder.length - 1));
+  }
+
+  /** True for claims ranked at or above 62 (62..65, every double, Mexican). */
+  private isHighClaim(claim: number | null): claim is number {
+    if (claim == null) return false;
+    return this.claimStrength(claim) >= this.claimStrength(HIGH_CLAIM_FLOOR);
+  }
+
+  /**
+   * How far above `floorClaim` a claim sits, as a 0..1 fraction of the remaining
+   * ladder (0 at or below the floor, 1 at Mexican). Replaces the old raw-number
+   * `(claim - 60) / 40` pressure, which misranked doubles and Mexican.
+   */
+  private pressureAbove(claim: number, floorClaim: number): number {
+    const floor = this.claimStrength(floorClaim);
+    const span = 1 - floor;
+    if (span <= 0) return 0;
+    const pressure = (this.claimStrength(claim) - floor) / span;
+    return Math.min(1, Math.max(0, pressure));
+  }
+
+  /** Next legal-to-claim value above `claim`, skipping 41 (show-only, never bluffable). */
+  private nextClaimAbove(claim: number): number | null {
+    let next = this.nextHigherClaimFn!(claim);
+    let guard = 0;
+    while (next === 41 && guard < 4) {
+      next = this.nextHigherClaimFn!(next);
+      guard += 1;
+    }
+    return next;
   }
 
   decideAction(
@@ -287,7 +412,7 @@ export class LearningAIDiceOpponent {
       truthReverses;
     const truthBeatsOrEquals =
       currentClaim != null && this.compareClaimsFn!(truthClaim, currentClaim) >= 0;
-    const isHighClaim = currentClaim != null && currentClaim >= 62;
+    const isHighClaim = this.isHighClaim(currentClaim);
     const truthIsOpeningDouble = noPreviousClaim && isDouble(truthClaim);
 
     if (truthLegal && (forcesTruth || truthBeats || truthIsOpeningDouble)) {
@@ -363,13 +488,13 @@ export class LearningAIDiceOpponent {
     // CRITICAL: Doubles are HARD to beat (need another double or Mexican), always high-stakes
     // Normal pairs are easier to beat (any higher pair or double)
     // Special claims (31, 41) are reverses - must evaluate separately
-    const isEasyToBeat = category === 'normal' && currentClaim < 62 && truthful != null;
-    
+    const isEasyToBeat = category === 'normal' && !isHighClaim && truthful != null;
+
     // For high-stakes claims (Mexican, ALL doubles, high pairs, specials), evaluate calling bluff
-    const isHighStakes = category === 'mexican' || 
+    const isHighStakes = category === 'mexican' ||
                          category === 'special' ||
                          category === 'double' ||  // ALL doubles are high-stakes (hard to beat)
-                         (category === 'normal' && currentClaim >= 62);
+                         (category === 'normal' && isHighClaim);
 
     if (isHighStakes) {
       // For high-stakes claims, use DIRECT probability comparison (not EV)
@@ -387,16 +512,16 @@ export class LearningAIDiceOpponent {
       } else if (category === 'double') {
         // Doubles are VERY hard to beat (1/36 each, need specific double or Mexican)
         // Be aggressive on ALL doubles since they're inherently suspicious
-        if (currentClaim >= 66) {
+        if (this.compareClaimsFn!(currentClaim, 66) >= 0) {
           pThreshold = 0.25;  // Very aggressive on 66 (only Mexican beats it)
-        } else if (currentClaim >= 55) {
+        } else if (this.compareClaimsFn!(currentClaim, 44) >= 0) {
           pThreshold = 0.30;  // Very aggressive on 55, 44
-        } else if (currentClaim >= 33) {
+        } else if (this.compareClaimsFn!(currentClaim, 22) >= 0) {
           pThreshold = 0.35;  // Aggressive on 33, 22
         } else {
           pThreshold = 0.40;  // Skeptical on 11 (easier to beat with any double)
         }
-      } else if (category === 'normal' && currentClaim >= 64) {
+      } else if (category === 'normal' && this.compareClaimsFn!(currentClaim, 64) >= 0) {
         // High normal pairs
         pThreshold = 0.45;
       } else if (category === 'special') {
@@ -409,7 +534,7 @@ export class LearningAIDiceOpponent {
           pThreshold = 0.05;  // Very aggressive (95% call rate) on reverses after Mexican/66
         } else {
           // If AI can't beat high claims (Mexican, high doubles), be aggressive
-          const canBeatHighClaims = truthful != null && this.compareClaimsFn!(truthful, 62) >= 0;
+          const canBeatHighClaims = truthful != null && this.isHighClaim(truthful);
           pThreshold = canBeatHighClaims ? 0.50 : 0.35; // More aggressive if weak roll
         }
       }
@@ -520,26 +645,42 @@ export class LearningAIDiceOpponent {
     };
   }
 
-  loadState(state: {
-    profiles?: Record<string, {
-      bluffRate: Record<string, [number, number]>;
-      callRate: [number, number];
-      smallRaisePref: [number, number];
-    }>;
-    bandit?: { A: number[][]; b: number[] };
-  }) {
-    if (state.bandit) {
+  /**
+   * Restore persisted learning. The payload comes from disk and may be stale,
+   * truncated or hand-edited, so every part is validated independently; any part
+   * that fails validation is ignored and its in-memory default is kept.
+   */
+  loadState(state: unknown) {
+    if (!isPlainObject(state)) return;
+
+    if (state.bandit !== undefined) {
       this.bandit.load(state.bandit);
     }
-    Object.entries(state.profiles ?? {}).forEach(([opponentId, data]) => {
+
+    const profiles = state.profiles;
+    if (!isPlainObject(profiles)) return;
+
+    Object.entries(profiles).forEach(([opponentId, data]) => {
+      if (!isPlainObject(data)) return;
       const profile = new OpponentProfile();
-      Object.entries(data.bluffRate ?? {}).forEach(([cat, [alpha, beta]]) => {
-        profile.bluffRate[cat as ClaimCategory] = new BetaTracker(alpha, beta);
-      });
-      const [callAlpha, callBeta] = data.callRate ?? [1, 1];
-      profile.callRate = new BetaTracker(callAlpha, callBeta);
-      const [smallAlpha, smallBeta] = data.smallRaisePref ?? [1, 1];
-      profile.smallRaisePref = new BetaTracker(smallAlpha, smallBeta);
+
+      const bluffRate = data.bluffRate;
+      if (isPlainObject(bluffRate)) {
+        CLAIM_CATEGORIES.forEach((cat) => {
+          const tuple = bluffRate[cat];
+          if (isBetaTuple(tuple)) {
+            profile.bluffRate[cat] = new BetaTracker(tuple[0], tuple[1]);
+          }
+        });
+      }
+
+      if (isBetaTuple(data.callRate)) {
+        profile.callRate = new BetaTracker(data.callRate[0], data.callRate[1]);
+      }
+      if (isBetaTuple(data.smallRaisePref)) {
+        profile.smallRaisePref = new BetaTracker(data.smallRaisePref[0], data.smallRaisePref[1]);
+      }
+
       profile.mexicanClaimCount = 0;
       profile.totalClaimCount = 0;
       this.profiles.set(opponentId, profile);
@@ -601,7 +742,7 @@ export class LearningAIDiceOpponent {
     }
     let claim: number | null = currentClaim;
     for (let i = 0; i < step; i += 1) {
-      const next = this.nextHigherClaimFn!(claim!);
+      const next = this.nextClaimAbove(claim!);
       if (next == null) {
         claim = 21;
         break;
@@ -615,7 +756,7 @@ export class LearningAIDiceOpponent {
     if (allowReverse) {
       // Bluffing a reverse is most tempting when the opponent made a high claim and
       // when we believe they rarely call. Let the chance scale with both factors.
-      const pressure = Math.max(0, currentClaim - 60) / 40; // grows as claims surpass 60
+      const pressure = this.pressureAbove(currentClaim, 61); // grows by rank above 61
       const baseChance = 0.15 + pressure * 0.25;
       const confidenceBonus = (1 - callMean) * 0.2;
       const reverseChance = Math.min(0.55, baseChance + confidenceBonus);
@@ -626,7 +767,7 @@ export class LearningAIDiceOpponent {
     if (allowMexicanBluff) {
       // Treat Mexican as a rare, nuclear bluff. Only consider it when the opponent pushed
       // very high and we think they rarely call.
-      const pressure = Math.max(0, currentClaim - 61) / 45;
+      const pressure = this.pressureAbove(currentClaim, 61);
       const baseChance = 0.05 + pressure * 0.12;
       const confidenceBonus = (1 - callMean) * 0.1;
       const mexicanChance = Math.min(0.25, baseChance + confidenceBonus);
@@ -641,7 +782,7 @@ export class LearningAIDiceOpponent {
     let claim: number | null = baseline;
     const steps = Math.random() < 0.66 ? 1 : 2;
     for (let i = 0; i < steps; i += 1) {
-      const next = this.nextHigherClaimFn!(claim!);
+      const next = this.nextClaimAbove(claim!);
       if (next == null) {
         claim = 21;
         break;
@@ -658,7 +799,7 @@ export class LearningAIDiceOpponent {
   private shouldConsiderReverseBluff(currentClaim: number | null, truthClaim: number) {
     if (currentClaim == null) return false;
     if (truthClaim === 21 || truthClaim === 31) return false;
-    return currentClaim >= 60;
+    return this.compareClaimsFn!(currentClaim, 61) >= 0;
   }
 
   private shouldConsiderMexicanBluff(currentClaim: number | null, truthClaim: number) {
@@ -666,7 +807,7 @@ export class LearningAIDiceOpponent {
     // Real 21s still exit early via the forcesTruth path; only consider bluffing Mexican
     // when we do NOT actually hold it and the player made a huge claim.
     if (truthClaim === 21) return false;
-    return currentClaim >= 61;
+    return this.compareClaimsFn!(currentClaim, 61) >= 0;
   }
 
   private categoryOneHot(category: ClaimCategory) {
@@ -684,7 +825,7 @@ export class LearningAIDiceOpponent {
     let steps = 0;
     let cursor: number | null = currentClaim;
     while (cursor != null && this.compareClaimsFn!(cursor, truth) < 0 && steps < 20) {
-      cursor = this.nextHigherClaimFn!(cursor);
+      cursor = this.nextClaimAbove(cursor);
       steps += 1;
     }
     return steps;
@@ -695,7 +836,7 @@ export class LearningAIDiceOpponent {
     let steps = 0;
     let cursor: number | null = a;
     while (cursor != null && this.compareClaimsFn!(cursor, b) < 0 && steps < 30) {
-      cursor = this.nextHigherClaimFn!(cursor);
+      cursor = this.nextClaimAbove(cursor);
       steps += 1;
     }
     return steps;

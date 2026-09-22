@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import LearningAIDiceOpponent from '../ai/LearningAIOpponent';
+import { LearningAIDiceOpponent } from '../ai/LearningAIOpponent';
 import { loadAiState, saveAiState } from '../ai/persistence';
 import type { DicePair } from '../engine/mexican';
 import { loadBestStreak, saveBestStreak } from './survivalStorage';
@@ -51,6 +52,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { getCurrentUser } from '../lib/auth';
 import { didCarry } from '../utils/carry';
+import { getOrCreateDeviceId } from '../utils/deviceId';
 import { createAnalyticsId, logEvent } from '../analytics/logEvent';
 
 export type Turn = 'player' | 'cpu';
@@ -164,21 +166,11 @@ const getWebStorage = (): StorageAPI => {
   };
 };
 
-const getNativeStorage = (): StorageAPI => {
-  try {
-    // Lazy require to avoid web bundling issues.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require('@react-native-async-storage/async-storage');
-    const asyncStorage = mod.default ?? mod;
-    return {
-      getItem: asyncStorage.getItem.bind(asyncStorage),
-      setItem: asyncStorage.setItem.bind(asyncStorage),
-      removeItem: asyncStorage.removeItem.bind(asyncStorage),
-    };
-  } catch {
-    return makeMemoryStorage();
-  }
-};
+const getNativeStorage = (): StorageAPI => ({
+  getItem: (key) => AsyncStorage.getItem(key),
+  setItem: (key, value) => AsyncStorage.setItem(key, value),
+  removeItem: (key) => AsyncStorage.removeItem(key),
+});
 
 const carryStorage: StorageAPI = Platform.OS === 'web' ? getWebStorage() : getNativeStorage();
 
@@ -406,7 +398,7 @@ export type Store = {
   mode: 'normal' | 'survival';
   currentStreak: number;
   bestStreak: number;
-  globalBest: number;
+  globalBest: number | null; // null = not fetched yet / unknown
   isSurvivalOver: boolean;
   survivalPlayerScore: number;
   survivalCpuScore: number;
@@ -448,6 +440,10 @@ const buildSurvivalChallengeReset = (): Pick<
 
 const isTestEnv = process.env.NODE_ENV === 'test';
 
+// An Inferno (survival) run that has ended must not accept or generate any more moves.
+const isSurvivalRunOver = (s: Pick<Store, 'mode' | 'isSurvivalOver'>) =>
+  s.mode === 'survival' && s.isSurvivalOver;
+
 export const useGameStore = create<Store>((set, get) => {
   const beginTurnLock = () => set({ turnLock: true });
   const endTurnLock = () => set({ turnLock: false });
@@ -460,7 +456,7 @@ export const useGameStore = create<Store>((set, get) => {
   const waitForCpuCupAnimation = (
     action: Omit<CpuCupAction, 'nonce'>
   ): Promise<void> => {
-    if (isTestEnv || Platform.OS === 'web') {
+    if (isTestEnv) {
       return Promise.resolve();
     }
 
@@ -531,10 +527,18 @@ export const useGameStore = create<Store>((set, get) => {
   const recordWin = async (winner: 'player' | 'cpu') => {
     if (isTestEnv) return;
     try {
+      // The win-stats endpoint keys the Quick Play win streak per device (it used to be one
+      // global counter shared by every player).
+      let deviceId: string | null = null;
+      try {
+        deviceId = await getOrCreateDeviceId();
+      } catch {
+        deviceId = null;
+      }
       await fetch('/api/win-stats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ winner }),
+        body: JSON.stringify(deviceId ? { winner, deviceId } : { winner }),
       });
     } catch (error) {
       console.error('Failed to record win:', error);
@@ -546,9 +550,6 @@ export const useGameStore = create<Store>((set, get) => {
     try {
       try {
         // Notify server of this device's survival run so we can track per-device bests
-        // Use deviceId stored locally (getOrCreateDeviceId)
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { getOrCreateDeviceId } = require('../utils/deviceId');
         const deviceId = await getOrCreateDeviceId();
         await fetch('/api/survival-run', {
           method: 'POST',
@@ -561,23 +562,6 @@ export const useGameStore = create<Store>((set, get) => {
       }
     } catch (error) {
       console.error('Failed to record survival run:', error);
-    }
-  };
-
-  const postClaimOutcome = async (params: { 
-    winner: 'player' | 'cpu'; 
-    winningClaim?: string | null; 
-    losingClaim?: string | null;
-  }) => {
-    if (isTestEnv) return;
-    try {
-      await fetch('/api/claim-outcome-stats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-    } catch (error) {
-      console.error('Failed to record claim outcome:', error);
     }
   };
 
@@ -737,10 +721,23 @@ export const useGameStore = create<Store>((set, get) => {
     } else {
       void playWinRoundHaptic(hapticsEnabled);
     }
-    const updatedPlayer = clampFloor(state.playerScore - (who === 'player' ? amount : 0));
-    const updatedCpu = clampFloor(state.cpuScore - (who === 'cpu' ? amount : 0));
+    const isSurvivalMode = state.mode === 'survival';
+    // Quick Play scoreboard only changes in Quick Play. Inferno (survival) keeps its own buckets and
+    // its run ends via isSurvivalOver, never via a 0 score, so `finished` is always false there.
+    const updatedPlayer = clampFloor(
+      state.playerScore - (!isSurvivalMode && who === 'player' ? amount : 0)
+    );
+    const updatedCpu = clampFloor(state.cpuScore - (!isSurvivalMode && who === 'cpu' ? amount : 0));
+    const updatedSP = clampFloor(
+      state.survivalPlayerScore - (isSurvivalMode && who === 'player' ? amount : 0)
+    );
+    const updatedSC = clampFloor(
+      state.survivalCpuScore - (isSurvivalMode && who === 'cpu' ? amount : 0)
+    );
     const loserScore = who === 'player' ? updatedPlayer : updatedCpu;
-    const finished = loserScore <= 0;
+    const finished = !isSurvivalMode && loserScore <= 0;
+    const shownPlayer = isSurvivalMode ? updatedSP : updatedPlayer;
+    const shownCpu = isSurvivalMode ? updatedSC : updatedCpu;
     if (finished) {
       // Update personal stats and check day-based badges in the background
       void (async () => {
@@ -748,9 +745,6 @@ export const useGameStore = create<Store>((set, get) => {
           const stats = await updatePersonalStatsOnGamePlayed();
           if (stats.totalDaysPlayed >= 7) {
             void awardBadge('welcome_back_7_days');
-          }
-          if (stats.currentDailyStreak >= 7) {
-            void awardBadge('inferno_week_7_day_streak');
           }
         } catch (err) {
           console.error('Failed to update personal stats after game end', err);
@@ -765,13 +759,11 @@ export const useGameStore = create<Store>((set, get) => {
 
     // Create a concise history entry object for scoreboard changes
     const entry = who === 'player'
-      ? { text: `${finalMessage} You: ${updatedPlayer} | Infernoman: ${updatedCpu}`, who: 'player' as const }
-      : { text: `${finalMessage} You: ${updatedPlayer} | Infernoman: ${updatedCpu}`, who: 'cpu' as const };
+      ? { text: `${finalMessage} You: ${shownPlayer} | Infernoman: ${shownCpu}`, who: 'player' as const }
+      : { text: `${finalMessage} You: ${shownPlayer} | Infernoman: ${shownCpu}`, who: 'cpu' as const };
 
     // Update the appropriate score bucket depending on mode
-    if (state.mode === 'survival') {
-      const updatedSP = clampFloor(state.survivalPlayerScore - (who === 'player' ? amount : 0));
-      const updatedSC = clampFloor(state.survivalCpuScore - (who === 'cpu' ? amount : 0));
+    if (isSurvivalMode) {
       set((prev) => ({
         survivalPlayerScore: updatedSP,
         survivalCpuScore: updatedSC,
@@ -803,16 +795,6 @@ export const useGameStore = create<Store>((set, get) => {
           correctBluffEvents: state.playerSuccessfulBluffsThisGame,
         });
         
-        // Record winning/losing claims for Quick Play
-        // Use the last claim made (normalized roll code)
-        const finalClaim = state.lastClaim ? String(state.lastClaim) : null;
-        
-        void postClaimOutcome({
-          winner,
-          winningClaim: winner === 'player' ? finalClaim : null,
-          losingClaim: winner === 'cpu' ? finalClaim : null,
-        });
-
         // Track claim risk: Find the last claim made by each player from claims history
         // This ensures we track both winner's wins and loser's losses
         const playerLastClaim = state.claims
@@ -897,28 +879,23 @@ export const useGameStore = create<Store>((set, get) => {
           void saveBestStreak(newBest);
           set({ bestStreak: newBest, isSurvivalOver: true });
           // Award global record breaker badge only when this run beats the known global best
-          if (prevStreak > (s.globalBest || 0)) {
+          // Only when the global best is actually known; an unknown/failed fetch must not award it.
+          if (typeof s.globalBest === 'number' && prevStreak > s.globalBest) {
             void awardBadge('inferno_record_breaker');
           }
           // record streak end event using the final streak value
           pushSurvivalEvent(`💀 Streak ended at ${prevStreak}`);
-          // Submit the streak to global best
-          void submitGlobalBest(prevStreak);
           // Record survival run to average calculation
           void recordSurvivalRun(prevStreak);
           void recordPlayerSurvivalRun({ streak: prevStreak });
-          // Update global rank based on survival streak and bluff behavior (non-blocking).
+          // Report the run to the rank service exactly once (it used to be reported three times,
+          // inflating survival_runs), then refresh the global best from the server.
           void updateRankFromGameResult({
             mode: 'survival',
             survivalStreak: prevStreak,
             bluffEvents: s.playerBluffEventsThisGame,
             correctBluffEvents: s.playerSuccessfulBluffsThisGame,
-          });
-          // Update global rank based on survival streak (non-blocking).
-          void updateRankFromGameResult({
-            mode: 'survival',
-            survivalStreak: prevStreak,
-          });
+          }).then(() => fetchGlobalBest());
           // Survival run completion also counts as a played game for personal stats
           void (async () => {
             try {
@@ -1007,6 +984,7 @@ export const useGameStore = create<Store>((set, get) => {
     const survivalReset = buildSurvivalChallengeReset();
     set({
       ...survivalReset,
+      history: [],
       mode: 'survival',
       currentMatchId: matchId,
       currentStreak: 0,
@@ -1140,7 +1118,9 @@ export const useGameStore = create<Store>((set, get) => {
     if (isTestEnv) return;
     try {
       const streak = await getGlobalSurvivalBest(1);
-      set({ globalBest: streak });
+      if (streak !== null) {
+        set({ globalBest: streak });
+      }
     } catch (error) {
       console.error('Error fetching global best:', error);
       // Keep current globalBest value on error
@@ -1209,6 +1189,7 @@ export const useGameStore = create<Store>((set, get) => {
       mode: state.mode === 'survival' ? 'survival' : 'normal',
       matchId: state.currentMatchId ?? null,
       metadata: {
+        round: roundIndexCounter,
         caller: caller === 'player' ? 'player' : 'cpu',
         successful: callerWasCorrect,
         claimed: lastClaim,
@@ -1319,7 +1300,7 @@ export const useGameStore = create<Store>((set, get) => {
 
     const result = applyLoss(loser, lossAmount, message);
 
-    console.log('[INFERNO] processCallBluff resolved', {
+    if (__DEV__) console.log('[INFERNO] processCallBluff resolved', {
       mode: state.mode,
       caller,
       loser,
@@ -1353,10 +1334,13 @@ export const useGameStore = create<Store>((set, get) => {
 
   const cpuTurn = async () => {
     const start = get();
-    if (start.gameOver || start.turn !== 'cpu' || start.turnLock) {
+    if (start.gameOver || start.turn !== 'cpu' || start.turnLock || isSurvivalRunOver(start)) {
       return;
     }
     const startMode = start.mode;
+    // True once this CPU turn must stop: game over, turn changed, mode switched, or the Inferno run ended.
+    const cpuTurnAborted = (s: Store) =>
+      s.gameOver !== null || s.turn !== 'cpu' || s.mode !== startMode || isSurvivalRunOver(s);
     const hapticsEnabled = isHapticsEnabled();
 
     const shouldForceInfernoDelay = start.pendingInfernoDelay;
@@ -1375,8 +1359,7 @@ export const useGameStore = create<Store>((set, get) => {
       await new Promise((resolve) => setTimeout(resolve, thinkingDelay));
 
       const state = get();
-      if (state.gameOver || state.turn !== 'cpu') return;
-      if (state.mode !== startMode) return;
+      if (cpuTurnAborted(state)) return;
 
   const { lastClaim, baselineClaim } = state;
       const previousClaim = lastClaim ?? null;
@@ -1413,7 +1396,7 @@ export const useGameStore = create<Store>((set, get) => {
           });
         }
         const current = get();
-        if (current.gameOver || current.turn !== 'cpu' || current.mode !== startMode) return;
+        if (cpuTurnAborted(current)) return;
 
         void playSpecialClaimHaptic(41, hapticsEnabled);
         // Record CPU showing Social in history BEFORE resetting
@@ -1517,7 +1500,7 @@ export const useGameStore = create<Store>((set, get) => {
           claim: lastClaim,
         });
         const current = get();
-        if (current.gameOver || current.turn !== 'cpu' || current.mode !== startMode) return;
+        if (cpuTurnAborted(current)) return;
         const result = processCallBluff('cpu');
         endTurnLock();
         set({ isBusy: false });
@@ -1553,12 +1536,7 @@ export const useGameStore = create<Store>((set, get) => {
       }
 
       const actionFlag: LastAction =
-        lastClaim === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
-
-      if (previousClaim != null) {
-        aiOpponent.observeOpponentRaiseSize('player', previousClaim, claim);
-        persistAiState();
-      }
+        activeChallenge === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
 
       pendingCpuRaise = {
         claim,
@@ -1582,7 +1560,7 @@ export const useGameStore = create<Store>((set, get) => {
         });
       }
       const current = get();
-      if (current.gameOver || current.turn !== 'cpu' || current.mode !== startMode) return;
+      if (cpuTurnAborted(current)) return;
 
       const message = (() => {
         if (previousClaim != null && isReverseOf(previousClaim, claim)) {
@@ -1713,7 +1691,7 @@ export const useGameStore = create<Store>((set, get) => {
       mode: 'normal',
       currentStreak: 0,
       bestStreak: 0,
-      globalBest: 0,
+      globalBest: null,
       isSurvivalOver: false,
 
       startQuickPlayMatch,
@@ -1771,7 +1749,7 @@ export const useGameStore = create<Store>((set, get) => {
 
     playerRoll: () => {
       const state = get();
-      if (state.gameOver || state.turn !== 'player' || state.turnLock) return;
+      if (state.gameOver || state.turn !== 'player' || state.turnLock || isSurvivalRunOver(state)) return;
       if (state.lastPlayerRoll !== null) return;
 
       const hapticsEnabled = isHapticsEnabled();
@@ -1847,7 +1825,7 @@ export const useGameStore = create<Store>((set, get) => {
 
     playerClaim: (claim: number) => {
       const state = get();
-      if (state.gameOver || state.turn !== 'player' || state.turnLock) return;
+      if (state.gameOver || state.turn !== 'player' || state.turnLock || isSurvivalRunOver(state)) return;
       const hapticsEnabled = isHapticsEnabled();
       void playClaimHaptic(hapticsEnabled);
 
@@ -1951,8 +1929,16 @@ export const useGameStore = create<Store>((set, get) => {
         return;
       }
 
+      // A 31 answered to an active Inferno challenge (directly or through an earlier reverse)
+      // keeps the double penalty, matching coreGame.applyClaim.
       const action: LastAction =
-        prev === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
+        activeChallenge === 21 && claim === 31 ? 'reverseVsMexican' : 'normal';
+
+      // Let the AI profile how big the player's raises are (previous CPU claim -> player claim).
+      if (prev != null) {
+        aiOpponent.observeOpponentRaiseSize('player', prev, claim);
+        persistAiState();
+      }
 
       const message = (() => {
       if (prev != null && isReverseOf(prev, claim)) {
@@ -2043,7 +2029,7 @@ export const useGameStore = create<Store>((set, get) => {
 
     callBluff: () => {
       const state = get();
-      if (state.gameOver || state.turnLock) return;
+      if (state.gameOver || state.turnLock || isSurvivalRunOver(state)) return;
       
       // Record turn duration if we have a start time and it's player's turn
       if (state.turn === 'player' && state.playerTurnStartTime !== null) {
@@ -2066,7 +2052,7 @@ export const useGameStore = create<Store>((set, get) => {
       
       const result = processCallBluff(caller);
 
-      console.log('[INFERNO] callBluff result', {
+      if (__DEV__) console.log('[INFERNO] callBluff result', {
         mode: state.mode,
         caller,
         result,
@@ -2086,7 +2072,7 @@ export const useGameStore = create<Store>((set, get) => {
         caller === 'player' &&
         result.loser === 'cpu'
       ) {
-        console.log('[INFERNO] player won point, handing turn back to player');
+        if (__DEV__) console.log('[INFERNO] player won point, handing turn back to player');
         if (__DEV__) {
           console.log('[INFERNO] survival bluff outcome', {
             loser: result.loser,

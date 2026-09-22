@@ -80,7 +80,7 @@ export default function SecretStatsScreen() {
   const [survivalBest, setSurvivalBest] = useState<SurvivalBestData | null>(null);
   const [survivalOver10, setSurvivalOver10] = useState<{ totalSurvivalUsers: number; survivalOver10Users: number; survivalOver10Rate: number } | null>(null);
   const [quickPlayBest, setQuickPlayBest] = useState<QuickPlayBestData | null>(null);
-  const [averageStreak, setAverageStreak] = useState<number | null>(null);
+  const [averageStreak] = useState<number | null>(null);
   const [survivalAverage, setSurvivalAverage] = useState<SurvivalAverageData | null>(null);
   const [playerWins, setPlayerWins] = useState<number>(0);
   const [cpuWins, setCpuWins] = useState<number>(0);
@@ -325,26 +325,37 @@ export default function SecretStatsScreen() {
       setIsResetting(true);
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
-      const res = await fetch(`${baseUrl}/api/admin/reset-stats`, {
+      const res = await fetch(`${baseUrl}/api/admin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password: entered }),
+        body: JSON.stringify({ action: 'reset-stats', password: entered }),
       });
+
+      // The endpoint may answer with a non-JSON body (e.g. a 404 page when the
+      // route is not deployed or ADMIN_RESET_PASSWORD is unset), so only parse
+      // JSON when the content-type says it is JSON.
+      const isJson = (res.headers.get('content-type') ?? '').includes('application/json');
+      const payload: { error?: string; message?: string } | null = isJson
+        ? await res.json().catch(() => null)
+        : null;
 
       if (!res.ok) {
         if (res.status === 401) {
-          const errorData = await res.json();
-          setResetMessage(errorData.error || "Incorrect password. Stats were NOT reset.");
+          setResetMessage(payload?.error || "Incorrect password. Stats were NOT reset.");
+          setPendingConfirm(false);
+          return;
+        }
+        if (res.status === 404) {
+          setResetMessage("Reset endpoint is not available (admin password not configured). Stats were NOT reset.");
           setPendingConfirm(false);
           return;
         }
         throw new Error(`Reset failed with status ${res.status}`);
       }
 
-      const data = await res.json();
-      setResetMessage(data.message || "All stats have been reset successfully.");
+      setResetMessage(payload?.message || "All stats have been reset successfully.");
       setPendingConfirm(false);
 
       // Refresh stats after successful reset
@@ -357,19 +368,6 @@ export default function SecretStatsScreen() {
       setPendingConfirm(false);
     } finally {
       setIsResetting(false);
-    }
-  };
-
-  const getRollLabel = (roll: string): string => {
-    switch (roll) {
-      case '21':
-        return '21 (Inferno)';
-      case '31':
-        return '31 (Reverse)';
-      case '41':
-        return '41 (Social)';
-      default:
-        return roll;
     }
   };
 
@@ -407,7 +405,7 @@ export default function SecretStatsScreen() {
     );
   }
 
-  const totalGames = ponolayerWins + cpuWins;
+  const totalGames = playerWins + cpuWins;
   const playerWinRate = totalGames > 0 ? (playerWins / totalGames) * 100 : 0;
   const cpuWinRate = totalGames > 0 ? (cpuWins / totalGames) * 100 : 0;
   const carryPercent =

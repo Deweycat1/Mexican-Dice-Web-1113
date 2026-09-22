@@ -151,13 +151,6 @@ export default function RollClaimComparisonScreen() {
     return 'balanced';
   };
 
-  const getCategoryEmoji = (category: BluffCategory): string => {
-    if (category === 'balanced') {
-      return '⚖️';
-    }
-    return '';
-  };
-
   const getCategoryLabel = (category: BluffCategory): string => {
     switch (category) {
       case 'over':

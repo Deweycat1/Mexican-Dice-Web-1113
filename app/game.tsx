@@ -44,7 +44,7 @@ import { getRestingCupPhase } from '../src/lib/cupState';
 import { pickRandomLine, rivalPointWinLines, userPointWinLines } from '../src/lib/dialogLines';
 import { playDiceRollSound } from '../src/lib/diceRollSound';
 import { playGameResultSound } from '../src/lib/gameSounds';
-import { playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
+import { playDiceSettleHaptic, playRollHaptic, playToggleHaptic } from '../src/lib/haptics';
 import { loadBadges } from '../src/stats/badges';
 import { type BadgeMeta, getBadgeMeta } from '../src/stats/badgeMetadata';
 import { type PointEvent, type SocialEvent, useGameStore } from '../src/state/useGameStore';
@@ -222,7 +222,8 @@ export default function Game() {
   const { height } = useWindowDimensions();
   const isSmallScreen = height < 700;
   const isTallScreen = height > 820;
-  const cupPrototypeEnabled = Platform.OS !== 'web';
+  // The leather-cup stage is the one dice experience on every platform, web included.
+  const cupPrototypeEnabled = true;
   const hapticsEnabled = useSettingsStore((state) => state.hapticsEnabled);
   const musicEnabled = useSettingsStore((state) => state.musicEnabled);
   const sfxEnabled = useSettingsStore((state) => state.sfxEnabled);
@@ -324,6 +325,18 @@ export default function Game() {
   } = useGameStore();
   const lastRenderedPointEventNonceRef = useRef(lastPointEvent?.nonce ?? 0);
   const lastRenderedSocialEventNonceRef = useRef(lastSocialEvent?.nonce ?? 0);
+  // Auto-hide timer for the dialog banner (tracked so it can be cleared/replaced).
+  const dialogHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openingLineTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The store resets lastPointEvent/lastSocialEvent/cpuCupAction to null on newGame()
+  // and exitSurvivalToNormal(), so nonces restart at 1. Reset our "last rendered"
+  // refs so the first overlays of a fresh game are not swallowed.
+  const resetEventNonceRefs = useCallback(() => {
+    lastRenderedPointEventNonceRef.current = 0;
+    lastRenderedSocialEventNonceRef.current = 0;
+    lastCpuCupActionNonceRef.current = 0;
+  }, []);
 
   const narration = (buildBanner?.() || getBaseMessage() || '').trim();
   const lastClaimValue = resolveActiveChallenge(baselineClaim, lastClaim);
@@ -354,6 +367,7 @@ export default function Game() {
   useFocusEffect(
     useCallback(() => {
       exitSurvivalToNormal();
+      resetEventNonceRefs();
       startQuickPlayMatch();
       return () => {
         if (bluffResolutionTimerRef.current) {
@@ -378,7 +392,7 @@ export default function Game() {
         setIsRevealAnimating(false);
         if (state.mode === 'normal') completeCpuCupAction();
       };
-    }, [completeCpuCupAction, exitSurvivalToNormal, startQuickPlayMatch])
+    }, [completeCpuCupAction, exitSurvivalToNormal, resetEventNonceRefs, startQuickPlayMatch])
   );
 
   useEffect(() => {
@@ -591,16 +605,20 @@ export default function Game() {
       }
       return "You believe Infernoman. The hidden dice leave the table.";
     }
-    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'cpu-bluff') {
+    // Hold the "lifting" narration until the reveal has actually resolved; otherwise the store's
+    // previous message flashes back for a beat between the cup landing and the verdict.
+    const cupLiftInProgress =
+      cupPhase === 'revealing' || (cupPhase === 'revealed' && isRevealAnimating);
+    if (cupLiftInProgress && pendingCupActionRef.current === 'cpu-bluff') {
       return 'Infernoman calls your bluff and lifts the cup...';
     }
-    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'cpu-social') {
+    if (cupLiftInProgress && pendingCupActionRef.current === 'cpu-social') {
       return 'Infernoman lifts the cup and reveals Social...';
     }
-    if (cupPhase === 'revealing' && pendingCupActionRef.current === 'bluff') {
+    if (cupLiftInProgress && pendingCupActionRef.current === 'bluff') {
       return "Calling the bluff...lift Infernoman's cup.";
     }
-    if (cupPhase === 'revealing') {
+    if (cupLiftInProgress) {
       return 'Lifting the cup to reveal your roll...';
     }
     if (turn === 'cpu' && cupPhase === 'covered') {
@@ -613,6 +631,7 @@ export default function Game() {
     cupTheatrical,
     hasPeeked,
     hasRolled,
+    isRevealAnimating,
     narration,
     turn,
   ]);
@@ -680,6 +699,11 @@ export default function Game() {
 
   useEffect(() => {
     if (!cupPrototypeEnabled || !isFocused || mode !== 'normal' || !cpuCupAction) return;
+    // A nonce lower than what we last handled means the store restarted its counter
+    // (new game / mode switch); treat the incoming event as new.
+    if (cpuCupAction.nonce < lastCpuCupActionNonceRef.current) {
+      lastCpuCupActionNonceRef.current = cpuCupAction.nonce - 1;
+    }
     if (cpuCupAction.nonce <= lastCpuCupActionNonceRef.current) return;
 
     lastCpuCupActionNonceRef.current = cpuCupAction.nonce;
@@ -734,7 +758,12 @@ export default function Game() {
 
   // Dialog system function
   const showDialog = useCallback((speaker: Speaker, line: string) => {
-    console.log('showDialog called:', speaker, line);
+    if (__DEV__) console.log('showDialog called:', speaker, line);
+    // Clear any pending auto-hide from a previous dialog so it can't hide this one early.
+    if (dialogHideTimerRef.current) {
+      clearTimeout(dialogHideTimerRef.current);
+      dialogHideTimerRef.current = null;
+    }
     setDialogSpeaker(speaker);
     setDialogLine(line);
     setDialogVisible(true);
@@ -744,9 +773,11 @@ export default function Game() {
       toValue: 1,
       duration: 220,
       useNativeDriver: true,
-    }).start(() => {
+    }).start(({ finished }) => {
+      if (!finished) return;
       // Auto hide after delay
-      setTimeout(() => {
+      dialogHideTimerRef.current = setTimeout(() => {
+        dialogHideTimerRef.current = null;
         Animated.timing(dialogAnim, {
           toValue: 0,
           duration: 220,
@@ -757,6 +788,20 @@ export default function Game() {
       }, 2000);
     });
   }, [dialogAnim]);
+
+  // Clear dialog timers on unmount.
+  useEffect(() => {
+    return () => {
+      if (dialogHideTimerRef.current) {
+        clearTimeout(dialogHideTimerRef.current);
+        dialogHideTimerRef.current = null;
+      }
+      if (openingLineTimerRef.current) {
+        clearTimeout(openingLineTimerRef.current);
+        openingLineTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // End-of-game banner function
   const showEndBanner = useCallback((type: EndBannerType) => {
@@ -809,7 +854,7 @@ export default function Game() {
     
     if (playerScore < prevScore && prevScore > 0) {
       // Player lost points
-      console.log('Player lost point:', prevScore, '->', playerScore);
+      if (__DEV__) console.log('Player lost point:', prevScore, '->', playerScore);
       
       // Trigger score animation
       userScoreAnim.setValue(0);
@@ -828,7 +873,7 @@ export default function Game() {
       
       // Rival speaks
       const line = pickRandomLine(rivalPointWinLines);
-      console.log('Rival says:', line);
+      if (__DEV__) console.log('Rival says:', line);
       showDialog('rival', line);
     }
     
@@ -841,7 +886,7 @@ export default function Game() {
     
     if (cpuScore < prevScore && prevScore > 0) {
       // CPU lost points
-      console.log('CPU lost point:', prevScore, '->', cpuScore);
+      if (__DEV__) console.log('CPU lost point:', prevScore, '->', cpuScore);
       
       // Trigger score animation
       rivalScoreAnim.setValue(0);
@@ -860,7 +905,7 @@ export default function Game() {
       
       // User speaks
       const line = pickRandomLine(userPointWinLines);
-      console.log('User says:', line);
+      if (__DEV__) console.log('User says:', line);
       showDialog('user', line);
     }
     
@@ -907,6 +952,10 @@ export default function Game() {
 
   useEffect(() => {
     if (!lastPointEvent) return;
+    // Nonce restarted (new game / mode switch): treat as a fresh event.
+    if (lastPointEvent.nonce < lastRenderedPointEventNonceRef.current) {
+      lastRenderedPointEventNonceRef.current = lastPointEvent.nonce - 1;
+    }
     if (lastPointEvent.nonce <= lastRenderedPointEventNonceRef.current) return;
 
     lastRenderedPointEventNonceRef.current = lastPointEvent.nonce;
@@ -920,6 +969,10 @@ export default function Game() {
 
   useEffect(() => {
     if (!lastSocialEvent) return;
+    // Nonce restarted (new game / mode switch): treat as a fresh event.
+    if (lastSocialEvent.nonce < lastRenderedSocialEventNonceRef.current) {
+      lastRenderedSocialEventNonceRef.current = lastSocialEvent.nonce - 1;
+    }
     if (lastSocialEvent.nonce <= lastRenderedSocialEventNonceRef.current) return;
 
     lastRenderedSocialEventNonceRef.current = lastSocialEvent.nonce;
@@ -1046,7 +1099,8 @@ export default function Game() {
       if (!hasRolledThisGame) setHasRolledThisGame(true);
       setRollingAnim(true);
       playerRoll();
-      setTimeout(() => setRollingAnim(false), 400);
+      // One full 600 ms spin cycle plus the unwind, instead of a 400 ms twitch.
+      setTimeout(() => setRollingAnim(false), 700);
       return;
     }
 
@@ -1079,9 +1133,13 @@ export default function Game() {
     beginPlayerCupRoll();
   }
 
+  const handleDiceSettle = useCallback(() => {
+    void playDiceSettleHaptic(hapticsEnabled);
+  }, [hapticsEnabled]);
+
   function handleCallBluff() {
     if (controlsDisabled) return;
-    console.log("BLUFF: Player called Rival's bluff", { lastClaim, lastCpuRoll, lastAction });
+    if (__DEV__) console.log("BLUFF: Player called Rival's bluff", { lastClaim, lastCpuRoll, lastAction });
 
     if (cupPrototypeEnabled) {
       void playToggleHaptic(hapticsEnabled);
@@ -1091,7 +1149,7 @@ export default function Game() {
       return;
     }
 
-    console.log('BLUFF: Revealing Rival dice regardless of truth state');
+    if (__DEV__) console.log('BLUFF: Revealing Rival dice regardless of truth state');
     setIsRevealAnimating(true);
     setShouldRevealCpuDice(true);
     setPendingCpuBluffResolution(true);
@@ -1131,6 +1189,7 @@ export default function Game() {
   const startFreshGame = useCallback(() => {
     void captureBadgeBaseline();
     newGame();
+    resetEventNonceRefs();
     pendingSocialRecapRef.current = null;
     setRoundRecap(null);
     setMatchSummaryVisible(false);
@@ -1151,8 +1210,19 @@ export default function Game() {
       setScoreDiceAnimKey((k) => k + 1);
     }
     const openingLine = pickRandomRivalLine();
-    setTimeout(() => showDialog('rival', openingLine), 300);
-  }, [captureBadgeBaseline, newGame, setHasRolledThisGame, setScoreDiceAnimKey, showDialog]);
+    if (openingLineTimerRef.current) clearTimeout(openingLineTimerRef.current);
+    openingLineTimerRef.current = setTimeout(() => {
+      openingLineTimerRef.current = null;
+      showDialog('rival', openingLine);
+    }, 300);
+  }, [
+    captureBadgeBaseline,
+    newGame,
+    resetEventNonceRefs,
+    setHasRolledThisGame,
+    setScoreDiceAnimKey,
+    showDialog,
+  ]);
 
   const handleNewGamePress = useCallback(() => {
     startFreshGame();
@@ -1165,7 +1235,8 @@ export default function Game() {
 
   const handleMainMenuPress = useCallback(() => {
     setMatchSummaryVisible(false);
-    router.replace('/');
+    // Pop back to the root instead of replacing, so the stack does not accumulate screens.
+    router.dismissTo('/');
   }, [router]);
 
   const handleCpuRevealComplete = useCallback(() => {
@@ -1185,7 +1256,7 @@ export default function Game() {
     const nonce = cpuSocialRevealNonce;
     const dice = cpuSocialDice;
 
-    console.log('[CPU SOCIAL REVEAL] effect', {
+    if (__DEV__) console.log('[CPU SOCIAL REVEAL] effect', {
       source: 'game.tsx',
       nonce,
       refNonce: socialRevealNonceRef.current,
@@ -1209,12 +1280,12 @@ export default function Game() {
         return;
       }
       if (isRecapVisible) {
-        console.log('[CPU SOCIAL REVEAL] waiting for round recap to close');
+        if (__DEV__) console.log('[CPU SOCIAL REVEAL] waiting for round recap to close');
         return;
       }
 
       socialRevealNonceRef.current = nonce;
-      console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
+      if (__DEV__) console.log('[CPU SOCIAL REVEAL] starting reveal due to nonce bump');
       setSocialDiceValues(dice);
       setShowSocialReveal(true);
       setIsRevealAnimating(true);
@@ -1586,6 +1657,7 @@ export default function Game() {
                     }
                     onCupSwipeSide={canGestureRivalCup ? handleCupSwipeSide : undefined}
                     onAnimationComplete={handleCupAnimationComplete}
+                    onDiceSettle={handleDiceSettle}
                   />
                 ) : (
                   <>
@@ -1594,6 +1666,7 @@ export default function Game() {
                       rolling={rolling}
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Your' : undefined}
+                      colorway={getRollDiceColorways(turn === 'player' ? 'player' : 'cpu')[0]}
                       randomRestingPose={diceDisplayMode === 'values'}
                     />
                     <View style={{ width: DICE_SPACING }} />
@@ -1602,6 +1675,7 @@ export default function Game() {
                       rolling={rolling}
                       displayMode={diceDisplayMode}
                       overlayText={diceDisplayMode === 'prompt' ? 'Roll' : undefined}
+                      colorway={getRollDiceColorways(turn === 'player' ? 'player' : 'cpu')[1]}
                       randomRestingPose={diceDisplayMode === 'values'}
                     />
                   </>
@@ -1686,7 +1760,7 @@ export default function Game() {
                 <StyledButton
                   label="Menu"
                   variant="ghost"
-                  onPress={() => router.push('/')}
+                  onPress={() => router.dismissTo('/')}
                   style={[styles.btn, styles.menuBtnBlueOutline]}
                   textStyle={styles.footerButtonTextSmall}
                 />
@@ -2018,6 +2092,9 @@ const styles = StyleSheet.create({
   },
   diceArea: {
     position: 'relative',
+    // Above the events/history panels so a lifted cup never disappears behind them.
+    zIndex: 6,
+    elevation: 6,
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2036,6 +2113,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 14,
     marginTop: -DIE_SIZE * 1.5,
+    // Overlaps the bottom of the dice area, so it must stack above it to stay tappable.
+    position: 'relative',
+    zIndex: 10,
+    elevation: 10,
   },
   actionRow: {
     flexDirection: 'row',

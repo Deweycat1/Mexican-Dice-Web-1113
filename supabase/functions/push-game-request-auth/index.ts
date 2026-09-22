@@ -1,6 +1,9 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.1';
 
+/** Never log a full Expo push token; the last 6 characters are enough to correlate. */
+const redactToken = (token: string): string => `...${token.slice(-6)}`;
+
 type GameRequestAuthPayload = {
   targetUserId?: string;
   gameId?: string;
@@ -8,6 +11,12 @@ type GameRequestAuthPayload = {
 
 type UserPushToken = {
   expo_push_token: string;
+};
+
+type GameParticipants = {
+  id: string;
+  host_id: string | null;
+  guest_id: string | null;
 };
 
 type UserRecord = {
@@ -99,6 +108,46 @@ serve(async (req: Request): Promise<Response> => {
     });
   }
 
+  // Authorization: the caller must be a participant of the referenced games_v2
+  // row and the target must be the *other* participant. Without this, any
+  // signed-in user could push "game request" notifications to arbitrary users
+  // for arbitrary game ids.
+  const { data: game, error: gameError } = await supabaseClient
+    .from('games_v2')
+    .select('id, host_id, guest_id')
+    .eq('id', gameId)
+    .maybeSingle();
+
+  if (gameError) {
+    console.error('[push-game-request-auth] failed to load game', gameError);
+    return new Response(JSON.stringify({ error: 'game_query_failed' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const participants = (game as GameParticipants | null) ?? null;
+  const senderIsHost = participants?.host_id === senderUserId;
+  const senderIsGuest = participants?.guest_id === senderUserId;
+  const otherParticipant = senderIsHost
+    ? participants?.guest_id
+    : senderIsGuest
+      ? participants?.host_id
+      : null;
+
+  if (!participants || (!senderIsHost && !senderIsGuest) || !otherParticipant || otherParticipant !== targetUserId) {
+    console.warn('[push-game-request-auth] caller not authorized for game/target', {
+      gameId,
+      senderUserId,
+      targetUserId,
+      gameFound: Boolean(participants),
+    });
+    return new Response(JSON.stringify({ error: 'forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const { data: tokens, error: tokensError } = await supabaseClient
     .from('user_push_tokens')
     .select('expo_push_token')
@@ -181,7 +230,7 @@ serve(async (req: Request): Promise<Response> => {
       const message = result.message ?? '';
 
       console.warn('[push-game-request-auth] Expo push error for token', {
-        token: tokenRow.expo_push_token,
+        token: redactToken(tokenRow.expo_push_token),
         errorCode,
         message,
       });
@@ -195,12 +244,12 @@ serve(async (req: Request): Promise<Response> => {
 
         if (disableError) {
           console.error('[push-game-request-auth] failed to disable token', {
-            token: tokenRow.expo_push_token,
+            token: redactToken(tokenRow.expo_push_token),
             error: disableError,
           });
         } else {
           console.log('[push-game-request-auth] disabled invalid token', {
-            token: tokenRow.expo_push_token,
+            token: redactToken(tokenRow.expo_push_token),
           });
         }
       }

@@ -1,6 +1,9 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.53.1';
 
+/** Never log a full Expo push token; the last 6 characters are enough to correlate. */
+const redactToken = (token: string): string => `...${token.slice(-6)}`;
+
 type GameRequestPayload = {
   gameId?: string;
   targetUserId?: string;
@@ -168,7 +171,7 @@ serve(async (req: Request): Promise<Response> => {
       const message = result.message ?? '';
 
       console.warn('[push-game-request] Expo push error for token', {
-        token: token.expo_push_token,
+        token: redactToken(token.expo_push_token),
         errorCode,
         message,
       });
@@ -182,12 +185,12 @@ serve(async (req: Request): Promise<Response> => {
 
         if (disableError) {
           console.error('[push-game-request] failed to disable token', {
-            token: token.expo_push_token,
+            token: redactToken(token.expo_push_token),
             error: disableError,
           });
         } else {
           console.log('[push-game-request] disabled invalid token', {
-            token: token.expo_push_token,
+            token: redactToken(token.expo_push_token),
           });
         }
       }

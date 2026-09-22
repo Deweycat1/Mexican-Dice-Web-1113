@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, Platform, StyleSheet, View } from 'react-native';
 
 import { AppText as Text } from './AppText';
@@ -38,7 +38,18 @@ export default function NarrationBanner({
   const prevTextRef = useRef('');
   const heightRef = useRef(0);
 
-  const clearTimers = () => {
+  // Timers fire long after the render that scheduled them, so they read the
+  // latest props through refs instead of capturing stale closure values.
+  const minShowMsRef = useRef(minShowMs);
+  const maxShowMsRef = useRef(maxShowMs);
+  const onHeightChangeRef = useRef(onHeightChange);
+  useEffect(() => {
+    minShowMsRef.current = minShowMs;
+    maxShowMsRef.current = maxShowMs;
+    onHeightChangeRef.current = onHeightChange;
+  }, [minShowMs, maxShowMs, onHeightChange]);
+
+  const clearTimers = useCallback(() => {
     if (hideTimerRef.current) {
       clearTimeout(hideTimerRef.current);
       hideTimerRef.current = null;
@@ -51,12 +62,12 @@ export default function NarrationBanner({
       clearTimeout(maxTimerRef.current);
       maxTimerRef.current = null;
     }
-  };
+  }, []);
 
-  const scheduleHide = () => {
+  const scheduleHide = useCallback(() => {
     clearTimers();
     const elapsed = Date.now() - lastShowRef.current;
-    const wait = Math.max(0, minShowMs - elapsed);
+    const wait = Math.max(0, minShowMsRef.current - elapsed);
 
     hideTimerRef.current = setTimeout(() => {
       open.value = withTiming(0, { duration: OUT_DURATION, easing: Easing.in(Easing.cubic) });
@@ -64,13 +75,13 @@ export default function NarrationBanner({
         setDisplayText('');
         if (heightRef.current !== 0) {
           heightRef.current = 0;
-          onHeightChange?.(0);
+          onHeightChangeRef.current?.(0);
         }
       }, OUT_DURATION);
     }, wait);
-  };
+  }, [clearTimers, open]);
 
-  useEffect(() => () => clearTimers(), []);
+  useEffect(() => () => clearTimers(), [clearTimers]);
 
   useEffect(() => {
     if (!trimmedText) {
@@ -89,9 +100,9 @@ export default function NarrationBanner({
     lastShowRef.current = Date.now();
     open.value = withTiming(1, { duration: IN_DURATION, easing: Easing.out(Easing.cubic) });
 
-    const delay = Math.max(minShowMs, maxShowMs);
+    const delay = Math.max(minShowMsRef.current, maxShowMsRef.current);
     maxTimerRef.current = setTimeout(scheduleHide, delay);
-  }, [trimmedText, minShowMs, maxShowMs]);
+  }, [trimmedText, clearTimers, scheduleHide, open]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: -100 * (1 - open.value) }],
@@ -102,7 +113,7 @@ export default function NarrationBanner({
     const { height } = event.nativeEvent.layout;
     if (Math.abs(height - heightRef.current) > 0.5) {
       heightRef.current = height;
-      onHeightChange?.(height);
+      onHeightChangeRef.current?.(height);
     }
   };
 

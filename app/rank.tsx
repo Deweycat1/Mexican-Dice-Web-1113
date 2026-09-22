@@ -48,23 +48,6 @@ const getTopPercentColor = (topPercent: number) => {
   return rgbToHex(r, g, b);
 };
 
-const getTierColor = (tier: string) => {
-  switch (tier) {
-    case 'Inferno':
-      return '#FF4D4D';
-    case 'Blaze':
-      return '#FF7A1A';
-    case 'Ember':
-      return '#FE9902';
-    case 'Cinder':
-      return '#F2C94C';
-    case 'Ash':
-      return '#53A7F3';
-    default:
-      return '#53A7F3';
-  }
-};
-
 export default function RankScreen() {
   const router = useRouter();
   const [myRank, setMyRank] = useState<PlayerRank | null>(null);
