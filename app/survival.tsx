@@ -1182,6 +1182,8 @@ export default function Survival() {
   const rolling = rollingAnim || isRolling;
 
   const isGameOver = gameOver !== null;
+  const cupLifted =
+    cupPrototypeEnabled && (cupPhase === 'revealing' || cupPhase === 'revealed');
   const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock || isSurvivalOver;
   const streakEnded = isSurvivalOver;
   const showCpuThinking = turn !== 'player' && !isGameOver;
@@ -2284,7 +2286,8 @@ export default function Survival() {
               hitSlop={10}
               style={({ pressed }) => [
                 styles.historyBox,
-                { opacity: pressed ? 0.7 : 1 },
+                // The tipped cup sits over this box; dim it so it reads as "in front".
+                { opacity: pressed ? 0.7 : cupLifted ? 0.3 : 1 },
               ]}
             >
               <Animated.View style={{ opacity: fadeAnim }}>

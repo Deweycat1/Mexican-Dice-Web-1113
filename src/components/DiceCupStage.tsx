@@ -108,16 +108,18 @@ const DICE_GAP = Math.ceil(MAX_TILT_GROWTH + DIE_DEPTH_FAR_OFFSET + DIE_SIZE * 0
 const DICE_ROW_TOP = 70;
 const DICE_ROW_WIDTH = DIE_SHELL_SIZE * 2 + DICE_GAP;
 const DICE_ROW_LEFT = (STAGE_WIDTH - DICE_ROW_WIDTH) / 2;
-const DICE_PEEK_VISIBLE_HEIGHT = DIE_SIZE * 0.3;
-const CUP_REVEAL_Y =
-  DICE_ROW_TOP + DIE_SIZE - DICE_PEEK_VISIBLE_HEIGHT - (CUP_TOP + CUP_HEIGHT);
+// The cup image is portrait (2:3) drawn with "contain" into a wider box, so its visible body is
+// narrower than CUP_WIDTH: this is the on-screen width of the leather.
+const CUP_VISIBLE_WIDTH = CUP_HEIGHT * (1024 / 1536);
+// Revealed pose: instead of lifting the cup its whole height (which parks it on top of the
+// panels above), it tips aside to the right and rises just enough for the rim to clear the dice.
+const CUP_LIFTED_SCALE = 0.78;
+const CUP_LIFTED_X = Math.round(CUP_VISIBLE_WIDTH * 0.7);
+const CUP_LIFTED_ROTATION = -24;
+const CUP_LIFTED_OPACITY = 1;
+const CUP_REVEAL_Y = -Math.round(DIE_SIZE * 1.15);
 const PLAY_GROUP_OFFSET_Y = 65 - (Platform.OS === 'android' ? STAGE_WIDTH * 0.1 : 0);
 const STAGE_HEIGHT = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT + 24;
-
-// Lifted-cup pose: nudged right, slightly smaller and softer so the revealed dice own the scene.
-const CUP_LIFTED_X = 72;
-const CUP_LIFTED_SCALE = 0.8;
-const CUP_LIFTED_OPACITY = 0.82;
 
 const SHADOW_WIDTH = DIE_SIZE * 1.2;
 const SHADOW_HEIGHT = DIE_SIZE * 0.34;
@@ -386,7 +388,7 @@ export default function DiceCupStage({
       if (targetPhase === 'revealing' || targetPhase === 'revealed') {
         cupX.setValue(CUP_LIFTED_X);
         cupY.setValue(CUP_REVEAL_Y);
-        cupRotation.setValue(-7);
+        cupRotation.setValue(CUP_LIFTED_ROTATION);
         cupOpacity.setValue(CUP_LIFTED_OPACITY);
         cupScale.setValue(CUP_LIFTED_SCALE);
         leftSettle.setValue(1);
@@ -555,7 +557,7 @@ export default function DiceCupStage({
           useNativeDriver: true,
         }),
         Animated.timing(cupRotation, {
-          toValue: -7,
+          toValue: CUP_LIFTED_ROTATION,
           duration,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
@@ -719,8 +721,8 @@ export default function DiceCupStage({
       { scale: cupScale },
       {
         rotateZ: cupRotation.interpolate({
-          inputRange: [-10, 10],
-          outputRange: ['-10deg', '10deg'],
+          inputRange: [-30, 30],
+          outputRange: ['-30deg', '30deg'],
         }),
       },
     ],

@@ -442,6 +442,8 @@ export default function Game() {
 
   const isGameOver = gameOver !== null;
   const isRecapVisible = roundRecap !== null;
+  const cupLiftedOrRecap =
+    isRecapVisible || (cupPrototypeEnabled && (cupPhase === 'revealing' || cupPhase === 'revealed'));
   const controlsDisabled = isGameOver || turn !== 'player' || isBusy || turnLock || isRecapVisible;
   const showCpuThinking = turn !== 'player' && !isGameOver;
   const latestClaimEntry = useMemo(() => {
@@ -1565,7 +1567,9 @@ export default function Game() {
               hitSlop={10}
               style={({ pressed }) => [
                 styles.historyBox,
-                { opacity: pressed ? 0.7 : 1 },
+                // The tipped cup and the recap card sit over this box; dim it so they read as
+                // "in front" instead of clashing with the text.
+                { opacity: pressed ? 0.7 : cupLiftedOrRecap ? 0.3 : 1 },
               ]}
             >
               <Animated.View style={{ opacity: fadeAnim }}>
