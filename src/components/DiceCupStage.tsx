@@ -89,8 +89,8 @@ const MAX_TILT_DEG = 12;
 const MIN_LANDING_SPIN_DEG = 14;
 const MAX_LANDING_SPIN_DEG = 24;
 // Each die starts its landing this far outward and slides in as it settles, so the two never
-// cross while they are still enlarged and spun mid-air.
-const LANDING_SPREAD = Math.round(DIE_SIZE * 0.3);
+// cross while they are still spun mid-air.
+const LANDING_SPREAD = Math.round(DIE_SIZE * 0.22);
 // Whole-pair scatter so the landing spot varies without ever moving the dice toward each other.
 const MAX_SCATTER_X = Math.round(DIE_SIZE * 0.08);
 const MAX_SCATTER_Y = Math.round(DIE_SIZE * 0.05);
@@ -233,14 +233,15 @@ function LandingDie({ value, colorway, side, landing, settle }: LandingDieProps)
         {
           translateY: settle.interpolate({
             inputRange: [0, 1],
-            outputRange: [-DIE_SIZE * 0.22, 0],
+            outputRange: [-DIE_SIZE * 0.16, 0],
             extrapolate: 'clamp',
           }),
         },
         {
+          // Never larger than the resting size: the dice only squash a touch on touchdown.
           scale: settle.interpolate({
             inputRange: [0, 1, 1.15],
-            outputRange: [1.12, 1, 0.97],
+            outputRange: [1, 1, 0.97],
             extrapolate: 'clamp',
           }),
         },
