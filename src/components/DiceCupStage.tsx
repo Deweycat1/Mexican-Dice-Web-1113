@@ -72,11 +72,11 @@ const CUP_HEIGHT = alignAndroidPixel(146 * CUP_SCALE);
 const CUP_TOP = 13 - (CUP_HEIGHT - 146) / 2;
 const CUP_LEFT = (STAGE_WIDTH - CUP_WIDTH) / 2;
 
-// Dice are sized relative to the cup so the result reads at a glance (about a fifth of the
-// cup width) instead of being dwarfed by it. Android keeps a floor so pips stay legible.
+// Dice are sized relative to the cup: about 15% of its width reads clearly without crowding the
+// cup (19% looked oversized on phones). Android keeps a floor so pips stay legible.
 const DIE_SIZE = Math.max(
-  Platform.OS === 'android' ? 34 : 0,
-  Math.round(CUP_WIDTH * 0.19)
+  Platform.OS === 'android' ? 30 : 0,
+  Math.round(CUP_WIDTH * 0.15)
 );
 const DIE_DEPTH_FAR_OFFSET = Math.max(3, Math.round(DIE_SIZE * 0.09));
 const DIE_DEPTH_NEAR_OFFSET = Math.max(2, Math.round(DIE_SIZE * 0.055));
@@ -115,9 +115,9 @@ const PLAY_GROUP_OFFSET_Y = 65 - (Platform.OS === 'android' ? STAGE_WIDTH * 0.1 
 const STAGE_HEIGHT = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT + 24;
 
 // Lifted-cup pose: nudged right, slightly smaller and softer so the revealed dice own the scene.
-const CUP_LIFTED_X = 56;
-const CUP_LIFTED_SCALE = 0.86;
-const CUP_LIFTED_OPACITY = 0.9;
+const CUP_LIFTED_X = 72;
+const CUP_LIFTED_SCALE = 0.8;
+const CUP_LIFTED_OPACITY = 0.82;
 
 const SHADOW_WIDTH = DIE_SIZE * 1.2;
 const SHADOW_HEIGHT = DIE_SIZE * 0.34;

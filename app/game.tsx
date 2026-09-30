@@ -508,6 +508,8 @@ export default function Game() {
         marginTop: isSmallScreen ? -DIE_SIZE * 1.1 : isTallScreen ? -DIE_SIZE * 1.3 : -DIE_SIZE * 1.5,
         paddingVertical: isSmallScreen ? 10 : 14,
       },
+      // How far the action bar reaches up into the dice area (its negative margin).
+      controlsOverlap: isSmallScreen ? DIE_SIZE * 1.1 : isTallScreen ? DIE_SIZE * 1.3 : DIE_SIZE * 1.5,
     }),
     [isSmallScreen, isTallScreen]
   );
@@ -1602,7 +1604,16 @@ export default function Game() {
             </Pressable>
 
             {/* DICE BLOCK */}
-            <View testID="dice-area" style={[styles.diceArea, layoutTweaks.diceArea]}>
+            <View
+              testID="dice-area"
+              style={[
+                styles.diceArea,
+                layoutTweaks.diceArea,
+                // While the recap card is up the controls are disabled anyway, so let the card
+                // draw over the action bar instead of being clipped by it.
+                isRecapVisible && styles.diceAreaRecap,
+              ]}
+            >
               <View style={styles.diceRow}>
                 {showCpuThinking && !cupPrototypeEnabled ? (
                   <>
@@ -1681,7 +1692,11 @@ export default function Game() {
                   </>
                 )}
               </View>
-              <RoundRecapOverlay recap={roundRecap} onDone={handleRoundRecapDone} />
+              <RoundRecapOverlay
+                recap={roundRecap}
+                onDone={handleRoundRecapDone}
+                bottomInset={layoutTweaks.controlsOverlap * 0.5}
+              />
             </View>
 
             {/* ACTION BAR */}
@@ -2106,6 +2121,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  diceAreaRecap: {
+    zIndex: 12,
+    elevation: 12,
   },
   controls: {
     backgroundColor: BAR_BG,

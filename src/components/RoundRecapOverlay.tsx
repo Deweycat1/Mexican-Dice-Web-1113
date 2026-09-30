@@ -29,6 +29,11 @@ type Props = {
   recap: RoundRecapData | null;
   onDone: () => void;
   durationMs?: number;
+  /**
+   * Space at the bottom of the host area that something else (the action bar) overlaps.
+   * The card is centred in the remaining space so its bottom edge is never covered.
+   */
+  bottomInset?: number;
 };
 
 const MINI_DIE_SIZE = 30;
@@ -46,7 +51,12 @@ function DicePair({ value, owner }: { value: number; owner?: RollOwner }) {
   );
 }
 
-export default function RoundRecapOverlay({ recap, onDone, durationMs = 5000 }: Props) {
+export default function RoundRecapOverlay({
+  recap,
+  onDone,
+  durationMs = 5000,
+  bottomInset = 0,
+}: Props) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(8)).current;
   const doneRef = useRef(onDone);
@@ -136,7 +146,10 @@ export default function RoundRecapOverlay({ recap, onDone, durationMs = 5000 }: 
         },
       ]}
     >
-      <Pressable style={styles.dismissLayer} onPress={handleDismiss}>
+      <Pressable
+        style={[styles.dismissLayer, bottomInset > 0 && { paddingBottom: bottomInset }]}
+        onPress={handleDismiss}
+      >
         <View style={[styles.card, resolvedToneStyle]}>
           <Text style={[styles.title, resolvedTitleStyle]}>{recap.title}</Text>
 
