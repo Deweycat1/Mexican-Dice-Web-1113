@@ -3,6 +3,22 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/survival-best",
+      "destination": "/api/survival?kind=best"
+    },
+    {
+      "source": "/api/survival-run",
+      "destination": "/api/survival?kind=run"
+    },
+    {
+      "source": "/api/survival-over10",
+      "destination": "/api/survival?kind=over10"
+    },
+    {
+      "source": "/api/survival-average-streak",
+      "destination": "/api/survival?kind=average-streak"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
@@ -15,10 +31,22 @@
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://infernodice.com" },
-        { "key": "Vary", "value": "Origin" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://infernodice.com"
+        },
+        {
+          "key": "Vary",
+          "value": "Origin"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type"
+        }
       ]
     }
   ]

@@ -1,7 +1,7 @@
 import { kv } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-import { rejectUnsupportedMethod } from './_lib/validate';
+import { rejectUnsupportedMethod } from '../validate';
 
 const SURVIVAL_DEVICES_SET = 'survival:devices';
 const SURVIVAL_OVER10_SET = 'survival:over10';

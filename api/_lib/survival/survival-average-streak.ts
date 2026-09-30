@@ -1,7 +1,7 @@
 import { kv } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-import { rejectUnsupportedMethod } from './_lib/validate';
+import { rejectUnsupportedMethod } from '../validate';
 
 /**
  * Returns the average Survival Mode streak across all completed runs.

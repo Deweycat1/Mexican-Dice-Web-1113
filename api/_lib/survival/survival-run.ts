@@ -7,7 +7,7 @@ import {
   isValidStreak,
   rejectUnsupportedMethod,
   requireJsonBody,
-} from './_lib/validate';
+} from '../validate';
 
 // Keys
 const SURVIVAL_DEVICES_SET = 'survival:devices';

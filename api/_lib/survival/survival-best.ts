@@ -2,7 +2,7 @@
 import { kv } from '@vercel/kv';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-import { STREAK_MAX, isValidStreak, readGeo, rejectUnsupportedMethod, requireJsonBody } from './_lib/validate';
+import { STREAK_MAX, isValidStreak, readGeo, rejectUnsupportedMethod, requireJsonBody } from '../validate';
 
 const GLOBAL_KEY = 'survival:globalBest';
 
