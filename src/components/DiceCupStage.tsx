@@ -72,11 +72,18 @@ const CUP_HEIGHT = alignAndroidPixel(146 * CUP_SCALE);
 const CUP_TOP = 13 - (CUP_HEIGHT - 146) / 2;
 const CUP_LEFT = (STAGE_WIDTH - CUP_WIDTH) / 2;
 
-// Dice are sized relative to the cup: about 15% of its width reads clearly without crowding the
-// cup (19% looked oversized on phones). Android keeps a floor so pips stay legible.
+// The cup image is portrait (2:3) drawn with "contain" into a wider box, so its visible body is
+// narrower than CUP_WIDTH: this is the on-screen width of the leather, i.e. the rim the dice
+// have to fit under.
+const CUP_VISIBLE_WIDTH = CUP_HEIGHT * (1024 / 1536);
+
+// Dice are sized against that rim: each die is about a fifth of it, so the pair plus its gap
+// takes roughly half the rim width and clearly sits under the cup (this matches the original
+// hand-tuned size; anything larger reads as dice too big for the cup). Android keeps a floor so
+// pips stay legible.
 const DIE_SIZE = Math.max(
-  Platform.OS === 'android' ? 30 : 0,
-  Math.round(CUP_WIDTH * 0.15)
+  Platform.OS === 'android' ? 24 : 0,
+  Math.round(CUP_VISIBLE_WIDTH * 0.21)
 );
 const DIE_DEPTH_FAR_OFFSET = Math.max(3, Math.round(DIE_SIZE * 0.09));
 const DIE_DEPTH_NEAR_OFFSET = Math.max(2, Math.round(DIE_SIZE * 0.055));
@@ -108,9 +115,6 @@ const DICE_GAP = Math.ceil(MAX_TILT_GROWTH + DIE_DEPTH_FAR_OFFSET + DIE_SIZE * 0
 const DICE_ROW_TOP = 70;
 const DICE_ROW_WIDTH = DIE_SHELL_SIZE * 2 + DICE_GAP;
 const DICE_ROW_LEFT = (STAGE_WIDTH - DICE_ROW_WIDTH) / 2;
-// The cup image is portrait (2:3) drawn with "contain" into a wider box, so its visible body is
-// narrower than CUP_WIDTH: this is the on-screen width of the leather.
-const CUP_VISIBLE_WIDTH = CUP_HEIGHT * (1024 / 1536);
 // Revealed pose: instead of lifting the cup its whole height (which parks it on top of the
 // panels above), it tips aside to the right and rises just enough for the rim to clear the dice.
 const CUP_LIFTED_SCALE = 0.78;
