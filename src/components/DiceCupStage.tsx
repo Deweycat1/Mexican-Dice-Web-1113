@@ -118,10 +118,10 @@ const DICE_ROW_LEFT = (STAGE_WIDTH - DICE_ROW_WIDTH) / 2;
 // Revealed pose: instead of lifting the cup its whole height (which parks it on top of the
 // panels above), it tips aside to the right and rises just enough for the rim to clear the dice.
 const CUP_LIFTED_SCALE = 0.78;
-const CUP_LIFTED_X = Math.round(CUP_VISIBLE_WIDTH * 0.7);
-const CUP_LIFTED_ROTATION = -24;
+const CUP_LIFTED_X = Math.round(CUP_VISIBLE_WIDTH * 0.88);
+const CUP_LIFTED_ROTATION = -20;
 const CUP_LIFTED_OPACITY = 1;
-const CUP_REVEAL_Y = -Math.round(DIE_SIZE * 1.15);
+const CUP_REVEAL_Y = -Math.round(DIE_SIZE * 1.5);
 const PLAY_GROUP_OFFSET_Y = 65 - (Platform.OS === 'android' ? STAGE_WIDTH * 0.1 : 0);
 const STAGE_HEIGHT = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT + 24;
 
@@ -222,7 +222,9 @@ type LandingDieProps = {
  */
 function LandingDie({ value, colorway, side, landing, settle }: LandingDieProps) {
   const [farDepth, nearDepth] = DIE_DEPTH_COLORS[colorway];
-  const spread = side === 'left' ? -LANDING_SPREAD : LANDING_SPREAD;
+  // Only the left die starts offset (away from the cup); the right die must never begin
+  // under the tipped cup's rim.
+  const spread = side === 'left' ? -LANDING_SPREAD : 0;
 
   const dieStyle = useMemo(
     () => ({
