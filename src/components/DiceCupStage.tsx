@@ -115,8 +115,19 @@ const DICE_GAP = Math.ceil(MAX_TILT_GROWTH + DIE_DEPTH_FAR_OFFSET + DIE_SIZE * 0
 const DICE_ROW_TOP = 70;
 const DICE_ROW_WIDTH = DIE_SHELL_SIZE * 2 + DICE_GAP;
 const DICE_ROW_LEFT = (STAGE_WIDTH - DICE_ROW_WIDTH) / 2;
-// Revealed pose: instead of lifting the cup its whole height (which parks it on top of the
-// panels above), it tips aside to the right and rises just enough for the rim to clear the dice.
+// The reveal is two moves. First the cup rises straight up, growing slightly as it comes toward
+// the viewer, until its rim is clearly above the dice (so they are uncovered from underneath,
+// like a real cup being lifted). Only then does it swing aside to the right and settle lower,
+// where it stays while the player decides.
+const CUP_LIFT_APEX_SCALE = 1.06;
+// Visible bottom of the leather at rest (the image has ~0.6% transparent padding below it).
+const CUP_VISIBLE_BOTTOM = CUP_TOP + CUP_HEIGHT * 0.994;
+// Rim must clear the top of the dice (they start their landing slightly raised) with some air,
+// and growing the cup by 6% pushes its bottom edge down by 3% of its height.
+const CUP_LIFT_APEX_Y = -Math.round(
+  CUP_VISIBLE_BOTTOM - (DICE_ROW_TOP - DIE_SIZE * 0.16) + DIE_SIZE * 0.35 + CUP_HEIGHT * 0.03
+);
+// Resting pose after the swing.
 const CUP_LIFTED_SCALE = 0.78;
 const CUP_LIFTED_X = Math.round(CUP_VISIBLE_WIDTH * 0.88);
 const CUP_LIFTED_ROTATION = -20;
@@ -531,9 +542,12 @@ export default function DiceCupStage({
     }
 
     if (phase === 'revealing') {
-      const duration = theatrical ? 1150 : 760;
-      // Dice start landing once the rim has cleared them, the second die a beat behind.
-      const landingDelay = Math.round(duration * 0.38);
+      const liftMs = theatrical ? 640 : 480;
+      const holdMs = theatrical ? 160 : 110;
+      const swingMs = theatrical ? 560 : 440;
+      const duration = liftMs + holdMs + swingMs;
+      // The rim passes over the dice part-way through the lift; that is when they land.
+      const landingDelay = Math.round(liftMs * 0.55);
       const stagger = theatrical ? 120 : 80;
       const leadValue = pose.lead === 'left' ? leftSettle : rightSettle;
       const trailValue = pose.lead === 'left' ? rightSettle : leftSettle;
@@ -550,39 +564,59 @@ export default function DiceCupStage({
           restSpeedThreshold: 0.03,
           useNativeDriver: true,
         });
-      const cupLift = Animated.parallel([
+      // Move 1: straight up, no sideways drift or tilt, until the rim clears the dice.
+      const liftUp = Animated.parallel([
         Animated.timing(cupY, {
-          toValue: CUP_REVEAL_Y,
-          duration,
+          toValue: CUP_LIFT_APEX_Y,
+          duration: liftMs,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
-        Animated.timing(cupX, {
-          toValue: CUP_LIFTED_X,
-          duration,
-          easing: Easing.inOut(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(cupRotation, {
-          toValue: CUP_LIFTED_ROTATION,
-          duration,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        // Shrink and soften the cup as it rises so it intrudes less on the panels above.
         Animated.timing(cupScale, {
-          toValue: CUP_LIFTED_SCALE,
-          duration,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(cupOpacity, {
-          toValue: CUP_LIFTED_OPACITY,
-          duration,
+          toValue: CUP_LIFT_APEX_SCALE,
+          duration: liftMs,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]);
+      // Move 2: swing aside to the right, tilting and settling lower and smaller.
+      const swingAside = Animated.parallel([
+        Animated.timing(cupX, {
+          toValue: CUP_LIFTED_X,
+          duration: swingMs,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        // Stay high while travelling sideways so the rim never sweeps across the dice, then
+        // settle down once the cup is clear of them.
+        Animated.sequence([
+          Animated.delay(Math.round(swingMs * 0.5)),
+          Animated.timing(cupY, {
+            toValue: CUP_REVEAL_Y,
+            duration: Math.round(swingMs * 0.5),
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(cupRotation, {
+          toValue: CUP_LIFTED_ROTATION,
+          duration: swingMs,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(cupScale, {
+          toValue: CUP_LIFTED_SCALE,
+          duration: swingMs,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(cupOpacity, {
+          toValue: CUP_LIFTED_OPACITY,
+          duration: swingMs,
+          useNativeDriver: true,
+        }),
+      ]);
+      const cupLift = Animated.sequence([liftUp, Animated.delay(holdMs), swingAside]);
       const diceLanding = Animated.sequence([
         Animated.delay(landingDelay),
         Animated.parallel([
