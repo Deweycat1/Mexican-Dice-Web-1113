@@ -112,27 +112,39 @@ const MAX_TILT_GROWTH =
   DIE_SIZE * (Math.cos(degToRad(MAX_TILT_DEG)) + Math.sin(degToRad(MAX_TILT_DEG)) - 1);
 const DICE_GAP = Math.ceil(MAX_TILT_GROWTH + DIE_DEPTH_FAR_OFFSET + DIE_SIZE * 0.05);
 
-const DICE_ROW_TOP = 70;
+// Where the leather actually is inside the (mostly transparent) cup image, measured from its
+// alpha channel as fractions of the drawn height: the body runs from 16% down to the front
+// edge of the rim at 81%, and the rim's widest row (the middle of the mouth, i.e. the point on
+// the table a die inside the cup stands on) is at 72%.
+const CUP_RIM_CENTER_Y = CUP_TOP + CUP_HEIGHT * 0.72;
+const CUP_RIM_BOTTOM_Y = CUP_TOP + CUP_HEIGHT * 0.811;
+const CUP_CENTER_Y = CUP_TOP + CUP_HEIGHT / 2;
+
+// The dice stand on the table inside the mouth of the cup, feet just below the rim's centre
+// line, so a rising rim uncovers them from the feet up instead of popping them into view all at
+// once from halfway up the cup. The faint pre-landing shadow still hides behind the front edge.
+const DICE_ROW_TOP = Math.round(CUP_RIM_CENTER_Y + DIE_SIZE * 0.2 - DIE_SHELL_SIZE);
 const DICE_ROW_WIDTH = DIE_SHELL_SIZE * 2 + DICE_GAP;
 const DICE_ROW_LEFT = (STAGE_WIDTH - DICE_ROW_WIDTH) / 2;
 // The reveal is two moves. First the cup rises straight up, growing slightly as it comes toward
 // the viewer, until its rim is clearly above the dice (so they are uncovered from underneath,
-// like a real cup being lifted). Only then does it swing aside to the right and settle lower,
-// where it stays while the player decides.
+// like a real cup being lifted). Only then does it swing aside to the right and sets down on the
+// table beside them, where it stays while the player decides.
 const CUP_LIFT_APEX_SCALE = 1.06;
-// Visible bottom of the leather at rest (the image has ~0.6% transparent padding below it).
-const CUP_VISIBLE_BOTTOM = CUP_TOP + CUP_HEIGHT * 0.994;
-// Rim must clear the top of the dice (they start their landing slightly raised) with some air,
-// and growing the cup by 6% pushes its bottom edge down by 3% of its height.
+// The rim's front edge must clear the top of the dice (they start their landing slightly raised)
+// by half a die of air; growing the cup about its centre also pushes the rim down a little.
 const CUP_LIFT_APEX_Y = -Math.round(
-  CUP_VISIBLE_BOTTOM - (DICE_ROW_TOP - DIE_SIZE * 0.16) + DIE_SIZE * 0.35 + CUP_HEIGHT * 0.03
+  CUP_RIM_BOTTOM_Y -
+    (DICE_ROW_TOP - DIE_SIZE * 0.16) +
+    DIE_SIZE * 0.5 +
+    (CUP_RIM_BOTTOM_Y - CUP_CENTER_Y) * (CUP_LIFT_APEX_SCALE - 1)
 );
-// Resting pose after the swing.
+// Resting pose after the swing: tipped onto its rim at table level, clear of the right die.
 const CUP_LIFTED_SCALE = 0.78;
 const CUP_LIFTED_X = Math.round(CUP_VISIBLE_WIDTH * 0.88);
 const CUP_LIFTED_ROTATION = -20;
 const CUP_LIFTED_OPACITY = 1;
-const CUP_REVEAL_Y = -Math.round(DIE_SIZE * 1.5);
+const CUP_REVEAL_Y = -Math.round(DIE_SIZE * 0.15);
 const PLAY_GROUP_OFFSET_Y = 65 - (Platform.OS === 'android' ? STAGE_WIDTH * 0.1 : 0);
 const STAGE_HEIGHT = PLAY_GROUP_OFFSET_Y + CUP_TOP + CUP_HEIGHT + 24;
 
@@ -546,8 +558,10 @@ export default function DiceCupStage({
       const holdMs = theatrical ? 160 : 110;
       const swingMs = theatrical ? 560 : 440;
       const duration = liftMs + holdMs + swingMs;
-      // The rim passes over the dice part-way through the lift; that is when they land.
-      const landingDelay = Math.round(liftMs * 0.55);
+      // The dice come into view feet-first as soon as the rim starts rising, so their settle
+      // plays out while they are being uncovered rather than after they are already in plain
+      // sight (a die frozen mid-spin, then dropping, is exactly what reads as fake).
+      const landingDelay = Math.round(liftMs * 0.12);
       const stagger = theatrical ? 120 : 80;
       const leadValue = pose.lead === 'left' ? leftSettle : rightSettle;
       const trailValue = pose.lead === 'left' ? rightSettle : leftSettle;
@@ -588,7 +602,7 @@ export default function DiceCupStage({
           useNativeDriver: true,
         }),
         // Stay high while travelling sideways so the rim never sweeps across the dice, then
-        // settle down once the cup is clear of them.
+        // set the cup down on the table once it is clear of them.
         Animated.sequence([
           Animated.delay(Math.round(swingMs * 0.5)),
           Animated.timing(cupY, {
